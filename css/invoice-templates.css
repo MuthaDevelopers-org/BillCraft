@@ -566,30 +566,42 @@
 
 /* ============================================================
    PRINT MEDIA RULES
+   Only the bill prints. Everything else is removed from the layout.
+   Print uses a page narrower than the desktop breakpoints, so
+   .mobile-only elements would show. Chrome repeats fixed bars on
+   every page. Add any new bar, toolbar or modal to the hide list
+   below; tests/print.test.js checks that list.
    ============================================================ */
 @media print {
+  /* html carries the screen background, and it would print as a grey page */
+  html,
   body {
     background: #ffffff !important;
     color: #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
   .app-sidebar,
   .app-topbar,
   .bill-form-panel,
   .preview-actions-bar,
+  .preview-done-actions,
   .toast-container,
   .modal-overlay,
   .step-bar,
   .step-nav,
-  .no-print {
+  .mobile-only,
+  .no-print,
+  .view-section:not(#view-builder) {
     display: none !important;
   }
 
   .app-container,
   .app-main,
-  .view-section,
+  #view-builder,
   .bill-builder-layout,
   .bill-preview-panel {
     display: block !important;
@@ -599,6 +611,7 @@
     box-shadow: none !important;
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
     position: static !important;
     width: 100% !important;
   }
