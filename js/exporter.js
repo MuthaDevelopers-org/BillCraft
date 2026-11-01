@@ -4,6 +4,7 @@
  */
 
 import { formatCurrency } from './models.js';
+import { createTranslator, statusLabel } from './i18n/i18n.js';
 
 export const ExporterService = {
   /**
@@ -153,46 +154,53 @@ export const ExporterService = {
   },
 
   /**
-   * Build text summary of invoice
+   * Build the WhatsApp text for a bill, in the bill language `tb`
    */
-  formatInvoiceText(invoice, settings) {
+  formatInvoiceText(invoice, settings, tb = createTranslator()) {
+    const { t } = tb;
     const curr = settings.currency || '₹';
     const lines = [
-      `🧾 *Bill from ${settings.brandName || 'Domestic Store'}*`,
-      `Bill No: ${invoice.invoiceNumber}`,
-      `Date: ${invoice.date}`,
-      `Customer: ${invoice.customer.name || 'Valued Customer'}`
+      `🧾 *${t('wa.billFrom', { name: settings.brandName || t('wa.defaultShop') })}*`,
+      `${t('wa.billNo')}: ${invoice.invoiceNumber}`,
+      `${t('wa.date')}: ${invoice.date}`,
+      `${t('wa.customer')}: ${invoice.customer.name || t('wa.defaultCustomer')}`
     ];
 
-    if (invoice.customer.phone) lines.push(`Phone: ${invoice.customer.phone}`);
+    if (invoice.customer.phone) lines.push(`${t('wa.phone')}: ${invoice.customer.phone}`);
     lines.push('--------------------------------');
 
     invoice.items.forEach(it => {
-      lines.push(`• ${it.name} (${it.quantity} ${it.unit} @ ${formatCurrency(it.unitPrice, curr)}) : ${formatCurrency(it.total, curr)}`);
+      lines.push(t('wa.item', {
+        name: it.name,
+        qty: it.quantity,
+        unit: it.unit,
+        rate: formatCurrency(it.unitPrice, curr),
+        total: formatCurrency(it.total, curr)
+      }));
     });
 
     lines.push('--------------------------------');
-    lines.push(`Subtotal: ${formatCurrency(invoice.subtotal, curr)}`);
-    if (invoice.billDiscount > 0) lines.push(`Discount: -${formatCurrency(invoice.billDiscount, curr)}`);
-    if (invoice.shippingFee > 0) lines.push(`Delivery: +${formatCurrency(invoice.shippingFee, curr)}`);
-    lines.push(`*Grand Total: ${formatCurrency(invoice.grandTotal, curr)}*`);
-    lines.push(`Status: ${invoice.status}`);
+    lines.push(`${t('wa.subtotal')}: ${formatCurrency(invoice.subtotal, curr)}`);
+    if (invoice.billDiscount > 0) lines.push(`${t('wa.discount')}: -${formatCurrency(invoice.billDiscount, curr)}`);
+    if (invoice.shippingFee > 0) lines.push(`${t('wa.delivery')}: +${formatCurrency(invoice.shippingFee, curr)}`);
+    lines.push(`*${t('wa.grandTotal')}: ${formatCurrency(invoice.grandTotal, curr)}*`);
+    lines.push(`${t('wa.status')}: ${statusLabel(t, invoice.status)}`);
 
     if (settings.upiId) {
-      lines.push(`\n💳 Pay via UPI: ${settings.upiId}`);
+      lines.push(`\n💳 ${t('wa.payUpi')}: ${settings.upiId}`);
     }
     if (settings.sellerName || settings.phone) {
-      lines.push(`Contact: ${settings.sellerName || ''} (${settings.phone || ''})`);
+      lines.push(`${t('wa.contact')}: ${settings.sellerName || ''} (${settings.phone || ''})`);
     }
-    lines.push(`\nThank you for your business!`);
+    lines.push(`\n${t('wa.thanks')}`);
     return lines.join('\n');
   },
 
   /**
    * Share via WhatsApp link
    */
-  shareWhatsApp(invoice, settings) {
-    const text = this.formatInvoiceText(invoice, settings);
+  shareWhatsApp(invoice, settings, tb = createTranslator()) {
+    const text = this.formatInvoiceText(invoice, settings, tb);
     let targetPhone = (invoice.customer.phone || '').replace(/[^0-9]/g, '');
     let url = '';
     if (targetPhone.length >= 10) {
@@ -207,8 +215,8 @@ export const ExporterService = {
   /**
    * Copy invoice text to clipboard
    */
-  async copyInvoiceText(invoice, settings) {
-    const text = this.formatInvoiceText(invoice, settings);
+  async copyInvoiceText(invoice, settings, tb = createTranslator()) {
+    const text = this.formatInvoiceText(invoice, settings, tb);
     await navigator.clipboard.writeText(text);
     return true;
   }

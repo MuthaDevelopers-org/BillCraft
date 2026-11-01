@@ -2,16 +2,17 @@
 <html lang="en" data-accent="emerald">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>BillCraft - Domestic Business Bill & Invoice Maker</title>
-  <meta name="description" content="Fast, offline-ready domestic sales bill and invoice generator with multiple templates, product catalog, UPI QR code, PDF and Image export." />
-  
-  <!-- Modern Typography -->
+  <link rel="icon" href="data:," />
+  <meta name="description" content="Simple bill and invoice maker for small businesses. Works in many Indian languages, on phones and computers, with UPI QR codes and PDF, image and WhatsApp sharing." />
+
+  <!-- Typography (Devanagari for Hindi and Marathi) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- App Stylesheets -->
+  <!-- App Stylesheets (mobile-first: base styles are for phones, responsive.css adds larger screens) -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -24,53 +25,53 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- App Sidebar (Desktop Sidebar / Mobile Bottom Nav) -->
+    <!-- Navigation: bottom bar on phones, left sidebar on larger screens -->
     <aside class="app-sidebar">
       <div class="brand-header">
         <div class="brand-icon-box">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
         <div>
-          <div class="brand-title">BillCraft</div>
-          <div class="brand-subtitle">Domestic Sales Utility</div>
+          <div class="brand-title" data-i18n="app.name">BillCraft</div>
+          <div class="brand-subtitle" data-i18n="app.subtitle">Domestic Sales Utility</div>
         </div>
       </div>
 
       <ul class="nav-links">
         <li class="nav-item">
-          <button class="nav-btn active" data-view="builder" id="nav-builder-btn" title="Create Bill">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn active" data-view="builder" id="nav-builder-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            <span>Create Bill</span>
+            <span class="nav-label" data-i18n="nav.createBill">Create Bill</span>
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-btn" data-view="catalog" id="nav-catalog-btn" title="Products">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn" data-view="catalog" id="nav-catalog-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span>Products</span>
+            <span class="nav-label" data-i18n="nav.products">Products</span>
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-btn" data-view="history" id="nav-history-btn" title="History">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn" data-view="history" id="nav-history-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>History</span>
+            <span class="nav-label" data-i18n="nav.history">History</span>
             <span class="nav-badge" id="nav-history-badge">0</span>
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-btn" data-view="settings" id="nav-settings-btn" title="Settings">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn" data-view="settings" id="nav-settings-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>Settings</span>
+            <span class="nav-label" data-i18n="nav.settings">Settings</span>
           </button>
         </li>
       </ul>
@@ -85,213 +86,224 @@
 
     <!-- Main Workspace -->
     <main class="app-main">
-      <!-- Topbar Header -->
       <header class="app-topbar">
         <div class="topbar-left">
-          <h1 class="page-title" id="topbar-page-title">New Sales Bill</h1>
+          <h1 class="page-title" id="topbar-page-title" data-i18n="title.builder">New Sales Bill</h1>
         </div>
         <div class="topbar-right">
+          <button class="btn btn-ghost btn-icon" id="btn-change-language" data-i18n-title="nav.language" data-i18n-aria="nav.language">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>
+          </button>
           <button class="btn btn-primary btn-sm" id="btn-new-bill">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-            <span>+ New Bill</span>
+            <span data-i18n="nav.newBill">+ New Bill</span>
           </button>
         </div>
       </header>
 
       <!-- VIEW 1: BILL BUILDER -->
       <section class="view-section active" id="view-builder">
-        <!-- Mobile tab switch -->
-        <div class="bill-view-tabs">
-          <button class="view-tab-btn active" data-tab="editor">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-            1. Edit Bill
+        <!-- Mobile step bar (hidden on larger screens) -->
+        <nav class="step-bar mobile-only" aria-label="Bill steps" data-i18n-aria="step.bar">
+          <button class="step-btn active" data-step-go="1">
+            <span class="step-num">1</span>
+            <span class="step-label" data-i18n="step.customer">Customer</span>
           </button>
-          <button class="view-tab-btn" data-tab="preview">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            2. Live Preview
+          <button class="step-btn" data-step-go="2">
+            <span class="step-num">2</span>
+            <span class="step-label" data-i18n="step.items">Items</span>
           </button>
-        </div>
+          <button class="step-btn" data-step-go="3">
+            <span class="step-num">3</span>
+            <span class="step-label" data-i18n="step.done">Done</span>
+          </button>
+        </nav>
 
-        <div class="bill-builder-layout">
-          <!-- Left Panel: Form Inputs -->
+        <div class="bill-builder-layout step-1" id="bill-layout">
           <div class="bill-form-panel">
-            <!-- Card 1: Bill & Customer Info -->
-            <div class="card">
+            <!-- Step 1: Customer -->
+            <div class="card step-customer">
               <div class="card-header">
                 <div class="card-title">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                  Bill & Customer Information
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                  <span data-i18n="customer.card">Customer Details</span>
                 </div>
               </div>
               <div class="card-body">
-                <div class="form-grid-3">
+                <div class="form-grid-2">
                   <div class="form-group">
-                    <label class="form-label" for="inv-number">Bill / Invoice #</label>
-                    <input type="text" id="inv-number" class="form-control" placeholder="BILL-001" />
+                    <label class="form-label" for="cust-name" data-i18n="field.customerName">Customer Name</label>
+                    <input type="text" id="cust-name" class="form-control" data-voice="text" data-i18n-placeholder="ph.customerName" placeholder="e.g. Priya Sharma" autocomplete="off" />
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="inv-date">Bill Date</label>
-                    <input type="date" id="inv-date" class="form-control" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="inv-status">Payment Status</label>
-                    <select id="inv-status" class="form-control">
-                      <option value="Paid">Paid</option>
-                      <option value="Due">Due / Unpaid</option>
-                      <option value="Draft">Draft</option>
-                    </select>
+                    <label class="form-label" for="cust-phone" data-i18n="field.customerPhone">Phone / WhatsApp</label>
+                    <input type="tel" id="cust-phone" class="form-control" data-voice="number" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" autocomplete="tel" />
                   </div>
                 </div>
 
-                <div class="form-grid-2">
-                  <div class="form-group">
-                    <label class="form-label" for="cust-name">Customer Name</label>
-                    <input type="text" id="cust-name" class="form-control" placeholder="e.g. Priya Sharma" />
+                <details class="more-options">
+                  <summary class="more-summary" data-i18n="step.more">More options</summary>
+                  <div class="more-body">
+                    <div class="form-grid-3">
+                      <div class="form-group">
+                        <label class="form-label" for="inv-number" data-i18n="field.billNumber">Bill Number</label>
+                        <input type="text" id="inv-number" class="form-control" data-i18n-placeholder="ph.billNumber" placeholder="BILL-001" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="inv-date" data-i18n="field.billDate">Bill Date</label>
+                        <input type="date" id="inv-date" class="form-control" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="inv-status" data-i18n="field.status">Payment Status</label>
+                        <select id="inv-status" class="form-control">
+                          <option value="Paid" data-i18n="status.paid">Paid</option>
+                          <option value="Due" data-i18n="status.dueLong">Due / Unpaid</option>
+                          <option value="Draft" data-i18n="status.draft">Draft</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="cust-address" data-i18n="field.customerAddress">Delivery Address / City</label>
+                        <input type="text" id="cust-address" class="form-control" data-i18n-placeholder="ph.address" placeholder="e.g. 104 Blossom Heights, Pune" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="cust-notes" data-i18n="field.customerNote">Order Note</label>
+                        <input type="text" id="cust-notes" class="form-control" data-i18n-placeholder="ph.customerNote" placeholder="e.g. Gift wrap requested" />
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label" for="cust-phone">Customer Phone / WhatsApp</label>
-                    <input type="tel" id="cust-phone" class="form-control" placeholder="e.g. +91 98765 43210" />
-                  </div>
-                </div>
-
-                <div class="form-grid-2">
-                  <div class="form-group">
-                    <label class="form-label" for="cust-address">Delivery Address / City</label>
-                    <input type="text" id="cust-address" class="form-control" placeholder="e.g. 104 Blossom Heights, Pune" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="cust-notes">Customer Order Note</label>
-                    <input type="text" id="cust-notes" class="form-control" placeholder="e.g. Gift wrap requested, evening drop" />
-                  </div>
-                </div>
+                </details>
               </div>
             </div>
 
-            <!-- Card 2: Items & Pricing -->
-            <div class="card">
+            <!-- Step 2: Items and totals -->
+            <div class="card step-items">
               <div class="card-header">
                 <div class="card-title">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                  Products & Line Items
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                  <span data-i18n="items.card">Products & Items</span>
                 </div>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-pick-from-catalog">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                    + From Catalog
-                  </button>
-                  <button type="button" class="btn btn-primary btn-sm" id="btn-add-custom-item">
-                    + Custom Item
-                  </button>
+                <div class="card-header-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-pick-from-catalog" data-i18n="items.fromCatalog">+ From Catalog</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-add-custom-item" data-i18n="items.custom">+ Custom Item</button>
                 </div>
               </div>
               <div class="card-body">
-                <!-- Desktop Table View (Hidden on mobile) -->
-                <div class="items-table-wrap desktop-items-table">
-                  <table class="items-table">
-                    <thead>
-                      <tr>
-                        <th>Item Details</th>
-                        <th>Rate / Price</th>
-                        <th>Qty & Unit</th>
-                        <th>Disc %</th>
-                        <th style="text-align: right;">Total</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="items-table-body">
-                      <!-- Rendered dynamically -->
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Mobile Card List View (Visible only on mobile) -->
+                <!-- Phone item cards -->
                 <div class="mobile-items-container" id="mobile-items-list">
-                  <!-- Rendered dynamically for touch -->
+                  <!-- Rendered dynamically -->
                 </div>
 
-                <!-- Totals Summary & Adjustments -->
-                <div class="form-grid-2" style="margin-top: 1rem;">
-                  <div class="form-group">
-                    <label class="form-label" for="inv-shipping">Delivery / Shipping Fee</label>
-                    <input type="number" step="any" min="0" id="inv-shipping" class="form-control" placeholder="0" />
+                <details class="more-options">
+                  <summary class="more-summary" data-i18n="step.more">More options</summary>
+                  <div class="more-body">
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="inv-shipping" data-i18n="field.shipping">Delivery / Shipping Fee</label>
+                        <input type="number" inputmode="decimal" step="any" min="0" id="inv-shipping" class="form-control" placeholder="0" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="inv-discount" data-i18n="field.flatDiscount">Flat Bill Discount</label>
+                        <input type="number" inputmode="decimal" step="any" min="0" id="inv-discount" class="form-control" placeholder="0" />
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="inv-footer-notes" data-i18n="field.terms">Terms / Notes for Customer</label>
+                      <input type="text" id="inv-footer-notes" class="form-control" data-i18n-placeholder="ph.terms" placeholder="Thank you for supporting small business!" />
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label" for="inv-discount">Special Bill Discount (Flat)</label>
-                    <input type="number" step="any" min="0" id="inv-discount" class="form-control" placeholder="0" />
-                  </div>
-                </div>
+                </details>
 
                 <div class="bill-summary-grid">
                   <div class="summary-row">
-                    <span>Subtotal:</span>
+                    <span data-i18n="sum.subtotal">Subtotal:</span>
                     <span id="summary-subtotal">₹ 0.00</span>
                   </div>
                   <div class="summary-row grand-total">
-                    <span>Grand Total:</span>
+                    <span data-i18n="sum.grandTotal">Grand Total:</span>
                     <span class="grand-total-amount" id="summary-grand-total">₹ 0.00</span>
                   </div>
-                  <div class="amount-words-badge" id="summary-words">Zero Only</div>
-                </div>
-
-                <div class="form-group" style="margin-top: 1.25rem;">
-                  <label class="form-label" for="inv-footer-notes">Terms / Notes for Customer</label>
-                  <input type="text" id="inv-footer-notes" class="form-control" placeholder="Thank you for supporting small domestic business!" />
+                  <div class="amount-words-row">
+                    <div class="amount-words-badge" id="summary-words">Zero Only</div>
+                    <button type="button" class="btn btn-ghost btn-icon btn-speak" id="btn-speak-total" data-i18n-title="sum.readAloud" data-i18n-aria="sum.readAloud" hidden>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="card-footer">
-                <button type="button" class="btn btn-secondary" id="btn-jump-to-preview">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                  Preview Bill
+                <button type="button" class="btn btn-secondary mobile-only" id="btn-jump-to-preview">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <span data-i18n="btn.previewBill">Preview Bill</span>
                 </button>
-                <button type="button" class="btn btn-success" id="btn-save-bill">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                  Save to History
+                <button type="button" class="btn btn-success btn-save-bill">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                  <span data-i18n="btn.saveHistory">Save to History</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Right Panel: Live Invoice Preview -->
+          <!-- Step 3 on phones, right-hand panel on larger screens -->
           <div class="bill-preview-panel">
-            <!-- Preview Controls Bar -->
             <div class="preview-actions-bar">
               <div class="template-selector-pill">
-                <span>Template:</span>
+                <span data-i18n="preview.template">Design:</span>
                 <select id="preview-template-select">
-                  <option value="modern">Modern Minimal</option>
-                  <option value="classic">Classic Executive</option>
-                  <option value="boutique">Artisan Boutique</option>
-                  <option value="thermal">Compact Thermal POS</option>
+                  <option value="modern" data-i18n="template.modern">Modern Minimal</option>
+                  <option value="classic" data-i18n="template.classic">Classic Executive</option>
+                  <option value="boutique" data-i18n="template.boutique">Artisan Boutique</option>
+                  <option value="thermal" data-i18n="template.thermal">Compact Thermal POS</option>
                 </select>
               </div>
 
               <div class="btn-group">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-pdf" title="Download PDF">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                  PDF
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-pdf" data-i18n-title="action.pdfTitle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <span data-i18n="action.pdf">PDF</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-image" title="Download PNG Image">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                  Image
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-image" data-i18n-title="action.imageTitle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <span data-i18n="action.image">Image</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-print-bill" title="Print Invoice">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                  Print
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-print-bill" data-i18n-title="action.printTitle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                  <span data-i18n="action.print">Print</span>
                 </button>
-                <button type="button" class="btn btn-success btn-sm btn-whatsapp" id="btn-share-whatsapp" title="Share via WhatsApp">
-                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 01-1.25-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.83c.02 4.54-3.68 8.23-8.23 8.23zm4.51-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
+                <button type="button" class="btn btn-success btn-sm btn-whatsapp" id="btn-share-whatsapp" data-i18n-title="action.whatsappTitle">
+                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15c-1.48 0-2.930-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 01-1.25-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.83c.02 4.54-3.68 8.23-8.23 8.23zm4.51-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
                   </svg>
-                  WhatsApp
+                  <span data-i18n="action.whatsapp">WhatsApp</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-speak" id="btn-speak-preview" data-i18n-title="action.speak" data-i18n-aria="action.speak" hidden>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  <span data-i18n="action.speak">Read aloud</span>
                 </button>
               </div>
             </div>
 
-            <!-- The Rendered Document Paper -->
+            <!-- The bill itself -->
             <div class="invoice-render-wrapper" id="invoice-render-target">
               <!-- Rendered via JS templates -->
             </div>
+
+            <div class="preview-done-actions mobile-only">
+              <button type="button" class="btn btn-success btn-save-bill">
+                <span data-i18n="btn.saveHistory">Save to History</span>
+              </button>
+            </div>
           </div>
+        </div>
+
+        <!-- Mobile step buttons -->
+        <div class="step-nav mobile-only">
+          <button type="button" class="btn btn-secondary" id="btn-step-back" hidden>
+            <span data-i18n="common.back">Back</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-step-next">
+            <span data-i18n="common.next">Next</span>
+          </button>
         </div>
       </section>
 
@@ -299,12 +311,11 @@
       <section class="view-section" id="view-catalog">
         <div class="catalog-header-bar">
           <div class="catalog-search-wrap">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input type="text" id="catalog-search" class="form-control catalog-search-input" placeholder="Search catalog items or categories..." />
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="catalog-search" class="form-control catalog-search-input" data-i18n-placeholder="catalog.search" placeholder="Search products..." />
           </div>
           <button class="btn btn-primary" id="btn-new-product">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-            + Add Product
+            <span data-i18n="catalog.addProduct">+ Add Product</span>
           </button>
         </div>
 
@@ -313,66 +324,64 @@
         </div>
       </section>
 
-      <!-- VIEW 3: INVOICES HISTORY -->
+      <!-- VIEW 3: BILLS HISTORY -->
       <section class="view-section" id="view-history">
-        <!-- Stats Summary -->
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon-wrap">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div>
               <div class="stat-val" id="stat-total-sales">₹ 0.00</div>
-              <div class="stat-label">Total Realized Sales</div>
+              <div class="stat-label" data-i18n="stats.sales">Total Sales (Paid)</div>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon-wrap">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </div>
             <div>
               <div class="stat-val" id="stat-total-count">0</div>
-              <div class="stat-label">Invoices Created</div>
+              <div class="stat-label" data-i18n="stats.count">Bills Created</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon-wrap" style="color: var(--danger); background: var(--danger-light);">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="stat-icon-wrap stat-icon-danger">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div>
               <div class="stat-val" id="stat-pending-amount">₹ 0.00</div>
-              <div class="stat-label">Pending / Due Amount</div>
+              <div class="stat-label" data-i18n="stats.pending">Pending / Due</div>
             </div>
           </div>
         </div>
 
-        <!-- History Filter & Table / Cards -->
         <div class="card">
-          <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
-            <div class="card-title">Saved Bills Record</div>
-            <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%; max-width: 380px;">
-              <select id="history-filter-status" class="form-control" style="width: 130px; font-size: 0.85rem;">
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="due">Due</option>
-                <option value="draft">Draft</option>
+          <div class="card-header history-header">
+            <div class="card-title" data-i18n="history.card">Saved Bills</div>
+            <div class="history-filters">
+              <select id="history-filter-status" class="form-control history-filter-select" aria-label="Status">
+                <option value="all" data-i18n="history.filterAll">All</option>
+                <option value="paid" data-i18n="status.paid">Paid</option>
+                <option value="due" data-i18n="status.due">Due</option>
+                <option value="draft" data-i18n="status.draft">Draft</option>
               </select>
-              <input type="text" id="history-search-input" class="form-control" style="flex: 1; font-size: 0.85rem;" placeholder="Search customer / #" />
+              <input type="text" id="history-search-input" class="form-control history-search" data-i18n-placeholder="history.search" placeholder="Search by name or bill no." />
             </div>
           </div>
-          <div class="card-body" style="padding: 0;">
-            <!-- Desktop Table View -->
-            <div class="items-table-wrap desktop-history-table" style="border: none; border-radius: 0; margin-bottom: 0;">
+          <div class="card-body card-body-flush">
+            <!-- Desktop table -->
+            <div class="items-table-wrap desktop-history-table">
               <table class="items-table">
                 <thead>
                   <tr>
-                    <th>Bill #</th>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th style="text-align: center;">Items</th>
-                    <th>Grand Total</th>
-                    <th>Status</th>
-                    <th style="text-align: right;">Actions</th>
+                    <th data-i18n="history.th.bill">Bill #</th>
+                    <th data-i18n="history.th.date">Date</th>
+                    <th data-i18n="history.th.customer">Customer</th>
+                    <th style="text-align: center;" data-i18n="history.th.items">Items</th>
+                    <th data-i18n="history.th.total">Grand Total</th>
+                    <th data-i18n="history.th.status">Status</th>
+                    <th style="text-align: right;" data-i18n="history.th.actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="history-table-body">
@@ -381,9 +390,9 @@
               </table>
             </div>
 
-            <!-- Mobile Card List View -->
+            <!-- Phone cards -->
             <div class="mobile-history-container" id="mobile-history-list">
-              <!-- Rendered dynamically for touch -->
+              <!-- Rendered dynamically -->
             </div>
           </div>
         </div>
@@ -392,88 +401,80 @@
       <!-- VIEW 4: SETTINGS -->
       <section class="view-section" id="view-settings">
         <form id="form-settings">
-          <!-- Profile Card -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                Seller & Brand Identity
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                <span data-i18n="settings.sellerCard">Your Business</span>
               </div>
             </div>
             <div class="card-body">
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-seller-name">Seller / Owner Name</label>
+                  <label class="form-label" for="settings-seller-name" data-i18n="settings.sellerName">Owner Name</label>
                   <input type="text" id="settings-seller-name" class="form-control" placeholder="e.g. Aarav Sharma" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="settings-brand-name">Brand / Business Name</label>
+                  <label class="form-label" for="settings-brand-name" data-i18n="settings.brandName">Business Name</label>
                   <input type="text" id="settings-brand-name" class="form-control" placeholder="e.g. Craftisan Studio" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-tagline">Tagline / Business Subtitle</label>
-                  <input type="text" id="settings-tagline" class="form-control" placeholder="e.g. Handmade Domestic Goods & Curations" />
+                  <label class="form-label" for="settings-tagline" data-i18n="settings.tagline">Tagline</label>
+                  <input type="text" id="settings-tagline" class="form-control" placeholder="e.g. Handmade Domestic Goods" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="settings-phone">Business Phone / WhatsApp</label>
+                  <label class="form-label" for="settings-phone" data-i18n="settings.phone">Business Phone / WhatsApp</label>
                   <input type="tel" id="settings-phone" class="form-control" placeholder="e.g. +91 98765 43210" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-email">Email Address</label>
+                  <label class="form-label" for="settings-email" data-i18n="settings.email">Email Address</label>
                   <input type="email" id="settings-email" class="form-control" placeholder="e.g. contact@craftisan.store" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="settings-address">Business Address / Location</label>
-                  <input type="text" id="settings-address" class="form-control" placeholder="e.g. 12 Green Avenue, Bengaluru, Karnataka" />
+                  <label class="form-label" for="settings-address" data-i18n="settings.address">Business Address</label>
+                  <input type="text" id="settings-address" class="form-control" placeholder="e.g. 12 Green Avenue, Bengaluru" />
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Payment & UPI Card -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
-                Digital Payment & QR Settings
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                <span data-i18n="settings.paymentCard">Payment & QR Code</span>
               </div>
             </div>
             <div class="card-body">
               <div class="form-grid-2">
                 <div>
                   <div class="form-group">
-                    <label class="form-label" for="settings-upi">UPI ID (VPA)</label>
-                    <input type="text" id="settings-upi" class="form-control" placeholder="e.g. seller@okaxis or business@upi" />
-                    <small style="color: var(--text-muted); font-size: 0.75rem;">Generates a dynamic payment QR code automatically on every invoice!</small>
+                    <label class="form-label" for="settings-upi" data-i18n="settings.upi">UPI ID</label>
+                    <input type="text" id="settings-upi" class="form-control" placeholder="e.g. seller@okaxis" />
+                    <small class="field-help" data-i18n="settings.upiHelp">A payment QR code is made automatically on every bill.</small>
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="settings-payment-note">Payment Instructions Note</label>
-                    <input type="text" id="settings-payment-note" class="form-control" placeholder="e.g. Scan QR code or pay to UPI ID for immediate confirmation." />
+                    <label class="form-label" for="settings-payment-note" data-i18n="settings.paymentNote">Payment Instructions</label>
+                    <input type="text" id="settings-payment-note" class="form-control" placeholder="e.g. Scan the QR code to pay" />
                   </div>
                 </div>
 
                 <div>
-                  <label class="form-label">Payment QR Code Preview</label>
-                  <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                  <label class="form-label" data-i18n="settings.qrPreview">QR Code Preview</label>
+                  <div class="qr-row">
                     <div class="qr-preview-box" id="settings-qr-preview">
                       <!-- Rendered via JS -->
                     </div>
-                    <div>
-                      <label for="settings-qr-upload" class="btn btn-secondary btn-sm" style="cursor: pointer; display: inline-flex;">
-                        Upload Custom QR Image
-                      </label>
-                      <input type="file" id="settings-qr-upload" accept="image/*" style="display: none;" />
-                      <div style="margin-top: 0.4rem;">
-                        <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-custom-qr" style="font-size: 0.75rem; color: var(--danger);">
-                          Reset to Auto UPI QR
-                        </button>
-                      </div>
+                    <div class="qr-actions">
+                      <label for="settings-qr-upload" class="btn btn-secondary btn-sm qr-upload-label" data-i18n="settings.uploadQr">Upload Your Own QR</label>
+                      <input type="file" id="settings-qr-upload" accept="image/*" hidden />
+                      <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-custom-qr" style="color: var(--danger);" data-i18n="settings.resetQr">Use Automatic UPI QR</button>
                     </div>
                   </div>
                 </div>
@@ -481,18 +482,29 @@
             </div>
           </div>
 
-          <!-- Template & Style Preferences -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                Bill Format & Design Preferences
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                <span data-i18n="settings.formatCard">Bill Design & Language</span>
               </div>
             </div>
             <div class="card-body">
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-currency">Currency Symbol</label>
+                  <label class="form-label" for="settings-app-language" data-i18n="settings.appLanguage">App Language</label>
+                  <select id="settings-app-language" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="settings-bill-language" data-i18n="settings.billLanguage">Bill Language</label>
+                  <select id="settings-bill-language" class="form-control"></select>
+                  <small class="field-help" data-i18n="settings.billLanguageHelp">Language printed on bills, PDFs and WhatsApp messages.</small>
+                </div>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="settings-currency" data-i18n="settings.currency">Currency Symbol</label>
                   <select id="settings-currency" class="form-control">
                     <option value="₹">₹ (INR - Indian Rupee)</option>
                     <option value="$">$ (USD / International)</option>
@@ -504,24 +516,22 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Theme Color Accent</label>
+                  <span class="form-label" data-i18n="settings.accent">Theme Colour</span>
                   <div class="color-swatches">
-                    <div class="color-swatch active" data-color="emerald" style="background: #059669;" title="Emerald Green"></div>
-                    <div class="color-swatch" data-color="sapphire" style="background: #2563eb;" title="Sapphire Blue"></div>
-                    <div class="color-swatch" data-color="purple" style="background: #7c3aed;" title="Royal Purple"></div>
-                    <div class="color-swatch" data-color="rose" style="background: #e11d48;" title="Rose Gold"></div>
-                    <div class="color-swatch" data-color="amber" style="background: #d97706;" title="Warm Amber"></div>
-                    <div class="color-swatch" data-color="charcoal" style="background: #1e293b;" title="Executive Charcoal"></div>
+                    <button type="button" class="color-swatch active" data-color="emerald" style="background: #059669;" data-i18n-title="settings.color.emerald" data-i18n-aria="settings.color.emerald"></button>
+                    <button type="button" class="color-swatch" data-color="sapphire" style="background: #2563eb;" data-i18n-title="settings.color.sapphire" data-i18n-aria="settings.color.sapphire"></button>
+                    <button type="button" class="color-swatch" data-color="purple" style="background: #7c3aed;" data-i18n-title="settings.color.purple" data-i18n-aria="settings.color.purple"></button>
+                    <button type="button" class="color-swatch" data-color="rose" style="background: #e11d48;" data-i18n-title="settings.color.rose" data-i18n-aria="settings.color.rose"></button>
+                    <button type="button" class="color-swatch" data-color="amber" style="background: #d97706;" data-i18n-title="settings.color.amber" data-i18n-aria="settings.color.amber"></button>
+                    <button type="button" class="color-swatch" data-color="charcoal" style="background: #1e293b;" data-i18n-title="settings.color.charcoal" data-i18n-aria="settings.color.charcoal"></button>
                   </div>
                 </div>
               </div>
 
-              <!-- Default Template Selection Cards -->
-              <div class="form-group" style="margin-top: 1rem;">
-                <label class="form-label">Default Invoice Template Format</label>
+              <div class="form-group">
+                <span class="form-label" data-i18n="settings.defaultTemplate">Default Bill Design</span>
                 <div class="template-cards-grid">
-                  <!-- Modern -->
-                  <div class="template-card-choice selected" data-template="modern">
+                  <button type="button" class="template-card-choice selected" data-template="modern">
                     <div class="template-mock-thumb">
                       <div class="mock-bar accent"></div>
                       <div class="mock-bar" style="width: 50%;"></div>
@@ -530,12 +540,11 @@
                         <div class="mock-row"></div>
                       </div>
                     </div>
-                    <div class="template-choice-label">Modern Minimal</div>
-                    <div class="template-choice-desc">Clean lines & accent bar</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.modern">Modern Minimal</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.modernDesc">Clean lines and accent bar</div>
+                  </button>
 
-                  <!-- Classic -->
-                  <div class="template-card-choice" data-template="classic">
+                  <button type="button" class="template-card-choice" data-template="classic">
                     <div class="template-mock-thumb" style="border: 2px solid #334155;">
                       <div class="mock-bar" style="background: #334155;"></div>
                       <div class="mock-table">
@@ -544,12 +553,11 @@
                         <div class="mock-row"></div>
                       </div>
                     </div>
-                    <div class="template-choice-label">Classic Executive</div>
-                    <div class="template-choice-desc">Traditional formal receipt</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.classic">Classic Executive</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.classicDesc">Traditional formal receipt</div>
+                  </button>
 
-                  <!-- Boutique -->
-                  <div class="template-card-choice" data-template="boutique">
+                  <button type="button" class="template-card-choice" data-template="boutique">
                     <div class="template-mock-thumb" style="background: linear-gradient(135deg, #6366f1, #818cf8);">
                       <div class="mock-bar" style="background: #ffffff; width: 60%;"></div>
                       <div class="mock-table" style="background: #ffffff; padding: 3px; border-radius: 3px; margin-top: 6px;">
@@ -557,58 +565,54 @@
                         <div class="mock-row"></div>
                       </div>
                     </div>
-                    <div class="template-choice-label">Artisan Boutique</div>
-                    <div class="template-choice-desc">Warm retail gradient banner</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.boutique">Artisan Boutique</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.boutiqueDesc">Warm retail banner</div>
+                  </button>
 
-                  <!-- Thermal POS -->
-                  <div class="template-card-choice" data-template="thermal">
+                  <button type="button" class="template-card-choice" data-template="thermal">
                     <div class="template-mock-thumb" style="border: 1px dashed #64748b; font-family: monospace; font-size: 6px; padding: 6px; justify-content: center; align-items: center;">
                       <div>--- RECEIPT ---</div>
                       <div style="width: 80%; border-bottom: 1px dashed #cbd5e1; margin: 3px 0;"></div>
                       <div>TOTAL: ₹***</div>
                     </div>
-                    <div class="template-choice-label">Compact POS Slip</div>
-                    <div class="template-choice-desc">Receipt slip style</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.thermal">Compact Thermal POS</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.thermalDesc">Receipt slip style</div>
+                  </button>
                 </div>
               </div>
 
-              <div class="form-group" style="margin-top: 1.25rem;">
-                <label class="form-label" for="settings-default-notes">Default Bill Terms & Conditions</label>
-                <textarea id="settings-default-notes" class="form-control" rows="2" placeholder="e.g. Items once sold can be exchanged within 7 days. Thank you for shopping with us!"></textarea>
+              <div class="form-group">
+                <label class="form-label" for="settings-default-notes" data-i18n="settings.defaultTerms">Default Terms & Conditions</label>
+                <textarea id="settings-default-notes" class="form-control" rows="2" placeholder="e.g. Items once sold can be exchanged within 7 days."></textarea>
               </div>
             </div>
             <div class="card-footer">
               <button type="submit" class="btn btn-primary">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                Save Settings
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+                <span data-i18n="settings.save">Save Settings</span>
               </button>
             </div>
           </div>
 
-          <!-- Data Backup & Restore -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                Backup & Data Portability
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <span data-i18n="settings.backupCard">Backup & Restore</span>
               </div>
             </div>
             <div class="card-body">
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                All your catalog products, settings, and invoice history are securely stored in your local browser. Export a JSON backup anytime or restore on another device.
-              </p>
-              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <p class="backup-text" data-i18n="settings.backupText">Your products, settings and bills are stored only in this browser. Save a backup file regularly, or restore it on another phone.</p>
+              <div class="backup-actions">
                 <button type="button" class="btn btn-secondary" id="btn-export-backup">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                  Export Data JSON
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  <span data-i18n="settings.exportJson">Save Backup File</span>
                 </button>
-                <label for="input-import-backup" class="btn btn-secondary" style="cursor: pointer;">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                  Restore from JSON
+                <label for="input-import-backup" class="btn btn-secondary backup-restore-label">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                  <span data-i18n="settings.restoreJson">Restore Backup File</span>
                 </label>
-                <input type="file" id="input-import-backup" accept=".json" style="display: none;" />
+                <input type="file" id="input-import-backup" accept=".json" hidden />
               </div>
             </div>
           </div>
@@ -617,76 +621,92 @@
     </main>
   </div>
 
+  <!-- MODAL: LANGUAGE (first visit, and from the top bar) -->
+  <div class="modal-overlay" id="modal-language">
+    <div class="modal-box lang-box">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="lang.title">Choose your language</h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" id="btn-close-language" data-i18n-title="common.close" data-i18n-aria="common.close" hidden>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="lang-subtitle" data-i18n="lang.subtitle">Pick the language you read best. You can change it later in Settings.</p>
+        <div class="lang-grid" id="lang-grid">
+          <!-- Rendered from the language registry -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: ADD / EDIT PRODUCT -->
   <div class="modal-overlay" id="modal-product">
     <div class="modal-box">
       <div class="modal-header">
-        <h3 class="modal-title" id="modal-product-title">Add New Product</h3>
-        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" title="Close">&times;</button>
+        <h3 class="modal-title" id="modal-product-title" data-i18n="product.addTitle">Add New Product</h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
       </div>
       <form id="form-product-edit">
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label" for="modal-prod-name">Product Name *</label>
-            <input type="text" id="modal-prod-name" class="form-control" required placeholder="e.g. Handcrafted Soy Wax Candle" />
+            <label class="form-label" for="modal-prod-name" data-i18n="product.name">Product Name *</label>
+            <input type="text" id="modal-prod-name" class="form-control" required data-i18n-placeholder="product.namePh" placeholder="e.g. Handmade Soy Candle" />
           </div>
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label" for="modal-prod-category">Category / Tag</label>
-              <input type="text" id="modal-prod-category" class="form-control" placeholder="e.g. Home Decor, Wellness, Grocery" />
+              <label class="form-label" for="modal-prod-category" data-i18n="product.category">Category</label>
+              <input type="text" id="modal-prod-category" class="form-control" data-i18n-placeholder="product.categoryPh" placeholder="e.g. Home Decor, Grocery" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="modal-prod-sku">SKU / Item Code</label>
-              <input type="text" id="modal-prod-sku" class="form-control" placeholder="e.g. CAN-01" />
+              <label class="form-label" for="modal-prod-sku" data-i18n="product.sku">Item Code (SKU)</label>
+              <input type="text" id="modal-prod-sku" class="form-control" data-i18n-placeholder="product.skuPh" placeholder="e.g. CAN-01" />
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label" for="modal-prod-price">Unit Price *</label>
-              <input type="number" step="any" min="0" id="modal-prod-price" class="form-control" required placeholder="450" />
+              <label class="form-label" for="modal-prod-price" data-i18n="product.price">Price *</label>
+              <input type="number" inputmode="decimal" step="any" min="0" id="modal-prod-price" class="form-control" required placeholder="450" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="modal-prod-unit">Unit Type</label>
-              <input type="text" id="modal-prod-unit" class="form-control" placeholder="pcs, jar, kg, box, packet, mtr" value="pcs" />
+              <label class="form-label" for="modal-prod-unit" data-i18n="product.unit">Unit Type</label>
+              <input type="text" id="modal-prod-unit" class="form-control" data-i18n-placeholder="product.unitPh" placeholder="pcs, jar, kg, box" value="pcs" />
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="modal-prod-desc">Description / Notes</label>
-            <textarea id="modal-prod-desc" class="form-control" rows="2" placeholder="e.g. 200g jar, Lavender essential oil scent"></textarea>
+            <label class="form-label" for="modal-prod-desc" data-i18n="product.desc">Description / Notes</label>
+            <textarea id="modal-prod-desc" class="form-control" rows="2" data-i18n-placeholder="product.descPh" placeholder="e.g. 200g jar, lavender scent"></textarea>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-close-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-modal-product">Save Product</button>
+          <button type="button" class="btn btn-secondary btn-close-modal" data-i18n="common.cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-modal-product" data-i18n="product.save">Save Product</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: QUICK CATALOG PICKER FOR ACTIVE BILL -->
+  <!-- MODAL: CATALOG PICKER FOR THE ACTIVE BILL -->
   <div class="modal-overlay" id="modal-catalog-picker">
     <div class="modal-box">
       <div class="modal-header">
-        <h3 class="modal-title">Select from Catalog</h3>
-        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" title="Close">&times;</button>
+        <h3 class="modal-title" data-i18n="catalog.pickerTitle">Select from Catalog</h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
       </div>
-      <div style="padding: 1rem 1.25rem 0.5rem;">
-        <input type="text" id="catalog-picker-search" class="form-control" placeholder="Search catalog items..." />
+      <div class="picker-search">
+        <input type="text" id="catalog-picker-search" class="form-control" data-i18n-placeholder="catalog.pickerSearch" placeholder="Search products..." />
       </div>
-      <div class="modal-body" id="catalog-picker-list" style="padding: 0.5rem 1.25rem 1.25rem; max-height: 420px;">
+      <div class="modal-body picker-list" id="catalog-picker-list">
         <!-- Rendered dynamically -->
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-close-modal">Done</button>
+        <button type="button" class="btn btn-secondary btn-close-modal" data-i18n="common.done">Done</button>
       </div>
     </div>
   </div>
 
   <!-- Toast Notification Container -->
-  <div class="toast-container" id="toast-container"></div>
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <!-- Main ES Module Script -->
   <script type="module" src="js/app.js"></script>

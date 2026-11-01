@@ -1,43 +1,121 @@
 /**
  * BillCraft - Main Application Controller
- * Optimized for Mobile-First & Desktop Split-Screen UX
+ * Mobile-first: a three-step bill on phones, a split-screen editor on larger screens.
  */
 
-import { Product, Invoice, InvoiceItem, BusinessSettings, formatCurrency, numberToWords } from './models.js';
+import { Product, Invoice, InvoiceItem, formatCurrency } from './models.js';
 import { StorageService } from './storage.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString } from './qrHelper.js';
 import { ExporterService } from './exporter.js';
+import { DEFAULT_LANGUAGE, availableLanguages, getLanguage } from './i18n/languages.js';
+import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, statusLabel } from './i18n/i18n.js';
+import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
+
+const DESKTOP_QUERY = window.matchMedia('(min-width: 1024px)');
+const STEP_COUNT = 3;
+
+const MIC_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>';
+const SPEAK_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>';
+const TRASH_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
 
 class BillCraftApp {
   constructor() {
     this.settings = StorageService.getSettings();
-    this.catalog = StorageService.getCatalog();
-    this.invoices = StorageService.getInvoices();
     this.currentInvoice = StorageService.getActiveDraft() || this.createNewInvoice();
     this.activeTemplate = this.currentInvoice.template || this.settings.defaultTemplate || 'modern';
     this.currentView = 'builder';
-    this.activeMobileTab = 'editor';
+    this.step = 1;
     this.qrDataUrl = '';
-
     this.editingProductId = null;
+    this.expandedItemIds = new Set();
 
-    this.init();
+    // Replaced by loadTranslators() before anything is rendered
+    this.ui = createTranslator();
+    this.bill = this.ui;
   }
 
-  init() {
-    this.applyThemeAccent(this.settings.themeAccent);
+  async start() {
+    await this.loadTranslators();
     this.bindNavigation();
     this.bindBuilderEvents();
     this.bindCatalogEvents();
     this.bindHistoryEvents();
     this.bindSettingsEvents();
     this.bindModalEvents();
+    this.bindLanguageEvents();
+    this.bindVoiceEvents();
+    this.bindMoreOptions();
+    this.populateLanguageSelects();
+    this.setupSpeechButtons();
+    this.decorateVoiceFields(document);
+    this.refreshAll();
+    if (!this.settings.appLanguage) this.openLanguagePicker(true);
+  }
 
-    this.refreshQR();
-    this.renderActiveView();
-    this.renderActiveInvoicePreview();
-    this.updateSidebarBrand();
+  populateLanguageSelects() {
+    const labelFor = language => (language.nativeName === language.name
+      ? language.name
+      : `${language.nativeName} (${language.name})`);
+    const options = availableLanguages()
+      .map(language => `<option value="${language.code}">${this.escape(labelFor(language))}</option>`)
+      .join('');
+
+    document.getElementById('settings-app-language').innerHTML = options;
+    document.getElementById('settings-bill-language').innerHTML =
+      `<option value="" data-i18n="settings.billLanguageSame">Same as app language</option>${options}`;
+  }
+
+  // --- Translation ---
+  async loadTranslators() {
+    const appCode = this.settings.appLanguage || DEFAULT_LANGUAGE;
+    this.ui = createTranslator(await loadLocale(appCode));
+    this.bill = createTranslator(await loadLocale(this.settings.billLanguage || appCode));
+    setDocumentLanguage(appCode);
+  }
+
+  async applyLanguageChange() {
+    await this.loadTranslators();
+    this.refreshAll();
+  }
+
+  t(key, params) {
+    return this.ui.t(key, params);
+  }
+
+  speechTag() {
+    return getLanguage(this.settings.appLanguage)?.speech || 'en-IN';
+  }
+
+  // --- Language picker ---
+  bindLanguageEvents() {
+    document.getElementById('btn-change-language').addEventListener('click', () => this.openLanguagePicker(false));
+  }
+
+  openLanguagePicker(firstRun) {
+    const grid = document.getElementById('lang-grid');
+    grid.innerHTML = availableLanguages().map(language => `
+      <button type="button" class="lang-option${language.code === this.settings.appLanguage ? ' active' : ''}" data-lang="${language.code}" lang="${language.code}">
+        <span class="lang-native">${this.escape(language.nativeName)}</span>
+        <span class="lang-english">${this.escape(language.name)}</span>
+      </button>
+    `).join('');
+
+    grid.querySelectorAll('.lang-option').forEach(btn => {
+      btn.addEventListener('click', () => this.chooseAppLanguage(btn.dataset.lang));
+    });
+
+    // On the first visit the language must be chosen, so there is no close button
+    document.getElementById('btn-close-language').hidden = firstRun;
+    this.openModal('modal-language');
+  }
+
+  async chooseAppLanguage(code) {
+    this.settings.appLanguage = code;
+    StorageService.saveSettings(this.settings);
+    await this.applyLanguageChange();
+    this.closeModal('modal-language');
+    this.showToast(this.t('toast.languageChanged'), 'success');
   }
 
   // --- Theme & Brand ---
@@ -48,45 +126,34 @@ class BillCraftApp {
   updateSidebarBrand() {
     const brandNameEl = document.getElementById('sidebar-brand-name');
     const brandAvatarEl = document.getElementById('sidebar-brand-avatar');
-    if (brandNameEl) brandNameEl.textContent = this.settings.brandName || 'BillCraft';
+    if (brandNameEl) brandNameEl.textContent = this.settings.brandName || this.t('app.name');
     if (brandAvatarEl) {
       const initial = (this.settings.brandName || 'B').trim().charAt(0).toUpperCase();
       brandAvatarEl.textContent = initial;
     }
   }
 
-  // --- View Navigation ---
+  // --- Navigation ---
   bindNavigation() {
-    const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const view = btn.dataset.view;
-        this.switchView(view);
-      });
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.switchView(btn.dataset.view));
     });
 
-    // Mobile tabs for bill builder (Editor vs Preview)
-    const tabBtns = document.querySelectorAll('.view-tab-btn');
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        this.switchMobileTab(tab);
-      });
+    document.querySelectorAll('[data-step-go]').forEach(btn => {
+      btn.addEventListener('click', () => this.setStep(Number(btn.dataset.stepGo)));
     });
 
-    const jumpToPreviewBtn = document.getElementById('btn-jump-to-preview');
-    if (jumpToPreviewBtn) {
-      jumpToPreviewBtn.addEventListener('click', () => {
-        this.switchMobileTab('preview');
-        const previewPanel = document.querySelector('.bill-preview-panel');
-        if (previewPanel) {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
-    }
+    document.getElementById('btn-step-back').addEventListener('click', () => this.setStep(this.step - 1));
+    document.getElementById('btn-step-next').addEventListener('click', () => this.setStep(this.step + 1));
+    document.getElementById('btn-jump-to-preview').addEventListener('click', () => this.setStep(STEP_COUNT));
   }
 
   switchView(viewName) {
+    this.showView(viewName);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  showView(viewName) {
     this.currentView = viewName;
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -97,38 +164,52 @@ class BillCraftApp {
       section.classList.toggle('active', section.id === `view-${viewName}`);
     });
 
-    const titleMap = {
-      builder: 'New Sales Bill',
-      catalog: 'Product Catalog',
-      history: 'Bills & History',
-      settings: 'Settings & Profile'
-    };
     const titleEl = document.getElementById('topbar-page-title');
-    if (titleEl) titleEl.textContent = titleMap[viewName] || 'BillCraft';
+    if (titleEl) titleEl.textContent = this.t(`title.${viewName}`);
 
     if (viewName === 'catalog') this.renderCatalogView();
     if (viewName === 'history') this.renderHistoryView();
     if (viewName === 'settings') this.renderSettingsView();
     if (viewName === 'builder') this.renderBuilderForm();
-
-    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
-  switchMobileTab(tabName) {
-    this.activeMobileTab = tabName;
-    const layout = document.querySelector('.bill-builder-layout');
-    if (layout) {
-      layout.classList.remove('tab-mode-editor', 'tab-mode-preview');
-      layout.classList.add(`tab-mode-${tabName}`);
-    }
+  /**
+   * Mobile guided flow: 1 Customer, 2 Items, 3 Done (preview and share).
+   * On desktop the CSS shows all three panels at once and ignores the step.
+   */
+  setStep(step) {
+    this.step = Math.min(STEP_COUNT, Math.max(1, step));
 
-    document.querySelectorAll('.view-tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    const layout = document.getElementById('bill-layout');
+    layout.classList.remove(...Array.from({ length: STEP_COUNT }, (_, i) => `step-${i + 1}`));
+    layout.classList.add(`step-${this.step}`);
+
+    document.querySelectorAll('[data-step-go]').forEach(btn => {
+      const active = Number(btn.dataset.stepGo) === this.step;
+      btn.classList.toggle('active', active);
+      if (active) {
+        btn.setAttribute('aria-current', 'step');
+      } else {
+        btn.removeAttribute('aria-current');
+      }
     });
 
-    if (tabName === 'preview') {
-      this.renderActiveInvoicePreview();
-    }
+    document.getElementById('btn-step-back').hidden = this.step === 1;
+    document.getElementById('btn-step-next').hidden = this.step === STEP_COUNT;
+
+    if (this.step === STEP_COUNT) this.renderActiveInvoicePreview();
+  }
+
+  refreshAll() {
+    applyTranslations(this.ui.t);
+    this.updateSidebarBrand();
+    this.applyThemeAccent(this.settings.themeAccent);
+    this.showView(this.currentView);
+    this.refreshQR();
+    this.renderActiveInvoicePreview();
+    this.updateBadges();
+    this.setStep(this.step);
+    this.decorateVoiceFields(document);
   }
 
   // --- Bill Builder Logic ---
@@ -153,123 +234,100 @@ class BillCraftApp {
   }
 
   bindBuilderEvents() {
-    const btnNewBill = document.getElementById('btn-new-bill');
-    if (btnNewBill) {
-      btnNewBill.addEventListener('click', () => {
-        if (confirm('Create a new blank bill?')) {
-          this.currentInvoice = this.createNewInvoice();
-          StorageService.saveActiveDraft(this.currentInvoice);
-          this.switchView('builder');
-          this.switchMobileTab('editor');
-          this.renderBuilderForm();
-          this.renderActiveInvoicePreview();
-          this.showToast('Created new blank bill', 'info');
-        }
-      });
-    }
+    document.getElementById('btn-new-bill').addEventListener('click', () => {
+      if (!confirm(this.t('confirm.newBill'))) return;
+      this.currentInvoice = this.createNewInvoice();
+      this.activeTemplate = this.currentInvoice.template;
+      this.expandedItemIds.clear();
+      StorageService.saveActiveDraft(this.currentInvoice);
+      this.switchView('builder');
+      this.setStep(1);
+      this.showToast(this.t('toast.newBill'), 'info');
+    });
 
-    const btnSaveBill = document.getElementById('btn-save-bill');
-    if (btnSaveBill) {
-      btnSaveBill.addEventListener('click', () => {
-        this.saveCurrentInvoiceToHistory();
-      });
-    }
+    document.querySelectorAll('.btn-save-bill').forEach(btn => {
+      btn.addEventListener('click', () => this.saveCurrentInvoiceToHistory());
+    });
 
     const inputs = [
       'inv-number', 'inv-date', 'inv-status',
       'cust-name', 'cust-phone', 'cust-address', 'cust-notes',
       'inv-shipping', 'inv-discount', 'inv-footer-notes'
     ];
-
     inputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('input', () => this.syncFormToInvoice());
-      }
+      document.getElementById(id).addEventListener('input', () => this.syncFormToInvoice());
     });
 
-    const btnAddCustom = document.getElementById('btn-add-custom-item');
-    if (btnAddCustom) {
-      btnAddCustom.addEventListener('click', () => {
-        this.currentInvoice.items.push(new InvoiceItem({
-          name: '',
-          quantity: 1,
-          unit: 'pcs',
-          unitPrice: 0
-        }));
-        this.renderAllItemsViews();
-        this.syncFormToInvoice();
-        this.showToast('Added new item row', 'info');
-      });
-    }
+    document.getElementById('btn-add-custom-item').addEventListener('click', () => {
+      this.currentInvoice.items.push(new InvoiceItem({
+        name: '',
+        quantity: 1,
+        unit: 'pcs',
+        unitPrice: 0
+      }));
+      this.renderAllItemsViews();
+      this.syncFormToInvoice();
+      this.focusLastItemName();
+      this.showToast(this.t('items.added'), 'info');
+    });
 
-    const btnPickCatalog = document.getElementById('btn-pick-from-catalog');
-    if (btnPickCatalog) {
-      btnPickCatalog.addEventListener('click', () => {
-        this.openCatalogPickerModal();
-      });
-    }
+    document.getElementById('btn-pick-from-catalog').addEventListener('click', () => {
+      this.openCatalogPickerModal();
+    });
 
-    const templateSelect = document.getElementById('preview-template-select');
-    if (templateSelect) {
-      templateSelect.addEventListener('change', (e) => {
-        this.activeTemplate = e.target.value;
-        this.currentInvoice.template = this.activeTemplate;
-        this.renderActiveInvoicePreview();
-      });
-    }
+    document.getElementById('preview-template-select').addEventListener('change', (e) => {
+      this.activeTemplate = e.target.value;
+      this.currentInvoice.template = this.activeTemplate;
+      StorageService.saveActiveDraft(this.currentInvoice);
+      this.renderActiveInvoicePreview();
+    });
 
-    // Export Handlers
-    const btnExportPDF = document.getElementById('btn-export-pdf');
-    if (btnExportPDF) {
-      btnExportPDF.addEventListener('click', async () => {
-        this.showToast('Preparing PDF download...', 'info');
-        const filename = `${this.currentInvoice.invoiceNumber || 'bill'}.pdf`;
-        await ExporterService.exportPDF('active-invoice-doc', filename);
-        this.showToast('PDF ready!', 'success');
-      });
-    }
+    document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+      this.showToast(this.t('toast.pdfPreparing'), 'info');
+      await ExporterService.exportPDF('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.pdf`);
+      this.showToast(this.t('toast.pdfReady'), 'success');
+    });
 
-    const btnExportImage = document.getElementById('btn-export-image');
-    if (btnExportImage) {
-      btnExportImage.addEventListener('click', async () => {
-        this.showToast('Generating PNG image...', 'info');
-        const filename = `${this.currentInvoice.invoiceNumber || 'bill'}.png`;
-        await ExporterService.exportImage('active-invoice-doc', filename);
-        this.showToast('Image downloaded!', 'success');
-      });
-    }
+    document.getElementById('btn-export-image').addEventListener('click', async () => {
+      this.showToast(this.t('toast.imagePreparing'), 'info');
+      await ExporterService.exportImage('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.png`);
+      this.showToast(this.t('toast.imageReady'), 'success');
+    });
 
-    const btnShareWhatsApp = document.getElementById('btn-share-whatsapp');
-    if (btnShareWhatsApp) {
-      btnShareWhatsApp.addEventListener('click', () => {
-        ExporterService.shareWhatsApp(this.currentInvoice, this.settings);
-      });
-    }
+    document.getElementById('btn-share-whatsapp').addEventListener('click', () => {
+      ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill);
+    });
 
-    const btnPrintBill = document.getElementById('btn-print-bill');
-    if (btnPrintBill) {
-      btnPrintBill.addEventListener('click', () => {
-        ExporterService.triggerPrint();
-      });
-    }
+    document.getElementById('btn-print-bill').addEventListener('click', () => {
+      ExporterService.triggerPrint();
+    });
+
+    document.querySelectorAll('.btn-speak').forEach(btn => {
+      btn.addEventListener('click', () => this.speakTotal());
+    });
+  }
+
+  focusLastItemName() {
+    const scope = '#mobile-items-list';
+    const names = document.querySelectorAll(`${scope} input[data-field="name"]`);
+    names[names.length - 1]?.focus();
   }
 
   syncFormToInvoice() {
-    this.currentInvoice.invoiceNumber = document.getElementById('inv-number')?.value || '';
-    this.currentInvoice.date = document.getElementById('inv-date')?.value || '';
-    this.currentInvoice.status = document.getElementById('inv-status')?.value || 'Paid';
+    this.currentInvoice.invoiceNumber = document.getElementById('inv-number').value || '';
+    this.currentInvoice.date = document.getElementById('inv-date').value || '';
+    this.currentInvoice.status = document.getElementById('inv-status').value || 'Paid';
 
     this.currentInvoice.customer = {
-      name: document.getElementById('cust-name')?.value || '',
-      phone: document.getElementById('cust-phone')?.value || '',
-      address: document.getElementById('cust-address')?.value || '',
-      note: document.getElementById('cust-notes')?.value || ''
+      name: document.getElementById('cust-name').value || '',
+      phone: document.getElementById('cust-phone').value || '',
+      address: document.getElementById('cust-address').value || '',
+      note: document.getElementById('cust-notes').value || ''
     };
 
-    this.currentInvoice.shippingFee = parseFloat(document.getElementById('inv-shipping')?.value) || 0;
-    this.currentInvoice.billDiscount = parseFloat(document.getElementById('inv-discount')?.value) || 0;
-    this.currentInvoice.notes = document.getElementById('inv-footer-notes')?.value || '';
+    this.currentInvoice.shippingFee = parseFloat(document.getElementById('inv-shipping').value) || 0;
+    this.currentInvoice.billDiscount = parseFloat(document.getElementById('inv-discount').value) || 0;
+    this.currentInvoice.notes = document.getElementById('inv-footer-notes').value || '';
 
     this.updateTotalsCard();
     this.refreshQR();
@@ -293,112 +351,27 @@ class BillCraftApp {
     document.getElementById('inv-footer-notes').value = this.currentInvoice.notes || '';
 
     const templateSelect = document.getElementById('preview-template-select');
-    if (templateSelect) {
-      templateSelect.value = this.currentInvoice.template || this.settings.defaultTemplate || 'modern';
-      this.activeTemplate = templateSelect.value;
-    }
+    templateSelect.value = this.currentInvoice.template || this.settings.defaultTemplate || 'modern';
+    this.activeTemplate = templateSelect.value;
 
     this.renderAllItemsViews();
     this.updateTotalsCard();
+    this.refreshQR();
+    this.renderActiveInvoicePreview();
   }
 
   renderAllItemsViews() {
-    this.renderDesktopItemsTable();
     this.renderMobileItemsCards();
   }
 
-  renderDesktopItemsTable() {
-    const tbody = document.getElementById('items-table-body');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    const curr = this.settings.currency || '₹';
-
-    if (this.currentInvoice.items.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="6" style="text-align:center; padding: 1.5rem; color: #94a3b8;">
-            No items added yet. Click <strong>"+ From Catalog"</strong> or <strong>"+ Custom Item"</strong>.
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    this.currentInvoice.items.forEach((item, index) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="min-width: 170px;">
-          <input type="text" class="form-control item-row-title-input" placeholder="Item name" value="${this.escape(item.name)}" data-index="${index}" data-field="name" />
-          <input type="text" class="form-control item-row-desc-input" placeholder="Optional description" value="${this.escape(item.description)}" data-index="${index}" data-field="description" />
-        </td>
-        <td style="width: 100px;">
-          <input type="number" step="any" min="0" class="form-control" value="${item.unitPrice}" data-index="${index}" data-field="unitPrice" />
-        </td>
-        <td style="width: 120px;">
-          <div style="display: flex; gap: 4px;">
-            <input type="number" step="any" min="0.01" class="form-control" style="width: 60px;" value="${item.quantity}" data-index="${index}" data-field="quantity" />
-            <input type="text" class="form-control" style="width: 50px;" placeholder="pcs" value="${this.escape(item.unit)}" data-index="${index}" data-field="unit" />
-          </div>
-        </td>
-        <td style="width: 75px;">
-          <input type="number" min="0" max="100" class="form-control" placeholder="0" value="${item.discount || ''}" data-index="${index}" data-field="discount" />
-        </td>
-        <td style="width: 90px; text-align: right;">
-          <div class="item-total-badge">${formatCurrency(item.total, curr)}</div>
-        </td>
-        <td style="width: 40px; text-align: center;">
-          <button type="button" class="btn btn-ghost btn-icon btn-remove-item" data-index="${index}" title="Remove item" style="color: var(--danger);">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    tbody.querySelectorAll('input').forEach(input => {
-      input.addEventListener('input', (e) => {
-        const idx = parseInt(e.target.dataset.index, 10);
-        const field = e.target.dataset.field;
-        let val = e.target.value;
-
-        if (field === 'unitPrice' || field === 'quantity' || field === 'discount') {
-          val = parseFloat(val) || 0;
-        }
-
-        this.currentInvoice.items[idx][field] = val;
-        this.renderMobileItemsCards(); // Sync to mobile view
-        this.updateTotalsCard();
-        this.renderActiveInvoicePreview();
-        StorageService.saveActiveDraft(this.currentInvoice);
-      });
-    });
-
-    tbody.querySelectorAll('.btn-remove-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.index, 10);
-        this.currentInvoice.items.splice(idx, 1);
-        this.renderAllItemsViews();
-        this.updateTotalsCard();
-        this.renderActiveInvoicePreview();
-        StorageService.saveActiveDraft(this.currentInvoice);
-      });
-    });
-  }
 
   renderMobileItemsCards() {
     const container = document.getElementById('mobile-items-list');
-    if (!container) return;
-
     container.innerHTML = '';
     const curr = this.settings.currency || '₹';
 
     if (this.currentInvoice.items.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center; padding: 1.5rem; color: #94a3b8; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px dashed var(--border-light);">
-          No items in bill yet.
-        </div>
-      `;
+      container.innerHTML = `<div class="empty-box">${this.escape(this.t('items.emptyHint'))}</div>`;
       return;
     }
 
@@ -408,50 +381,65 @@ class BillCraftApp {
       card.innerHTML = `
         <div class="mobile-item-header">
           <div class="mobile-item-title-wrap">
-            <input type="text" class="form-control" style="font-weight: 700; margin-bottom: 4px;" placeholder="Product / Item name" value="${this.escape(item.name)}" data-index="${index}" data-field="name" />
-            <input type="text" class="form-control" style="font-size: 0.8rem;" placeholder="Description / notes (optional)" value="${this.escape(item.description)}" data-index="${index}" data-field="description" />
+            <input type="text" class="form-control item-name-input" placeholder="${this.escape(this.t('item.namePh'))}" value="${this.escape(item.name)}" data-index="${index}" data-field="name" data-voice="text" aria-label="${this.escape(this.t('item.namePh'))}" />
           </div>
-          <button type="button" class="btn btn-ghost btn-icon btn-del-mob-item" data-index="${index}" style="color: var(--danger); margin-left: 4px;" title="Delete">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          <button type="button" class="btn btn-ghost btn-icon btn-del-mob-item" data-index="${index}" title="${this.escape(this.t('item.remove'))}" aria-label="${this.escape(this.t('item.remove'))}" style="color: var(--danger);">
+            ${TRASH_ICON}
           </button>
         </div>
 
         <div class="mobile-item-inputs-grid">
-          <div>
-            <label class="form-label" style="font-size: 0.7rem; margin-bottom: 2px;">Rate (${curr})</label>
-            <input type="number" step="any" min="0" class="form-control" value="${item.unitPrice}" data-index="${index}" data-field="unitPrice" />
+          <div class="field-stack">
+            <span class="form-label">${this.escape(this.t('item.rate', { currency: curr }))}</span>
+            <input type="number" inputmode="decimal" step="any" min="0" class="form-control" value="${item.unitPrice}" data-index="${index}" data-field="unitPrice" data-voice="number" />
           </div>
 
-          <div>
-            <label class="form-label" style="font-size: 0.7rem; margin-bottom: 2px;">Quantity</label>
+          <div class="field-stack">
+            <span class="form-label">${this.escape(this.t('item.qty'))}</span>
             <div class="qty-stepper">
-              <button type="button" class="qty-step-btn btn-mob-qty-minus" data-index="${index}">&minus;</button>
-              <input type="number" step="any" min="0.01" class="qty-stepper-input" value="${item.quantity}" data-index="${index}" data-field="quantity" />
-              <button type="button" class="qty-step-btn btn-mob-qty-plus" data-index="${index}">&#43;</button>
+              <button type="button" class="qty-step-btn btn-mob-qty-minus" data-index="${index}" aria-label="${this.escape(this.t('item.decrease'))}">&minus;</button>
+              <input type="number" inputmode="decimal" step="any" min="0.01" class="qty-stepper-input" value="${item.quantity}" data-index="${index}" data-field="quantity" data-voice="number" aria-label="${this.escape(this.t('item.qty'))}" />
+              <button type="button" class="qty-step-btn btn-mob-qty-plus" data-index="${index}" aria-label="${this.escape(this.t('item.increase'))}">&#43;</button>
             </div>
-          </div>
-
-          <div>
-            <label class="form-label" style="font-size: 0.7rem; margin-bottom: 2px;">Unit</label>
-            <input type="text" class="form-control" placeholder="pcs" value="${this.escape(item.unit)}" data-index="${index}" data-field="unit" />
           </div>
         </div>
 
+        <details class="item-more" data-item-id="${item.id}"${this.expandedItemIds.has(item.id) ? ' open' : ''}>
+          <summary>${this.escape(this.t('item.more'))}</summary>
+          <div class="item-more-body">
+            <div class="field-stack">
+              <span class="form-label">${this.escape(this.t('item.unit'))}</span>
+              <input type="text" class="form-control" placeholder="${this.escape(this.t('item.unitPh'))}" value="${this.escape(item.unit)}" data-index="${index}" data-field="unit" />
+            </div>
+            <div class="field-stack">
+              <span class="form-label">${this.escape(this.t('item.discPct'))}</span>
+              <input type="number" inputmode="decimal" min="0" max="100" class="form-control" placeholder="0" value="${item.discount || ''}" data-index="${index}" data-field="discount" />
+            </div>
+            <div class="field-stack field-wide">
+              <span class="form-label">${this.escape(this.t('product.desc'))}</span>
+              <input type="text" class="form-control" placeholder="${this.escape(this.t('item.descPh'))}" value="${this.escape(item.description)}" data-index="${index}" data-field="description" />
+            </div>
+          </div>
+        </details>
+
         <div class="mobile-item-footer">
-          <div style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted);">
-            <span>Disc %:</span>
-            <input type="number" min="0" max="100" class="form-control" style="width: 55px; height: 32px; padding: 2px 6px;" placeholder="0" value="${item.discount || ''}" data-index="${index}" data-field="discount" />
-          </div>
-          <div>
-            <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 4px;">Total:</span>
-            <span class="item-total-badge" style="color: var(--theme-accent, #4f46e5); font-size: 1.05rem;">${formatCurrency(item.total, curr)}</span>
-          </div>
+          <span class="item-total-caption">${this.escape(this.t('item.total'))}</span>
+          <span class="item-total-badge">${formatCurrency(item.total, curr)}</span>
         </div>
       `;
       container.appendChild(card);
     });
 
-    // Mobile inputs binding
+    container.querySelectorAll('details.item-more').forEach(details => {
+      details.addEventListener('toggle', () => {
+        if (details.open) {
+          this.expandedItemIds.add(details.dataset.itemId);
+        } else {
+          this.expandedItemIds.delete(details.dataset.itemId);
+        }
+      });
+    });
+
     container.querySelectorAll('input').forEach(input => {
       input.addEventListener('input', (e) => {
         const idx = parseInt(e.target.dataset.index, 10);
@@ -463,14 +451,12 @@ class BillCraftApp {
         }
 
         this.currentInvoice.items[idx][field] = val;
-        this.renderDesktopItemsTable(); // Sync to desktop view
         this.updateTotalsCard();
         this.renderActiveInvoicePreview();
         StorageService.saveActiveDraft(this.currentInvoice);
       });
     });
 
-    // Mobile Quantity Steppers (+ and -)
     container.querySelectorAll('.btn-mob-qty-minus').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
@@ -496,7 +482,6 @@ class BillCraftApp {
       });
     });
 
-    // Mobile delete button
     container.querySelectorAll('.btn-del-mob-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
@@ -507,17 +492,27 @@ class BillCraftApp {
         StorageService.saveActiveDraft(this.currentInvoice);
       });
     });
+
+    this.decorateVoiceFields(container);
+  }
+
+  /** Collapsed "More options" sections are always open on desktop. */
+  bindMoreOptions() {
+    const openOnDesktop = () => {
+      if (!DESKTOP_QUERY.matches) return;
+      document.querySelectorAll('details.more-options').forEach(details => {
+        details.open = true;
+      });
+    };
+    openOnDesktop();
+    DESKTOP_QUERY.addEventListener('change', openOnDesktop);
   }
 
   updateTotalsCard() {
     const curr = this.settings.currency || '₹';
-    const subtotalEl = document.getElementById('summary-subtotal');
-    const grandTotalEl = document.getElementById('summary-grand-total');
-    const wordsEl = document.getElementById('summary-words');
-
-    if (subtotalEl) subtotalEl.textContent = formatCurrency(this.currentInvoice.subtotal, curr);
-    if (grandTotalEl) grandTotalEl.textContent = formatCurrency(this.currentInvoice.grandTotal, curr);
-    if (wordsEl) wordsEl.textContent = numberToWords(this.currentInvoice.grandTotal);
+    document.getElementById('summary-subtotal').textContent = formatCurrency(this.currentInvoice.subtotal, curr);
+    document.getElementById('summary-grand-total').textContent = formatCurrency(this.currentInvoice.grandTotal, curr);
+    document.getElementById('summary-words').textContent = this.ui.words(this.currentInvoice.grandTotal);
   }
 
   refreshQR() {
@@ -536,64 +531,139 @@ class BillCraftApp {
 
   renderActiveInvoicePreview() {
     const container = document.getElementById('invoice-render-target');
-    if (!container) return;
-
-    const html = renderInvoice(
+    container.innerHTML = renderInvoice(
       this.activeTemplate,
       this.currentInvoice,
       this.settings,
-      this.qrDataUrl
+      this.qrDataUrl,
+      this.bill
     );
-    container.innerHTML = html;
   }
 
   saveCurrentInvoiceToHistory() {
     this.syncFormToInvoice();
 
     if (!this.currentInvoice.invoiceNumber) {
-      this.showToast('Please enter an Invoice / Bill number', 'warning');
+      this.showToast(this.t('toast.needNumber'), 'warning');
+      this.setStep(1);
       return;
     }
 
     if (this.currentInvoice.items.length === 0) {
-      this.showToast('Please add at least one item to the bill', 'warning');
+      this.showToast(this.t('toast.needItem'), 'warning');
+      this.setStep(2);
       return;
     }
 
     StorageService.saveInvoice(this.currentInvoice);
-    this.invoices = StorageService.getInvoices();
-    this.showToast(`Bill #${this.currentInvoice.invoiceNumber} saved!`, 'success');
+    this.showToast(this.t('toast.billSaved', { number: this.currentInvoice.invoiceNumber }), 'success');
     this.updateBadges();
+  }
+
+  // --- Voice ---
+  bindVoiceEvents() {
+    document.addEventListener('click', (event) => {
+      const mic = event.target.closest('.btn-mic');
+      if (mic) this.startVoiceInput(mic);
+    });
+  }
+
+  setupSpeechButtons() {
+    const supported = canSpeak();
+    document.querySelectorAll('.btn-speak').forEach(btn => {
+      btn.hidden = !supported;
+    });
+  }
+
+  /**
+   * Adds a microphone button beside every input marked data-voice. Runs after
+   * each render, and skips inputs that already have one.
+   */
+  decorateVoiceFields(root) {
+    if (!canListen()) return;
+
+    root.querySelectorAll('input[data-voice]').forEach(input => {
+      const anchor = input.closest('.qty-stepper') || input;
+      if (anchor.parentElement.classList.contains('voice-field')) return;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'voice-field';
+      anchor.parentElement.insertBefore(wrap, anchor);
+      wrap.appendChild(anchor);
+
+      const mic = document.createElement('button');
+      mic.type = 'button';
+      mic.className = 'btn btn-secondary btn-icon btn-mic';
+      mic.title = this.t('voice.speak');
+      mic.setAttribute('aria-label', this.t('voice.speak'));
+      mic.innerHTML = MIC_ICON;
+      wrap.appendChild(mic);
+    });
+  }
+
+  async startVoiceInput(mic) {
+    if (!this.settings.voiceConsent) {
+      if (!confirm(this.t('voice.consent'))) return;
+      this.settings.voiceConsent = true;
+      StorageService.saveSettings(this.settings);
+    }
+
+    const input = mic.closest('.voice-field').querySelector('[data-voice]');
+    const numeric = input.dataset.voice === 'number';
+    const idleTitle = this.t('voice.speak');
+
+    mic.classList.add('listening');
+    mic.title = this.t('voice.listening');
+    try {
+      listenOnce(this.speechTag(), {
+        onText: (text) => {
+          const value = numeric ? normalizeSpokenNumber(text) : text.trim();
+          if (!value) {
+            this.showToast(this.t('voice.noSpeech'), 'warning');
+            return;
+          }
+          input.value = value;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        onError: (error) => {
+          const key = error === 'no-speech' ? 'voice.noSpeech' : 'voice.failed';
+          this.showToast(this.t(key), 'warning');
+        },
+        onEnd: () => {
+          mic.classList.remove('listening');
+          mic.title = idleTitle;
+        }
+      });
+    } catch (error) {
+      mic.classList.remove('listening');
+      mic.title = idleTitle;
+      this.showToast(this.t('voice.failed'), 'warning');
+    }
+  }
+
+  speakTotal() {
+    const words = this.ui.words(this.currentInvoice.grandTotal);
+    speak(this.t('voice.totalSpoken', { words }), this.speechTag());
   }
 
   // --- Catalog Modal & Catalog View ---
   bindCatalogEvents() {
-    const btnNewProduct = document.getElementById('btn-new-product');
-    if (btnNewProduct) {
-      btnNewProduct.addEventListener('click', () => {
-        this.openProductModal();
-      });
-    }
+    document.getElementById('btn-new-product').addEventListener('click', () => {
+      this.openProductModal();
+    });
 
-    const catalogSearch = document.getElementById('catalog-search');
-    if (catalogSearch) {
-      catalogSearch.addEventListener('input', (e) => {
-        this.renderCatalogView(e.target.value);
-      });
-    }
+    document.getElementById('catalog-search').addEventListener('input', (e) => {
+      this.renderCatalogView(e.target.value);
+    });
 
-    const formProduct = document.getElementById('form-product-edit');
-    if (formProduct) {
-      formProduct.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.saveProductFromModal();
-      });
-    }
+    document.getElementById('form-product-edit').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.saveProductFromModal();
+    });
   }
 
   renderCatalogView(searchQuery = '') {
     const container = document.getElementById('products-catalog-grid');
-    if (!container) return;
 
     let items = StorageService.getCatalog();
     if (searchQuery.trim()) {
@@ -609,13 +679,12 @@ class BillCraftApp {
 
     if (items.length === 0) {
       container.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px dashed var(--border-light);">
-          <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.85rem;">No products found</p>
-          <button class="btn btn-primary" id="btn-empty-add-prod">+ Add First Product</button>
+        <div class="empty-box empty-box-wide">
+          <p>${this.escape(this.t('catalog.empty'))}</p>
+          <button class="btn btn-primary" id="btn-empty-add-prod">${this.escape(this.t('catalog.addFirst'))}</button>
         </div>
       `;
-      const emptyAdd = document.getElementById('btn-empty-add-prod');
-      if (emptyAdd) emptyAdd.addEventListener('click', () => this.openProductModal());
+      document.getElementById('btn-empty-add-prod').addEventListener('click', () => this.openProductModal());
       return;
     }
 
@@ -626,23 +695,22 @@ class BillCraftApp {
             <div class="product-card-title">${this.escape(p.name)}</div>
             <span class="product-card-tag">${this.escape(p.category || 'General')}</span>
           </div>
-          <div class="product-card-desc">${this.escape(p.description || 'No description')}</div>
+          <div class="product-card-desc">${this.escape(p.description || this.t('catalog.noDesc'))}</div>
         </div>
         <div class="product-card-bottom">
           <div>
             <span class="product-card-price">${formatCurrency(p.unitPrice, curr)}</span>
             <span class="product-card-unit">/${this.escape(p.unit || 'pcs')}</span>
           </div>
-          <div style="display: flex; gap: 0.4rem;">
-            <button class="btn btn-secondary btn-sm btn-add-prod-to-bill" data-id="${p.id}" title="Add to active bill">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-              Add
+          <div class="product-card-actions">
+            <button class="btn btn-secondary btn-sm btn-add-prod-to-bill" data-id="${p.id}" title="${this.escape(this.t('catalog.addToBill'))}">
+              ${this.t('common.add')}
             </button>
-            <button class="btn btn-ghost btn-sm btn-icon btn-edit-product" data-id="${p.id}" title="Edit product">
+            <button class="btn btn-ghost btn-sm btn-icon btn-edit-product" data-id="${p.id}" title="${this.escape(this.t('catalog.editTitle'))}" aria-label="${this.escape(this.t('catalog.editTitle'))}">
               <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </button>
-            <button class="btn btn-ghost btn-sm btn-icon btn-delete-product" data-id="${p.id}" title="Delete" style="color: var(--danger);">
-              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <button class="btn btn-ghost btn-sm btn-icon btn-delete-product" data-id="${p.id}" title="${this.escape(this.t('catalog.deleteTitle'))}" aria-label="${this.escape(this.t('catalog.deleteTitle'))}" style="color: var(--danger);">
+              ${TRASH_ICON}
             </button>
           </div>
         </div>
@@ -654,7 +722,7 @@ class BillCraftApp {
         const prod = items.find(p => p.id === btn.dataset.id);
         if (prod) {
           this.addProductToBill(prod);
-          this.showToast(`Added "${prod.name}" to bill!`, 'success');
+          this.showToast(this.t('toast.productAdded', { name: prod.name }), 'success');
         }
       });
     });
@@ -668,10 +736,10 @@ class BillCraftApp {
 
     container.querySelectorAll('.btn-delete-product').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (confirm('Delete this product from catalog?')) {
+        if (confirm(this.t('confirm.deleteProduct'))) {
           StorageService.deleteProduct(btn.dataset.id);
           this.renderCatalogView();
-          this.showToast('Product deleted', 'info');
+          this.showToast(this.t('toast.productDeleted'), 'info');
         }
       });
     });
@@ -698,10 +766,8 @@ class BillCraftApp {
 
   openProductModal(product = null) {
     this.editingProductId = product ? product.id : null;
-    const modal = document.getElementById('modal-product');
-    const title = document.getElementById('modal-product-title');
 
-    title.textContent = product ? 'Edit Product' : 'Add New Product';
+    document.getElementById('modal-product-title').textContent = this.t(product ? 'product.editTitle' : 'product.addTitle');
     document.getElementById('modal-prod-name').value = product ? product.name : '';
     document.getElementById('modal-prod-category').value = product ? (product.category || 'General') : 'General';
     document.getElementById('modal-prod-desc').value = product ? (product.description || '') : '';
@@ -709,7 +775,7 @@ class BillCraftApp {
     document.getElementById('modal-prod-unit').value = product ? (product.unit || 'pcs') : 'pcs';
     document.getElementById('modal-prod-sku').value = product ? (product.sku || '') : '';
 
-    modal.classList.add('active');
+    this.openModal('modal-product');
   }
 
   saveProductFromModal() {
@@ -721,23 +787,21 @@ class BillCraftApp {
     const sku = document.getElementById('modal-prod-sku').value.trim();
 
     if (!name) {
-      this.showToast('Product name is required', 'warning');
+      this.showToast(this.t('toast.productNameRequired'), 'warning');
       return;
     }
 
     if (this.editingProductId) {
-      const updated = new Product({
+      StorageService.updateProduct(new Product({
         id: this.editingProductId,
         name, category, description, unitPrice, unit, sku
-      });
-      StorageService.updateProduct(updated);
-      this.showToast('Product updated successfully', 'success');
+      }));
+      this.showToast(this.t('toast.productUpdated'), 'success');
     } else {
-      const created = new Product({
+      StorageService.addProduct(new Product({
         name, category, description, unitPrice, unit, sku
-      });
-      StorageService.addProduct(created);
-      this.showToast('Product added to catalog', 'success');
+      }));
+      this.showToast(this.t('toast.catalogAdded'), 'success');
     }
 
     this.closeModal('modal-product');
@@ -745,7 +809,6 @@ class BillCraftApp {
   }
 
   openCatalogPickerModal() {
-    const modal = document.getElementById('modal-catalog-picker');
     const listContainer = document.getElementById('catalog-picker-list');
     const searchInput = document.getElementById('catalog-picker-search');
 
@@ -759,21 +822,21 @@ class BillCraftApp {
       const curr = this.settings.currency || '₹';
 
       if (prods.length === 0) {
-        listContainer.innerHTML = `<div style="text-align:center; padding: 2rem; color: #94a3b8;">No matching products found</div>`;
+        listContainer.innerHTML = `<div class="empty-box">${this.escape(this.t('catalog.pickerNone'))}</div>`;
         return;
       }
 
       listContainer.innerHTML = prods.map(p => `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-light); gap: 0.5rem;">
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 700; color: var(--text-main); font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escape(p.name)}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">${this.escape(p.description || '')}</div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: var(--theme-accent, #4f46e5); margin-top: 2px;">
-              ${formatCurrency(p.unitPrice, curr)} <small style="color: #94a3b8;">/${this.escape(p.unit || 'pcs')}</small>
+        <div class="picker-row">
+          <div class="picker-row-text">
+            <div class="picker-row-name">${this.escape(p.name)}</div>
+            <div class="picker-row-desc">${this.escape(p.description || '')}</div>
+            <div class="picker-row-price">
+              ${formatCurrency(p.unitPrice, curr)} <small>/${this.escape(p.unit || 'pcs')}</small>
             </div>
           </div>
-          <button class="btn btn-primary btn-sm btn-pick-item" data-id="${p.id}" style="flex-shrink: 0;">
-            + Add
+          <button class="btn btn-primary btn-sm btn-pick-item" data-id="${p.id}">
+            ${this.escape(this.t('catalog.pickerAdd'))}
           </button>
         </div>
       `).join('');
@@ -783,7 +846,7 @@ class BillCraftApp {
           const prod = prods.find(p => p.id === btn.dataset.id);
           if (prod) {
             this.addProductToBill(prod);
-            this.showToast(`Added ${prod.name}`, 'success');
+            this.showToast(this.t('toast.itemPicked', { name: prod.name }), 'success');
             this.closeModal('modal-catalog-picker');
           }
         });
@@ -794,42 +857,35 @@ class BillCraftApp {
     searchInput.value = '';
     searchInput.oninput = (e) => renderPickerItems(e.target.value);
 
-    modal.classList.add('active');
+    this.openModal('modal-catalog-picker');
   }
 
   // --- Invoices History View ---
   bindHistoryEvents() {
     const searchInput = document.getElementById('history-search-input');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        this.renderHistoryView(e.target.value);
-      });
-    }
+    searchInput.addEventListener('input', (e) => {
+      this.renderHistoryView(e.target.value);
+    });
 
-    const filterStatus = document.getElementById('history-filter-status');
-    if (filterStatus) {
-      filterStatus.addEventListener('change', () => {
-        this.renderHistoryView(searchInput ? searchInput.value : '');
-      });
-    }
+    document.getElementById('history-filter-status').addEventListener('change', () => {
+      this.renderHistoryView(searchInput.value);
+    });
   }
 
   renderHistoryView(searchQuery = '') {
     const tableBody = document.getElementById('history-table-body');
     const mobileContainer = document.getElementById('mobile-history-list');
-    const filterStatusEl = document.getElementById('history-filter-status');
-    const selectedFilter = filterStatusEl ? filterStatusEl.value : 'all';
+    const selectedFilter = document.getElementById('history-filter-status').value;
 
     let list = StorageService.getInvoices();
 
     // Stats
     const totalSales = list.reduce((sum, inv) => sum + (inv.status === 'Paid' ? inv.grandTotal : 0), 0);
-    const totalInvoices = list.length;
     const pendingAmount = list.reduce((sum, inv) => sum + (inv.status === 'Due' ? inv.grandTotal : 0), 0);
 
     const curr = this.settings.currency || '₹';
     document.getElementById('stat-total-sales').textContent = formatCurrency(totalSales, curr);
-    document.getElementById('stat-total-count').textContent = totalInvoices;
+    document.getElementById('stat-total-count').textContent = list.length;
     document.getElementById('stat-pending-amount').textContent = formatCurrency(pendingAmount, curr);
 
     if (selectedFilter !== 'all') {
@@ -845,86 +901,73 @@ class BillCraftApp {
       );
     }
 
-    // Render Desktop Table
-    if (tableBody) {
-      if (list.length === 0) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="7" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
-              No bills found in records.
-            </td>
-          </tr>
-        `;
-      } else {
-        tableBody.innerHTML = list.map(inv => `
-          <tr>
-            <td style="font-weight: 700; color: #0f172a;">${this.escape(inv.invoiceNumber)}</td>
-            <td style="font-size: 0.85rem; color: #475569;">${this.escape(inv.date)}</td>
-            <td>
-              <div style="font-weight: 600;">${this.escape(inv.customer.name || 'Walk-in Customer')}</div>
-              ${inv.customer.phone ? `<small style="color: #64748b;">${this.escape(inv.customer.phone)}</small>` : ''}
-            </td>
-            <td style="text-align: center;">${inv.items.length} items (${inv.totalItemsCount})</td>
-            <td style="font-weight: 800; color: #0f172a;">${formatCurrency(inv.grandTotal, curr)}</td>
-            <td>
-              <span class="badge ${inv.status === 'Paid' ? 'badge-paid' : 'badge-unpaid'}">${this.escape(inv.status)}</span>
-            </td>
-            <td style="text-align: right;">
-              <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
-                <button class="btn btn-secondary btn-sm btn-open-inv" data-id="${inv.id}" title="Open / Edit">
-                  Open
-                </button>
-                <button class="btn btn-ghost btn-sm btn-icon btn-dup-inv" data-id="${inv.id}" title="Duplicate">
-                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                </button>
-                <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="Delete" style="color: var(--danger);">
-                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        `).join('');
-      }
-    }
+    const badgeClass = inv => (inv.status === 'Paid' ? 'badge-paid' : 'badge-unpaid');
+    const customerName = inv => this.escape(inv.customer.name || this.t('common.walkIn'));
 
-    // Render Mobile Cards
-    if (mobileContainer) {
-      if (list.length === 0) {
-        mobileContainer.innerHTML = `
-          <div style="text-align: center; padding: 2rem; color: #94a3b8;">No bills found</div>
-        `;
-      } else {
-        mobileContainer.innerHTML = list.map(inv => `
-          <div class="history-bill-card">
-            <div class="history-bill-card-top">
-              <span class="history-bill-number">${this.escape(inv.invoiceNumber)}</span>
-              <span class="badge ${inv.status === 'Paid' ? 'badge-paid' : 'badge-unpaid'}">${this.escape(inv.status)}</span>
+    if (list.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+            ${this.escape(this.t('history.empty'))}
+          </td>
+        </tr>
+      `;
+      mobileContainer.innerHTML = `<div class="empty-box">${this.escape(this.t('history.empty'))}</div>`;
+    } else {
+      tableBody.innerHTML = list.map(inv => `
+        <tr>
+          <td style="font-weight: 700; color: var(--text-main);">${this.escape(inv.invoiceNumber)}</td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">${this.escape(inv.date)}</td>
+          <td>
+            <div style="font-weight: 600;">${customerName(inv)}</div>
+            ${inv.customer.phone ? `<small style="color: var(--text-muted);">${this.escape(inv.customer.phone)}</small>` : ''}
+          </td>
+          <td style="text-align: center;">${this.escape(this.t('history.itemsCount', { lines: inv.items.length, qty: inv.totalItemsCount }))}</td>
+          <td style="font-weight: 800; color: var(--text-main);">${formatCurrency(inv.grandTotal, curr)}</td>
+          <td>
+            <span class="badge ${badgeClass(inv)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>
+          </td>
+          <td style="text-align: right;">
+            <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm btn-open-inv" data-id="${inv.id}">${this.escape(this.t('history.open'))}</button>
+              <button class="btn btn-ghost btn-sm btn-dup-inv" data-id="${inv.id}">${this.escape(this.t('history.duplicate'))}</button>
+              <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
+                ${TRASH_ICON}
+              </button>
             </div>
-            <div class="history-bill-customer">${this.escape(inv.customer.name || 'Walk-in Customer')}</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">${this.escape(inv.date)} &bull; ${inv.items.length} items</div>
-            
-            <div class="history-bill-details-row">
-              <span style="font-size: 0.82rem; color: var(--text-muted);">Grand Total</span>
-              <span class="history-bill-amount">${formatCurrency(inv.grandTotal, curr)}</span>
-            </div>
+          </td>
+        </tr>
+      `).join('');
 
-            <div class="history-bill-actions">
-              <button class="btn btn-primary btn-sm btn-open-inv" data-id="${inv.id}" style="flex: 1;">
-                Open Bill
-              </button>
-              <button class="btn btn-secondary btn-sm btn-dup-inv" data-id="${inv.id}">
-                Duplicate
-              </button>
-              <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" style="color: var(--danger);">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
-            </div>
+      mobileContainer.innerHTML = list.map(inv => `
+        <div class="history-bill-card">
+          <div class="history-bill-card-top">
+            <span class="history-bill-number">${this.escape(inv.invoiceNumber)}</span>
+            <span class="badge ${badgeClass(inv)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>
           </div>
-        `).join('');
-      }
+          <div class="history-bill-customer">${customerName(inv)}</div>
+          <div class="history-bill-meta">${this.escape(inv.date)} &bull; ${this.escape(this.t('history.itemsShort', { lines: inv.items.length }))}</div>
+
+          <div class="history-bill-details-row">
+            <span class="history-bill-meta">${this.escape(this.t('history.grandTotal'))}</span>
+            <span class="history-bill-amount">${formatCurrency(inv.grandTotal, curr)}</span>
+          </div>
+
+          <div class="history-bill-actions">
+            <button class="btn btn-primary btn-sm btn-open-inv" data-id="${inv.id}" style="flex: 1;">
+              ${this.escape(this.t('history.openBill'))}
+            </button>
+            <button class="btn btn-secondary btn-sm btn-dup-inv" data-id="${inv.id}">
+              ${this.escape(this.t('history.duplicate'))}
+            </button>
+            <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
+              ${TRASH_ICON}
+            </button>
+          </div>
+        </div>
+      `).join('');
     }
 
-    // Attach Action Handlers (Both Table and Cards)
     document.querySelectorAll('.btn-open-inv').forEach(btn => {
       btn.addEventListener('click', () => {
         const inv = StorageService.getInvoiceById(btn.dataset.id);
@@ -932,10 +975,8 @@ class BillCraftApp {
           this.currentInvoice = new Invoice(inv);
           this.activeTemplate = this.currentInvoice.template || this.settings.defaultTemplate;
           this.switchView('builder');
-          this.switchMobileTab('preview');
-          this.renderBuilderForm();
-          this.renderActiveInvoicePreview();
-          this.showToast(`Opened Bill #${inv.invoiceNumber}`, 'info');
+          this.setStep(STEP_COUNT);
+          this.showToast(this.t('toast.billOpened', { number: inv.invoiceNumber }), 'info');
         }
       });
     });
@@ -945,30 +986,27 @@ class BillCraftApp {
         const inv = StorageService.getInvoiceById(btn.dataset.id);
         if (inv) {
           const nextNum = StorageService.getNextInvoiceNumber();
-          const dup = new Invoice({
+          this.currentInvoice = new Invoice({
             ...inv,
             id: 'inv_' + Date.now(),
             invoiceNumber: nextNum,
             date: new Date().toISOString().split('T')[0],
             status: 'Paid'
           });
-          this.currentInvoice = dup;
           this.switchView('builder');
-          this.switchMobileTab('editor');
-          this.renderBuilderForm();
-          this.renderActiveInvoicePreview();
-          this.showToast(`Duplicated into new Bill #${nextNum}`, 'success');
+          this.setStep(1);
+          this.showToast(this.t('toast.duplicated', { number: nextNum }), 'success');
         }
       });
     });
 
     document.querySelectorAll('.btn-del-inv').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (confirm('Delete this invoice permanently from records?')) {
+        if (confirm(this.t('confirm.deleteBill'))) {
           StorageService.deleteInvoice(btn.dataset.id);
-          this.renderHistoryView();
+          this.renderHistoryView(document.getElementById('history-search-input').value);
           this.updateBadges();
-          this.showToast('Bill deleted from records', 'info');
+          this.showToast(this.t('toast.billDeleted'), 'info');
         }
       });
     });
@@ -976,22 +1014,18 @@ class BillCraftApp {
 
   // --- Settings View ---
   bindSettingsEvents() {
-    const formSettings = document.getElementById('form-settings');
-    if (formSettings) {
-      formSettings.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.saveSettingsFromForm();
-      });
-    }
+    document.getElementById('form-settings').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.saveSettingsFromForm();
+    });
 
     const swatches = document.querySelectorAll('.color-swatch');
     swatches.forEach(sw => {
       sw.addEventListener('click', () => {
         swatches.forEach(s => s.classList.remove('active'));
         sw.classList.add('active');
-        const accent = sw.dataset.color;
-        this.settings.themeAccent = accent;
-        this.applyThemeAccent(accent);
+        this.settings.themeAccent = sw.dataset.color;
+        this.applyThemeAccent(sw.dataset.color);
       });
     });
 
@@ -1004,70 +1038,73 @@ class BillCraftApp {
       });
     });
 
-    const qrUploadInput = document.getElementById('settings-qr-upload');
-    if (qrUploadInput) {
-      qrUploadInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (re) => {
-            this.settings.qrCustomImage = re.target.result;
-            const previewBox = document.getElementById('settings-qr-preview');
-            if (previewBox) {
-              previewBox.innerHTML = `<img src="${re.target.result}" alt="Custom QR" style="width: 100%; height: 100%; object-fit: contain;" />`;
-            }
-          };
-          reader.readAsDataURL(file);
+    document.getElementById('settings-qr-upload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        this.settings.qrCustomImage = re.target.result;
+        this.renderSettingsQrPreview();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('btn-clear-custom-qr').addEventListener('click', () => {
+      this.settings.qrCustomImage = '';
+      this.renderSettingsQrPreview();
+      this.showToast(this.t('toast.qrReset'), 'info');
+    });
+
+    document.getElementById('btn-export-backup').addEventListener('click', () => {
+      const json = StorageService.exportBackupJSON();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `billcraft_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.showToast(this.t('toast.backupDone'), 'success');
+    });
+
+    document.getElementById('input-import-backup').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (re) => {
+        try {
+          StorageService.importBackupJSON(re.target.result);
+          this.settings = StorageService.getSettings();
+          this.currentInvoice = StorageService.getActiveDraft() || this.createNewInvoice();
+          await this.loadTranslators();
+          this.refreshAll();
+          this.showToast(this.t('toast.restoreDone'), 'success');
+        } catch (err) {
+          this.showToast(this.t('toast.restoreFailed'), 'danger');
         }
-      });
-    }
+      };
+      reader.readAsText(file);
+    });
+  }
 
-    const btnClearQR = document.getElementById('btn-clear-custom-qr');
-    if (btnClearQR) {
-      btnClearQR.addEventListener('click', () => {
-        this.settings.qrCustomImage = '';
-        const previewBox = document.getElementById('settings-qr-preview');
-        if (previewBox) previewBox.innerHTML = '<span style="font-size: 0.75rem; color: #94a3b8;">Auto-generated UPI QR</span>';
-        this.showToast('Custom QR cleared. Default UPI QR will be used.', 'info');
+  renderSettingsQrPreview() {
+    const previewBox = document.getElementById('settings-qr-preview');
+    if (this.settings.qrCustomImage) {
+      previewBox.innerHTML = `<img src="${this.settings.qrCustomImage}" alt="" style="width: 100%; height: 100%; object-fit: contain;" />`;
+    } else if (this.settings.upiId) {
+      const upiUri = buildUPIString({
+        upiId: this.settings.upiId,
+        brandName: this.settings.brandName,
+        amount: 0,
+        invoiceNumber: ''
       });
-    }
-
-    const btnExportJSON = document.getElementById('btn-export-backup');
-    if (btnExportJSON) {
-      btnExportJSON.addEventListener('click', () => {
-        const json = StorageService.exportBackupJSON();
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `billcraft_backup_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        this.showToast('Backup JSON downloaded!', 'success');
-      });
-    }
-
-    const fileImportJSON = document.getElementById('input-import-backup');
-    if (fileImportJSON) {
-      fileImportJSON.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (re) => {
-            try {
-              StorageService.importBackupJSON(re.target.result);
-              this.settings = StorageService.getSettings();
-              this.catalog = StorageService.getCatalog();
-              this.invoices = StorageService.getInvoices();
-              this.init();
-              this.showToast('Backup restored successfully!', 'success');
-            } catch (err) {
-              this.showToast('Failed to import backup: Invalid JSON', 'danger');
-            }
-          };
-          reader.readAsText(file);
-        }
-      });
+      const url = generateQRCodeURL(upiUri, 3);
+      previewBox.innerHTML = url
+        ? `<img src="${url}" alt="" style="width: 100%; height: 100%; object-fit: contain;" />`
+        : `<span class="muted-note">${this.escape(this.t('settings.enterUpi'))}</span>`;
+    } else {
+      previewBox.innerHTML = `<span class="muted-note">${this.escape(this.t('settings.noQr'))}</span>`;
     }
   }
 
@@ -1082,6 +1119,8 @@ class BillCraftApp {
     document.getElementById('settings-upi').value = this.settings.upiId || '';
     document.getElementById('settings-payment-note').value = this.settings.paymentNotes || '';
     document.getElementById('settings-default-notes').value = this.settings.defaultNotes || '';
+    document.getElementById('settings-app-language').value = this.settings.appLanguage || DEFAULT_LANGUAGE;
+    document.getElementById('settings-bill-language').value = this.settings.billLanguage || '';
 
     document.querySelectorAll('.color-swatch').forEach(sw => {
       sw.classList.toggle('active', sw.dataset.color === this.settings.themeAccent);
@@ -1091,26 +1130,10 @@ class BillCraftApp {
       card.classList.toggle('selected', card.dataset.template === (this.settings.defaultTemplate || 'modern'));
     });
 
-    const previewBox = document.getElementById('settings-qr-preview');
-    if (previewBox) {
-      if (this.settings.qrCustomImage) {
-        previewBox.innerHTML = `<img src="${this.settings.qrCustomImage}" alt="Custom QR" style="width: 100%; height: 100%; object-fit: contain;" />`;
-      } else if (this.settings.upiId) {
-        const upiUri = buildUPIString({
-          upiId: this.settings.upiId,
-          brandName: this.settings.brandName,
-          amount: 0,
-          invoiceNumber: ''
-        });
-        const url = generateQRCodeURL(upiUri, 3);
-        previewBox.innerHTML = url ? `<img src="${url}" alt="UPI QR" style="width: 100%; height: 100%; object-fit: contain;" />` : '<span style="font-size: 0.75rem; color: #94a3b8;">Enter UPI ID</span>';
-      } else {
-        previewBox.innerHTML = '<span style="font-size: 0.75rem; color: #94a3b8;">No QR set</span>';
-      }
-    }
+    this.renderSettingsQrPreview();
   }
 
-  saveSettingsFromForm() {
+  async saveSettingsFromForm() {
     this.settings.sellerName = document.getElementById('settings-seller-name').value.trim();
     this.settings.brandName = document.getElementById('settings-brand-name').value.trim();
     this.settings.tagline = document.getElementById('settings-tagline').value.trim();
@@ -1121,14 +1144,16 @@ class BillCraftApp {
     this.settings.upiId = document.getElementById('settings-upi').value.trim();
     this.settings.paymentNotes = document.getElementById('settings-payment-note').value.trim();
     this.settings.defaultNotes = document.getElementById('settings-default-notes').value.trim();
+    this.settings.appLanguage = document.getElementById('settings-app-language').value;
+    this.settings.billLanguage = document.getElementById('settings-bill-language').value;
 
     StorageService.saveSettings(this.settings);
-    this.updateSidebarBrand();
-    this.refreshQR();
-    this.renderActiveInvoicePreview();
-    this.showToast('Settings saved successfully!', 'success');
+    await this.loadTranslators();
+    this.refreshAll();
+    this.showToast(this.t('toast.settingsSaved'), 'success');
   }
 
+  // --- Modals ---
   bindModalEvents() {
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1139,30 +1164,32 @@ class BillCraftApp {
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.classList.remove('active');
+        // The language picker can only be dismissed once a language is chosen
+        if (e.target === overlay && overlay.id !== 'modal-language') overlay.classList.remove('active');
       });
     });
   }
 
+  openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+  }
+
   closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    document.getElementById(modalId).classList.remove('active');
   }
 
   updateBadges() {
-    const badge = document.getElementById('nav-history-badge');
-    if (badge) {
-      badge.textContent = StorageService.getInvoices().length;
-    }
+    document.getElementById('nav-history-badge').textContent = StorageService.getInvoices().length;
   }
 
   showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
-    if (!container) return;
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span>${this.escape(message)}</span>`;
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(text);
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -1181,13 +1208,9 @@ class BillCraftApp {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
   }
-
-  renderActiveView() {
-    this.switchView('builder');
-    this.updateBadges();
-  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   window.app = new BillCraftApp();
+  window.app.start().catch(error => console.error('BillCraft failed to start', error));
 });

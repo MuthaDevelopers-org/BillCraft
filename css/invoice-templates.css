@@ -10,7 +10,7 @@
   width: 100%;
   max-width: 780px;
   margin: 0 auto;
-  min-height: 600px;
+  min-height: 0;
   transition: all var(--transition-normal);
   box-sizing: border-box;
 }
@@ -19,8 +19,8 @@
 .invoice-paper {
   background: #ffffff;
   color: #1e293b;
-  padding: 2.25rem;
-  font-size: 13.5px;
+  padding: 1.1rem;
+  font-size: 13px;
   line-height: 1.5;
   box-sizing: border-box;
   width: 100%;
@@ -70,8 +70,8 @@
 }
 
 .template-modern .inv-meta-block {
-  text-align: right;
-  min-width: 140px;
+  text-align: left;
+  min-width: 0;
 }
 
 .template-modern .inv-title-badge {
@@ -101,7 +101,7 @@
 
 .template-modern .inv-parties-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   background: #f8fafc;
   padding: 1rem 1.25rem;
@@ -175,7 +175,7 @@
 
 .template-modern .inv-bottom-section {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   margin-top: 0.75rem;
 }
@@ -289,7 +289,7 @@
 .template-classic .classic-grid-meta {
   border: 1px solid #cbd5e1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   margin-bottom: 1.25rem;
 }
 
@@ -581,7 +581,8 @@
   .preview-actions-bar,
   .toast-container,
   .modal-overlay,
-  .bill-view-tabs,
+  .step-bar,
+  .step-nav,
   .no-print {
     display: none !important;
   }
@@ -620,4 +621,19 @@
     margin: 1cm;
     size: auto;
   }
+}
+
+/* Phone widths: the six-column item tables fit without wrapping every word.
+   responsive.css restores the desktop values from 640px. */
+.template-modern .inv-table th,
+.template-modern .inv-table td,
+.template-classic .classic-table th,
+.template-classic .classic-table td {
+  padding: 0.4rem 0.25rem;
+  font-size: 11px;
+}
+
+.template-modern .inv-table td:nth-child(2),
+.template-classic .classic-table td:nth-child(2) {
+  min-width: 96px;
 }

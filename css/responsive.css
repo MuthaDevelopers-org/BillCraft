@@ -1,305 +1,288 @@
-/* Responsive Media Queries (Mobile First UX Optimization) */
+/* ============================================================
+   LARGER SCREENS (min-width)
+   The phone layout is the default in base.css and components.css.
+   Each block below adds the layout for a wider screen.
+   ============================================================ */
 
-/* Tablet & Mobile (<= 1024px) */
-@media (max-width: 1024px) {
-  .bill-builder-layout {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
-  .bill-preview-panel {
-    position: static;
-  }
-
-  /* Show toggle tabs */
-  .bill-view-tabs {
-    display: flex;
-  }
-
-  .bill-builder-layout.tab-mode-editor .bill-preview-panel {
-    display: none !important;
-  }
-
-  .bill-builder-layout.tab-mode-preview .bill-form-panel {
-    display: none !important;
-  }
-
-  .bill-builder-layout.tab-mode-preview .bill-preview-panel {
-    display: flex !important;
-  }
-}
-
-/* Mobile Devices (<= 768px) */
-@media (max-width: 768px) {
-  html, body {
-    overflow-x: hidden !important;
-    width: 100% !important;
-    max-width: 100vw !important;
-  }
-
-  .app-container {
-    flex-direction: column;
-    padding-bottom: 74px; /* Space for bottom navigation bar + safe area */
-    width: 100% !important;
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-  }
-
-  /* Fixed Mobile Bottom Navigation Bar */
-  .app-sidebar {
-    position: fixed;
-    bottom: 0;
-    top: auto;
-    left: 0;
-    right: 0;
-    width: 100% !important;
-    max-width: 100vw !important;
-    height: 64px;
-    height: calc(56px + env(safe-area-inset-bottom, 8px));
-    padding-bottom: env(safe-area-inset-bottom, 8px);
-    flex-direction: row;
-    border-right: none;
-    border-top: 1px solid #1e293b;
-    z-index: 90;
-    background: #0f172a;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
-  }
-
-  .brand-header,
-  .sidebar-footer {
-    display: none !important;
-  }
-
-  .nav-links {
-    flex-direction: row;
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    justify-content: space-around;
-    align-items: center;
-  }
-
-  .nav-item {
-    flex: 1;
-    height: 100%;
-    display: flex;
-    position: relative;
-  }
-
-  .nav-btn {
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.15rem;
-    padding: 0.35rem 0.2rem;
-    border-radius: 0;
-    font-size: 0.68rem;
-    font-weight: 600;
-    height: 100%;
-    min-height: auto;
-  }
-
-  .nav-btn.active {
-    background: transparent;
-    color: #ffffff;
-    border-top: 3px solid var(--theme-accent, #4f46e5);
-    box-shadow: none;
-  }
-
-  .nav-btn svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .nav-badge {
-    position: absolute;
-    top: 4px;
-    right: 22%;
-    font-size: 0.6rem;
-    padding: 0.1rem 0.35rem;
-  }
-
-  /* Main Workspace Mobile Constraints */
-  .app-main {
-    height: auto;
-    overflow-y: visible;
-    overflow-x: hidden !important;
-    width: 100% !important;
-    max-width: 100vw !important;
-  }
-
-  .app-topbar {
-    padding: 0.75rem 1rem;
-    width: 100% !important;
-    max-width: 100vw !important;
-  }
-
-  .page-title {
-    font-size: 1.1rem;
-  }
-
-  .view-section {
-    padding: 0.85rem;
-    width: 100% !important;
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-  }
-
-  /* Form Grids collapse cleanly */
-  .form-grid-2,
-  .form-grid-3 {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem;
-  }
-
-  .card-body {
-    padding: 1rem;
-  }
-
-  /* Switch Line Items to Mobile Cards */
-  .desktop-items-table {
-    display: none !important;
-  }
-
-  .mobile-items-container {
-    display: flex !important;
-  }
-
-  /* Switch History to Mobile Cards */
-  .desktop-history-table {
-    display: none !important;
-  }
-
-  .mobile-history-container {
-    display: flex !important;
-  }
-
-  /* Products Catalog Grid */
-  .products-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
+/* 640px and up: two columns for forms, products and bill sections */
+@media (min-width: 640px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr 1fr;
   }
 
   .catalog-header-bar {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
   }
 
-  .catalog-search-wrap {
-    width: 100%;
-  }
-
-  /* Stats Grid */
-  .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-  }
-
-  .stat-card {
-    padding: 0.85rem;
-  }
-
-  .stat-val {
-    font-size: 1.15rem;
-  }
-
-  /* Preview Actions Bar */
-  .preview-actions-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.75rem;
-  }
-
-  .preview-actions-bar .btn-group {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    width: 100%;
-  }
-
-  .preview-actions-bar .btn-whatsapp {
-    grid-column: span 2;
-  }
-
-  /* Invoices in Preview on Mobile */
-  .invoice-render-wrapper {
-    border-radius: var(--radius-md);
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: hidden;
-  }
-
-  .invoice-paper {
-    padding: 1.25rem 1rem !important;
-    font-size: 12px;
-  }
-
-  .template-modern .inv-parties-grid {
-    grid-template-columns: 1fr !important;
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1rem;
   }
 
+  .template-modern .inv-parties-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
   .template-modern .inv-bottom-section {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1.1fr 0.9fr;
     gap: 1.25rem;
   }
 
   .template-classic .classic-grid-meta {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .template-classic .meta-cell {
-    border-right: none !important;
-    border-bottom: 1px solid #cbd5e1;
+  .template-modern .inv-meta-block {
+    text-align: right;
+    min-width: 140px;
   }
 
-  .template-classic .meta-cell:last-child {
-    border-bottom: none;
+  .template-modern .inv-table th {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.72rem;
   }
 
-  .template-classic .classic-summary-table {
-    width: 100% !important;
+  .template-modern .inv-table td {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.88rem;
   }
 
-  /* Modals */
-  .modal-overlay {
-    padding: 0.5rem;
+  .template-modern .inv-table td:nth-child(2),
+  .template-classic .classic-table td:nth-child(2) {
+    min-width: 0;
   }
 
-  .modal-box {
-    max-height: 94vh;
-    border-radius: var(--radius-lg);
+  .template-classic .classic-table th {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.74rem;
   }
 
-  .modal-header {
-    padding: 1rem;
+  .template-classic .classic-table td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
   }
 
-  .modal-body {
-    padding: 1rem;
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    width: auto;
   }
 
-  .modal-footer {
-    padding: 0.75rem 1rem;
+  .btn-group .btn-whatsapp {
+    grid-column: auto;
   }
 }
 
-/* Small Mobile Screens (<= 480px) */
-@media (max-width: 480px) {
+/* 768px and up: tablets. Tables replace the phone cards; three-column forms */
+@media (min-width: 768px) {
+  .desktop-history-table {
+    display: block;
+  }
+
+  .mobile-history-container {
+    display: none;
+  }
+
+  .form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .stats-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
   }
 
-  .template-cards-grid {
-    grid-template-columns: 1fr 1fr !important;
+  .view-section {
+    padding: 1.25rem 1.5rem 1.5rem;
   }
 
-  .mobile-item-inputs-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 0.6rem;
+  .app-topbar {
+    padding: 0.85rem 1.5rem;
   }
 
-  .mobile-item-inputs-grid .grid-span-2 {
-    grid-column: span 2;
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .preview-actions-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 0.85rem 1rem;
+  }
+
+  .history-header {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .history-filters {
+    width: auto;
+    max-width: 380px;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .modal-overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .modal-box {
+    border-radius: var(--radius-xl);
+    max-height: 90vh;
+  }
+
+  .invoice-paper {
+    padding: 1.75rem;
+    font-size: 13.5px;
+  }
+}
+
+/* 1024px and up: desktop. Sidebar, and the bill editor beside the live preview */
+@media (min-width: 1024px) {
+  .app-container {
+    flex-direction: row;
+    padding-bottom: 0;
+  }
+
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 250px;
+    height: 100vh;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-top: none;
+    border-right: 1px solid #1e293b;
+    box-shadow: none;
+    padding-bottom: 0;
+    z-index: 40;
+  }
+
+  .brand-header {
+    display: flex;
+  }
+
+  .sidebar-footer {
+    display: flex;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem 0.75rem;
+  }
+
+  .nav-item {
+    flex: none;
+    width: 100%;
+  }
+
+  .nav-btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    border-top: none;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  .nav-btn.active {
+    background: var(--theme-accent, #4f46e5);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  }
+
+  .nav-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .nav-label {
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .nav-badge {
+    position: static;
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+  }
+
+  .app-main {
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .view-section {
+    padding: 1.5rem;
+  }
+
+  #view-builder {
+    padding-bottom: 1.5rem;
+  }
+
+  /* The step bar and Back/Next controls are phone-only */
+  .mobile-only {
+    display: none !important;
+  }
+
+  .bill-builder-layout {
+    grid-template-columns: 1.15fr 0.95fr;
+    gap: 1.75rem;
+  }
+
+  /* Desktop shows every bill panel together; these match the phone rules in components.css */
+  .bill-builder-layout.step-1 .step-items,
+  .bill-builder-layout.step-2 .step-customer,
+  .bill-builder-layout.step-3 .step-customer,
+  .bill-builder-layout.step-3 .step-items {
+    display: block;
+  }
+
+  .bill-builder-layout.step-1 .bill-preview-panel,
+  .bill-builder-layout.step-2 .bill-preview-panel {
+    display: flex;
+  }
+
+  .bill-preview-panel {
+    position: sticky;
+    top: 4.5rem;
+  }
+
+  .invoice-render-wrapper {
+    min-height: 600px;
+  }
+
+  .invoice-paper {
+    padding: 2.25rem;
+    font-size: 13.5px;
+  }
+
+  .toast-container {
+    top: auto;
+    bottom: 24px;
+    left: auto;
+    right: 24px;
+    max-width: 380px;
+    align-items: flex-end;
   }
 }

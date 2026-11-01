@@ -241,6 +241,9 @@ export const StorageService = {
 
   importBackupJSON(jsonString) {
     const data = JSON.parse(jsonString);
+    if (!data || (!data.settings && !data.catalog && !data.invoices)) {
+      throw new Error('Not a BillCraft backup file');
+    }
     if (data.settings) this.saveSettings(data.settings);
     if (data.catalog) this.saveCatalog(data.catalog);
     if (data.invoices) this.saveInvoices(data.invoices);
