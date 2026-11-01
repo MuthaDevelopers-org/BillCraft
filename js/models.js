@@ -2,6 +2,9 @@
  * BillCraft Data Models & Utilities
  */
 
+import english from './i18n/locales/en.js';
+import { spellAmount } from './i18n/numberWords.js';
+
 export class Product {
   constructor({
     id = 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -113,7 +116,10 @@ export class BusinessSettings {
     defaultTemplate = 'modern',
     themeAccent = 'emerald',
     defaultNotes = 'Thank you for supporting our domestic venture! Please retain this bill for your reference.',
-    qrCustomImage = ''
+    qrCustomImage = '',
+    appLanguage = '', // '' = not chosen yet, so the first-run picker is shown
+    billLanguage = '', // '' = same as the app language
+    voiceConsent = false // set once the user agrees to voice typing
   } = {}) {
     this.sellerName = sellerName;
     this.brandName = brandName;
@@ -128,37 +134,23 @@ export class BusinessSettings {
     this.themeAccent = themeAccent;
     this.defaultNotes = defaultNotes;
     this.qrCustomImage = qrCustomImage;
+    this.appLanguage = appLanguage;
+    this.billLanguage = billLanguage;
+    this.voiceConsent = Boolean(voiceConsent);
   }
 }
 
 /**
- * Converts a numeric amount to English Words (e.g. ₹ 1,520 => One Thousand Five Hundred Twenty Only)
+ * English amount in words, e.g. 1520 => "One Thousand Five Hundred and Twenty Only".
+ * Other languages use spellAmount() with their own vocabulary (see i18n/).
  */
 export function numberToWords(num) {
-  const n = Math.floor(Math.abs(num));
-  if (n === 0) return 'Zero Only';
-
-  const a = [
-    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-    'Seventeen', 'Eighteen', 'Nineteen'
-  ];
-  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-  function inWords(n) {
-    if (n < 20) return a[n];
-    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
-    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' and ' + inWords(n % 100) : '');
-    if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + inWords(n % 1000) : '');
-    if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 !== 0 ? ' ' + inWords(n % 100000) : '');
-    return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + inWords(n % 10000000) : '');
-  }
-
-  return inWords(n) + ' Only';
+  return spellAmount(num, english.words);
 }
 
 /**
- * Currency Formatter
+ * Currency formatter. Always Indian digit grouping with Latin digits, so
+ * amounts match what the customer sees in UPI and payment apps.
  */
 export function formatCurrency(amount, currency = '₹') {
   const num = Number(amount) || 0;
