@@ -1,0 +1,623 @@
+/* Invoice Viewport Container */
+.invoice-render-wrapper {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-invoice);
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  min-height: 600px;
+  transition: all var(--transition-normal);
+  box-sizing: border-box;
+}
+
+/* Base Invoice Typography & Reset */
+.invoice-paper {
+  background: #ffffff;
+  color: #1e293b;
+  padding: 2.25rem;
+  font-size: 13.5px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   TEMPLATE 1: MODERN MINIMAL
+   ============================================================ */
+.template-modern {
+  border-top: 6px solid var(--theme-accent, #4f46e5);
+  font-family: var(--font-sans);
+}
+
+.template-modern .inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.template-modern .inv-brand-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.template-modern .inv-brand-tagline {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.template-modern .inv-seller-info {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.template-modern .inv-meta-block {
+  text-align: right;
+  min-width: 140px;
+}
+
+.template-modern .inv-title-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--theme-accent, #4f46e5);
+  background: var(--theme-accent-soft, #f5f3ff);
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+.template-modern .inv-number {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.template-modern .inv-date-row {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.template-modern .inv-parties-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  background: #f8fafc;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+
+.template-modern .party-col h4 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.35rem;
+}
+
+.template-modern .party-col .customer-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.template-modern .party-col p {
+  font-size: 0.82rem;
+  color: #475569;
+  margin-top: 0.2rem;
+  word-break: break-word;
+}
+
+.template-modern .inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.template-modern .inv-table th {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
+  text-align: left;
+}
+
+.template-modern .inv-table th.num,
+.template-modern .inv-table td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.template-modern .inv-table td {
+  padding: 0.75rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.88rem;
+}
+
+.template-modern .item-name {
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.template-modern .item-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.template-modern .inv-bottom-section {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.template-modern .inv-totals-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.template-modern .tot-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.template-modern .tot-row.grand {
+  border-top: 2px solid #0f172a;
+  padding-top: 0.65rem;
+  margin-top: 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.template-modern .grand-price {
+  color: var(--theme-accent, #4f46e5);
+}
+
+.template-modern .inv-payment-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.template-modern .payment-qr-wrap {
+  width: 68px;
+  height: 68px;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.template-modern .payment-info-text {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #475569;
+  word-break: break-word;
+}
+
+.template-modern .payment-title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.2rem;
+}
+
+.template-modern .inv-footer-notes {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   TEMPLATE 2: CLASSIC EXECUTIVE
+   ============================================================ */
+.template-classic {
+  border: 1px solid #334155;
+  font-family: var(--font-sans);
+}
+
+.template-classic .inv-classic-header {
+  border-bottom: 2px solid #334155;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.template-classic .classic-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+
+.template-classic .classic-brand {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.template-classic .classic-grid-meta {
+  border: 1px solid #cbd5e1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 1.25rem;
+}
+
+.template-classic .meta-cell {
+  padding: 0.6rem 0.75rem;
+  border-right: 1px solid #cbd5e1;
+}
+
+.template-classic .meta-cell:last-child {
+  border-right: none;
+}
+
+.template-classic .meta-cell-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.template-classic .meta-cell-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.template-classic .classic-table {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-collapse: collapse;
+  margin-bottom: 1.25rem;
+}
+
+.template-classic .classic-table th {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.template-classic .classic-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.template-classic .classic-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.template-classic .classic-summary-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.template-classic .classic-summary-table {
+  width: 300px;
+  border: 1px solid #cbd5e1;
+  border-collapse: collapse;
+}
+
+.template-classic .classic-summary-table td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.template-classic .classic-summary-table tr.total td {
+  font-weight: 800;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+/* ============================================================
+   TEMPLATE 3: ARTISAN BOUTIQUE
+   ============================================================ */
+.template-boutique {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding: 0;
+}
+
+.template-boutique .boutique-banner {
+  background: linear-gradient(135deg, var(--theme-accent, #4f46e5), #818cf8);
+  color: #ffffff;
+  padding: 1.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.template-boutique .boutique-brand-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.template-boutique .boutique-pill {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.template-boutique .boutique-body {
+  padding: 1.75rem 2rem;
+}
+
+.template-boutique .boutique-parties {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px dashed #e2e8f0;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.template-boutique .boutique-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  margin-bottom: 1.25rem;
+}
+
+.template-boutique .boutique-table th {
+  padding: 0.55rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.template-boutique .boutique-table tr.boutique-row td {
+  background: #f8fafc;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.86rem;
+}
+
+.template-boutique .boutique-table tr.boutique-row td:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.template-boutique .boutique-table tr.boutique-row td:last-child {
+  border-radius: 0 6px 6px 0;
+  text-align: right;
+}
+
+.template-boutique .boutique-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.template-boutique .boutique-total-card {
+  background: #f1f5f9;
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  margin-left: auto;
+  max-width: 300px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ============================================================
+   TEMPLATE 4: COMPACT THERMAL / POS RECEIPT
+   ============================================================ */
+.template-thermal {
+  font-family: var(--font-mono);
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+}
+
+.template-thermal .pos-header {
+  text-align: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px dashed #94a3b8;
+  padding-bottom: 0.85rem;
+}
+
+.template-thermal .pos-store-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+
+.template-thermal .pos-meta-line {
+  font-size: 0.76rem;
+  color: #475569;
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.template-thermal .pos-receipt-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  border: 1px solid #1e293b;
+  padding: 0.15rem 0.5rem;
+}
+
+.template-thermal .pos-customer-info {
+  margin-bottom: 0.85rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.template-thermal .pos-divider {
+  border-bottom: 1px dashed #94a3b8;
+  margin: 0.65rem 0;
+}
+
+.template-thermal .pos-double-divider {
+  border-bottom: 2px solid #1e293b;
+  margin: 0.65rem 0;
+}
+
+.template-thermal .pos-item-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+  gap: 0.5rem;
+}
+
+.template-thermal .pos-item-math {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.template-thermal .pos-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  margin-bottom: 0.3rem;
+}
+
+.template-thermal .pos-total-row.grand {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.template-thermal .pos-footer {
+  text-align: center;
+  font-size: 0.72rem;
+  margin-top: 1rem;
+  color: #64748b;
+  word-break: break-word;
+}
+
+.template-thermal .pos-qr {
+  margin: 0.65rem auto;
+  width: 80px;
+  height: 80px;
+}
+
+/* ============================================================
+   PRINT MEDIA RULES
+   ============================================================ */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .app-sidebar,
+  .app-topbar,
+  .bill-form-panel,
+  .preview-actions-bar,
+  .toast-container,
+  .modal-overlay,
+  .bill-view-tabs,
+  .no-print {
+    display: none !important;
+  }
+
+  .app-container,
+  .app-main,
+  .view-section,
+  .bill-builder-layout,
+  .bill-preview-panel {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    position: static !important;
+    width: 100% !important;
+  }
+
+  .invoice-render-wrapper {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+  }
+
+  .invoice-paper {
+    padding: 1.2cm !important;
+    width: 100% !important;
+  }
+
+  @page {
+    margin: 1cm;
+    size: auto;
+  }
+}
