@@ -23,6 +23,7 @@ Static HTML, CSS and JavaScript bill and invoice maker for small domestic busine
 - **Escape before `innerHTML`.** Translations are plain text. Use `escape()` in `app.js` and `escapeHTML()` in `templates.js` for any value placed in markup.
 - **Keep stored values in English.** Statuses (`Paid`, `Due`, `Draft`) stay English in storage so old bills and backups still work. Only the display is translated.
 - **No new dependencies and no build step.**
+- **Printing.** The print rules are the `@media print` block in `css/invoice-templates.css`. Add any new bar, toolbar or modal to its hide list, or it prints. `tests/print.test.js` checks the list.
 - **Voice typing can send audio to a cloud service** (the browser's or phone maker's speech service). Consent is asked once and stored in `settings.voiceConsent`. Keep the notice in `README.md` accurate.
 
 ## Docs
