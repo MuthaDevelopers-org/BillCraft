@@ -3,13 +3,14 @@
 A simple, phone-first bill and invoice maker for domestic businesses, artisans, home sellers and local shops. It runs in the browser with no account and no server. It supports several Indian languages, so someone who reads little or no English can still make a bill.
 
 ## Features
-- **Guided bill on phones.** Three steps: Customer, Items, Done. Only the essential fields show; the rest sit under "More options".
+- **A bill in a few taps.** On phones there are two steps: Items, then Send. Tap product tiles to add them (the most used come first). Items sold by weight or length ask how much, with one-tap amounts. Pick a recent customer with one tap, or leave it as Walk-in. Sending, printing or downloading saves the bill to history.
+- **Motion that shows what happened**, kept short. It turns off when your device asks for reduced motion.
 - **Languages.** English and Hindi today, with more to come. The app language and the bill language can differ, so a bill can print in English while the app is in Hindi.
 - **Voice.** Tap the microphone beside a name or number to speak it. Tap the speaker to hear the total read aloud. Shown only where the browser supports speech.
 - **Four bill designs:** Modern Minimal, Classic Executive, Artisan Boutique and Compact Thermal POS slip.
 - **UPI QR code** for each bill, made from your UPI ID (or use your own QR image).
 - **Export:** PDF, PNG image, print, or a WhatsApp message.
-- **Product catalog**, bill history, and JSON backup and restore.
+- **Product catalog**, bill history (with Repeat), and JSON backup and restore.
 - **Wider screens:** a sidebar, with the bill editor beside a live preview.
 
 ## Running
