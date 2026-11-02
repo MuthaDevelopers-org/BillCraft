@@ -49,6 +49,7 @@ const CHROME = [
   '.step-nav',
   '.mobile-only',
   '.toast-container',
+  '.motion-layer',                    // flying "+1" bubbles and the burst after sending
   '.modal-overlay'
 ];
 

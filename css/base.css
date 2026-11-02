@@ -75,6 +75,16 @@ img {
   display: block;
 }
 
+/* Reduced motion: transitions and keyframes finish at once (js/motion.js skips its own) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Keyboard focus stays visible; mouse clicks do not show the ring */
 :focus-visible {
   outline: 3px solid var(--theme-accent, #059669);

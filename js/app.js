@@ -8,6 +8,7 @@ import {
   addProductLine, customerKey, isMeasuredUnit, presetsFor, rankProducts,
   recentCustomers, roundQty, setLineQuantity, stepQuantity
 } from './quickBill.js';
+import { celebrate, countTo, enter, exit, flyTo, nudge, pop, shrink, slideIn } from './motion.js';
 import { StorageService } from './storage.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString } from './qrHelper.js';
@@ -53,6 +54,7 @@ class BillCraftApp {
   }
 
   async start() {
+    this.motionLayer = document.getElementById('motion-layer');
     await this.loadTranslators();
     this.bindNavigation();
     this.bindBuilderEvents();
@@ -223,7 +225,11 @@ class BillCraftApp {
       el.hidden = Number(el.dataset.barStep) !== this.step;
     });
 
-    if (this.step !== previous && !DESKTOP_QUERY.matches) window.scrollTo({ top: 0, behavior: 'instant' });
+    if (this.step !== previous && !DESKTOP_QUERY.matches) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const panels = this.step === 1 ? '.step-items' : '.step-customer, .bill-preview-panel';
+      slideIn([...layout.querySelectorAll(panels)], Math.sign(this.step - previous));
+    }
 
     if (this.step === STEP_COUNT) {
       this.renderCustomerChips();
@@ -309,7 +315,9 @@ class BillCraftApp {
 
     document.querySelectorAll('.btn-save-bill').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (this.saveBill()) this.afterSave();
+        if (!this.saveBill()) return;
+        this.celebrateButton(btn);
+        this.afterSave();
       });
     });
 
@@ -395,8 +403,8 @@ class BillCraftApp {
       this.afterSave(this.t('toast.imageReady'));
     });
 
-    document.getElementById('btn-share-whatsapp').addEventListener('click', () => this.sendWhatsApp());
-    document.getElementById('btn-send-whatsapp').addEventListener('click', () => this.sendWhatsApp());
+    document.getElementById('btn-share-whatsapp').addEventListener('click', (event) => this.sendWhatsApp(event.currentTarget));
+    document.getElementById('btn-send-whatsapp').addEventListener('click', (event) => this.sendWhatsApp(event.currentTarget));
 
     document.getElementById('btn-print-bill').addEventListener('click', () => {
       if (!this.saveBill()) return;
@@ -496,11 +504,11 @@ class BillCraftApp {
         <span class="tile-plus" aria-hidden="true">+</span>
         <span class="tile-name">${this.escape(this.t('grid.other'))}</span>
       </button>`;
-    this.updateTileBadges();
+    this.updateTileBadges(false);
   }
 
-  /** The count on each tile, from the quantities in the bill */
-  updateTileBadges() {
+  /** The count on each tile, from the quantities in the bill. A new count pops; a cleared one shrinks away. */
+  updateTileBadges(animate = true) {
     const quantities = new Map();
     for (const item of this.currentInvoice.items) {
       if (item.productId) quantities.set(item.productId, roundQty((quantities.get(item.productId) || 0) + item.quantity));
@@ -508,12 +516,27 @@ class BillCraftApp {
     document.querySelectorAll('#product-grid [data-product-id]').forEach(tile => {
       const qty = quantities.get(tile.dataset.productId) || 0;
       const badge = tile.querySelector('.tile-badge');
-      const text = qty ? String(qty) : '';
+      const value = qty ? String(qty) : '';
       tile.classList.toggle('in-bill', qty > 0);
-      if (badge.textContent === text) return;
-      badge.textContent = text;
-      badge.hidden = !text;
+      if ((badge.dataset.value || '') === value) return;
+      badge.dataset.value = value;
+      if (value) {
+        badge.textContent = value;
+        badge.hidden = false;
+        if (animate) pop(badge);
+      } else if (animate) {
+        // Hide only if nothing was added back while it shrank
+        shrink(badge, () => { badge.hidden = !badge.dataset.value; });
+      } else {
+        badge.hidden = true;
+      }
     });
+  }
+
+  /** A "+1" flies from the tile into the bill: the bar on phones, the total on wide screens */
+  flyToBill(tile, label) {
+    const target = document.getElementById(DESKTOP_QUERY.matches ? 'summary-grand-total' : 'bar-count');
+    flyTo(tile, target, label, this.motionLayer, () => pop(target, 1.2));
   }
 
   /** A tap adds one. Products sold by weight or length ask how much instead. */
@@ -527,6 +550,7 @@ class BillCraftApp {
     }
     addProductLine(this.currentInvoice.items, product, 1);
     this.afterItemsChange();
+    this.flyToBill(tile, '+1');
   }
 
   /** "+ Other item": an empty line, with its name field ready for typing */
@@ -553,8 +577,8 @@ class BillCraftApp {
 
   /**
    * One line per item. Lines are kept and updated by item id, so typing keeps its
-   * focus and only real changes move on screen. `fresh` rebuilds them, for another
-   * bill or another language.
+   * focus and only real changes move: new lines slide in, removed ones collapse out.
+   * `fresh` rebuilds them without motion, for another bill or another language.
    */
   renderBillLines({ fresh = false } = {}) {
     const container = document.getElementById('mobile-items-list');
@@ -562,24 +586,26 @@ class BillCraftApp {
     const items = this.currentInvoice.items;
     const ids = new Set(items.map(item => item.id));
 
-    container.querySelectorAll('.bill-line').forEach(row => {
-      if (!ids.has(row.dataset.itemId)) row.remove();
+    container.querySelectorAll('.bill-line:not([data-leaving])').forEach(row => {
+      if (!ids.has(row.dataset.itemId)) exit(row);
     });
 
     const empty = container.querySelector('.empty-box');
     if (!items.length) {
-      if (!empty) container.innerHTML = `<div class="empty-box">${this.escape(this.t('items.emptyHint'))}</div>`;
+      if (!empty) container.insertAdjacentHTML('beforeend', `<div class="empty-box">${this.escape(this.t('items.emptyHint'))}</div>`);
       return;
     }
     empty?.remove();
 
     items.forEach(item => {
       let row = this.lineRow(item.id);
-      if (!row) {
+      const isNew = !row;
+      if (isNew) {
         row = this.createBillLine(item);
         container.appendChild(row);
+        if (!fresh) enter(row);
       }
-      this.updateBillLine(row, item);
+      this.updateBillLine(row, item, !fresh && !isNew);
     });
     this.decorateVoiceFields(container);
   }
@@ -635,9 +661,11 @@ class BillCraftApp {
     return row;
   }
 
-  updateBillLine(row, item) {
+  updateBillLine(row, item, animate = false) {
     const curr = this.settings.currency || '₹';
     const qty = roundQty(item.quantity);
+    const qtyChanged = row.dataset.qty !== undefined && row.dataset.qty !== String(qty);
+    row.dataset.qty = String(qty);
     const name = row.querySelector('.line-name');
     name.textContent = item.name || this.t('item.namePh');
     name.classList.toggle('is-placeholder', !item.name);
@@ -648,6 +676,7 @@ class BillCraftApp {
     row.querySelector('.line-rate').textContent = `× ${formatCurrency(item.unitPrice, curr)}`;
     // Only typed items can be saved as products; catalog items already are
     row.querySelector('[data-action="save-product"]').hidden = Boolean(item.productId);
+    if (animate && qtyChanged) pop(qtyButton, 1.15);
   }
 
   onLineAction(row, action) {
@@ -735,13 +764,14 @@ class BillCraftApp {
     // An empty field changes nothing
     if (String(value).trim() === '') return;
     const qty = roundQty(value);
-    const { product, lineId } = this.qtyTarget;
+    const { product, lineId, tile } = this.qtyTarget;
     if (lineId) {
       setLineQuantity(this.currentInvoice.items, lineId, qty);
     } else if (qty > 0) {
       addProductLine(this.currentInvoice.items, product, qty);
     }
     this.afterItemsChange();
+    if (tile && qty > 0) this.flyToBill(tile, `${lineId ? '' : '+'}${qty} ${product.unit || ''}`.trim());
   }
 
   /** Collapsed "More options" sections are always open on desktop. */
@@ -756,10 +786,11 @@ class BillCraftApp {
     DESKTOP_QUERY.addEventListener('change', openOnDesktop);
   }
 
+  /** Totals count up (or down) to the new amount */
   updateTotalsCard() {
-    const curr = this.settings.currency || '₹';
-    document.getElementById('summary-subtotal').textContent = formatCurrency(this.currentInvoice.subtotal, curr);
-    document.getElementById('summary-grand-total').textContent = formatCurrency(this.currentInvoice.grandTotal, curr);
+    const money = value => formatCurrency(value, this.settings.currency || '₹');
+    countTo(document.getElementById('summary-subtotal'), this.currentInvoice.subtotal, money);
+    countTo(document.getElementById('summary-grand-total'), this.currentInvoice.grandTotal, money);
     document.getElementById('summary-words').textContent = this.ui.words(this.currentInvoice.grandTotal);
     this.updateBar();
   }
@@ -768,8 +799,11 @@ class BillCraftApp {
   updateBar() {
     const count = this.currentInvoice.items.length;
     document.getElementById('bar-count').textContent = this.t(count === 1 ? 'bar.item' : 'bar.items', { count });
-    document.getElementById('bar-total').textContent = formatCurrency(this.currentInvoice.grandTotal, this.settings.currency || '₹');
-    document.getElementById('btn-step-next').disabled = count === 0;
+    countTo(document.getElementById('bar-total'), this.currentInvoice.grandTotal, value => formatCurrency(value, this.settings.currency || '₹'));
+    const next = document.getElementById('btn-step-next');
+    const wasOff = next.disabled;
+    next.disabled = count === 0;
+    if (wasOff && !next.disabled) nudge(next);
   }
 
   /** Paid, Due or Draft, with the pill behind the chosen one */
@@ -823,6 +857,7 @@ class BillCraftApp {
     }
     this.customerMode = null;
     this.setCustomer({ ...(key === 'walkin' ? {} : this.recent[Number(key.replace('recent-', ''))]), note });
+    pop(document.querySelector('#customer-chips .chip.active'), 1.08);
   }
 
   /** Puts `customer` on the bill and in the fields */
@@ -889,6 +924,7 @@ class BillCraftApp {
     this.customerMode = null;
     this.renderCustomerChips();
     this.updateBadges();
+    pop(document.getElementById('nav-history-badge'), 1.4);
     return true;
   }
 
@@ -897,10 +933,20 @@ class BillCraftApp {
     this.showToast(message, 'success', { label: this.t('nav.newBill'), onClick: () => this.startNewBill() });
   }
 
+  /** The button that sent or saved the bill shows a tick for a moment, with a burst of dots */
+  celebrateButton(button) {
+    if (!button) return;
+    celebrate(button, this.motionLayer);
+    button.classList.add('is-done');
+    clearTimeout(Number(button.dataset.doneTimer));
+    button.dataset.doneTimer = setTimeout(() => button.classList.remove('is-done'), 1400);
+  }
+
   /** Saves the bill, then opens WhatsApp with it: straight to the customer's chat when the phone is known */
-  sendWhatsApp() {
+  sendWhatsApp(button) {
     if (!this.saveBill()) return;
     ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill);
+    this.celebrateButton(button);
     this.afterSave();
   }
 

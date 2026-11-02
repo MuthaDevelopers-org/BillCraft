@@ -138,6 +138,8 @@
   .modal-box {
     border-radius: var(--radius-xl);
     max-height: 90vh;
+    animation-name: modalPop;
+    animation-duration: 200ms;
   }
 
   .invoice-paper {
