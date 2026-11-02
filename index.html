@@ -101,79 +101,20 @@
       <section class="view-section active" id="view-builder">
         <!-- Mobile step bar (hidden on larger screens) -->
         <nav class="step-bar mobile-only" aria-label="Bill steps" data-i18n-aria="step.bar">
-          <button class="step-btn active" data-step-go="1">
+          <span class="step-pill" aria-hidden="true"></span>
+          <button type="button" class="step-btn active" data-step-go="1">
             <span class="step-num">1</span>
-            <span class="step-label" data-i18n="step.customer">Customer</span>
-          </button>
-          <button class="step-btn" data-step-go="2">
-            <span class="step-num">2</span>
             <span class="step-label" data-i18n="step.items">Items</span>
           </button>
-          <button class="step-btn" data-step-go="3">
-            <span class="step-num">3</span>
-            <span class="step-label" data-i18n="step.done">Done</span>
+          <button type="button" class="step-btn" data-step-go="2">
+            <span class="step-num">2</span>
+            <span class="step-label" data-i18n="step.send">Send</span>
           </button>
         </nav>
 
         <div class="bill-builder-layout step-1" id="bill-layout">
           <div class="bill-form-panel">
-            <!-- Step 1: Customer -->
-            <div class="card step-customer">
-              <div class="card-header">
-                <div class="card-title">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                  <span data-i18n="customer.card">Customer Details</span>
-                </div>
-              </div>
-              <div class="card-body">
-                <div class="form-grid-2">
-                  <div class="form-group">
-                    <label class="form-label" for="cust-name" data-i18n="field.customerName">Customer Name</label>
-                    <input type="text" id="cust-name" class="form-control" data-voice="text" data-i18n-placeholder="ph.customerName" placeholder="e.g. Priya Sharma" autocomplete="off" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="cust-phone" data-i18n="field.customerPhone">Phone / WhatsApp</label>
-                    <input type="tel" id="cust-phone" class="form-control" data-voice="number" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" autocomplete="tel" />
-                  </div>
-                </div>
-
-                <details class="more-options">
-                  <summary class="more-summary" data-i18n="step.more">More options</summary>
-                  <div class="more-body">
-                    <div class="form-grid-3">
-                      <div class="form-group">
-                        <label class="form-label" for="inv-number" data-i18n="field.billNumber">Bill Number</label>
-                        <input type="text" id="inv-number" class="form-control" data-i18n-placeholder="ph.billNumber" placeholder="BILL-001" />
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label" for="inv-date" data-i18n="field.billDate">Bill Date</label>
-                        <input type="date" id="inv-date" class="form-control" />
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label" for="inv-status" data-i18n="field.status">Payment Status</label>
-                        <select id="inv-status" class="form-control">
-                          <option value="Paid" data-i18n="status.paid">Paid</option>
-                          <option value="Due" data-i18n="status.dueLong">Due / Unpaid</option>
-                          <option value="Draft" data-i18n="status.draft">Draft</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="form-grid-2">
-                      <div class="form-group">
-                        <label class="form-label" for="cust-address" data-i18n="field.customerAddress">Delivery Address / City</label>
-                        <input type="text" id="cust-address" class="form-control" data-i18n-placeholder="ph.address" placeholder="e.g. 104 Blossom Heights, Pune" />
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label" for="cust-notes" data-i18n="field.customerNote">Order Note</label>
-                        <input type="text" id="cust-notes" class="form-control" data-i18n-placeholder="ph.customerNote" placeholder="e.g. Gift wrap requested" />
-                      </div>
-                    </div>
-                  </div>
-                </details>
-              </div>
-            </div>
-
-            <!-- Step 2: Items and totals -->
+            <!-- Step 1: Items and totals -->
             <div class="card step-items">
               <div class="card-header">
                 <div class="card-title">
@@ -228,20 +169,71 @@
                   </div>
                 </div>
               </div>
-              <div class="card-footer">
-                <button type="button" class="btn btn-secondary mobile-only" id="btn-jump-to-preview">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                  <span data-i18n="btn.previewBill">Preview Bill</span>
-                </button>
-                <button type="button" class="btn btn-success btn-save-bill">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                  <span data-i18n="btn.saveHistory">Save to History</span>
-                </button>
+            </div>
+
+            <!-- Step 2: who the bill is for, and whether it is paid -->
+            <div class="card step-customer">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                  <span data-i18n="customer.card">Customer Details</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <!-- Walk-in, recent customers from history, and "+ New" (rendered by app.js) -->
+                <div class="chip-row" id="customer-chips" role="group" data-i18n-aria="customer.card"></div>
+
+                <div class="form-grid-2 customer-fields" id="customer-fields" hidden>
+                  <div class="form-group">
+                    <label class="form-label" for="cust-name" data-i18n="field.customerName">Customer Name</label>
+                    <input type="text" id="cust-name" class="form-control" data-voice="text" data-i18n-placeholder="ph.customerName" placeholder="e.g. Priya Sharma" autocomplete="off" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="cust-phone" data-i18n="field.customerPhone">Phone / WhatsApp</label>
+                    <input type="tel" id="cust-phone" class="form-control" data-voice="number" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" autocomplete="tel" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <span class="form-label" id="status-label" data-i18n="field.status">Payment Status</span>
+                  <div class="segmented" id="status-toggle" role="radiogroup" aria-labelledby="status-label">
+                    <span class="segmented-pill" aria-hidden="true"></span>
+                    <button type="button" role="radio" aria-checked="true" data-status="Paid" data-i18n="status.paid">Paid</button>
+                    <button type="button" role="radio" aria-checked="false" data-status="Due" data-i18n="status.due">Due</button>
+                    <button type="button" role="radio" aria-checked="false" data-status="Draft" data-i18n="status.draft">Draft</button>
+                  </div>
+                </div>
+
+                <details class="more-options">
+                  <summary class="more-summary" data-i18n="step.more">More options</summary>
+                  <div class="more-body">
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="inv-number" data-i18n="field.billNumber">Bill Number</label>
+                        <input type="text" id="inv-number" class="form-control" data-i18n-placeholder="ph.billNumber" placeholder="BILL-001" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="inv-date" data-i18n="field.billDate">Bill Date</label>
+                        <input type="date" id="inv-date" class="form-control" />
+                      </div>
+                    </div>
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="cust-address" data-i18n="field.customerAddress">Delivery Address / City</label>
+                        <input type="text" id="cust-address" class="form-control" data-i18n-placeholder="ph.address" placeholder="e.g. 104 Blossom Heights, Pune" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="cust-notes" data-i18n="field.customerNote">Order Note</label>
+                        <input type="text" id="cust-notes" class="form-control" data-i18n-placeholder="ph.customerNote" placeholder="e.g. Gift wrap requested" />
+                      </div>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
 
-          <!-- Step 3 on phones, right-hand panel on larger screens -->
+          <!-- Step 2 on phones (below the customer), the right-hand panel on larger screens -->
           <div class="bill-preview-panel">
             <div class="preview-actions-bar">
               <div class="template-selector-pill">
@@ -273,6 +265,10 @@
                   </svg>
                   <span data-i18n="action.whatsapp">WhatsApp</span>
                 </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-save-bill" data-i18n-title="btn.saveHistory">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                  <span data-i18n="action.save">Save</span>
+                </button>
                 <button type="button" class="btn btn-secondary btn-sm btn-speak" id="btn-speak-preview" data-i18n-title="action.speak" data-i18n-aria="action.speak" hidden>
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
                   <span data-i18n="action.speak">Read aloud</span>
@@ -284,22 +280,25 @@
             <div class="invoice-render-wrapper" id="invoice-render-target">
               <!-- Rendered via JS templates -->
             </div>
-
-            <div class="preview-done-actions mobile-only">
-              <button type="button" class="btn btn-success btn-save-bill">
-                <span data-i18n="btn.saveHistory">Save to History</span>
-              </button>
-            </div>
           </div>
         </div>
 
-        <!-- Mobile step buttons -->
+        <!-- Phone bar: the running total and Next on Items; Back and Send on the last step -->
         <div class="step-nav mobile-only">
-          <button type="button" class="btn btn-secondary" id="btn-step-back" hidden>
-            <span data-i18n="common.back">Back</span>
-          </button>
-          <button type="button" class="btn btn-primary" id="btn-step-next">
+          <div class="bar-summary" data-bar-step="1">
+            <span class="bar-count" id="bar-count">0 items</span>
+            <span class="bar-total" id="bar-total">₹ 0.00</span>
+          </div>
+          <button type="button" class="btn btn-primary bar-next" id="btn-step-next" data-bar-step="1" disabled>
             <span data-i18n="common.next">Next</span>
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <button type="button" class="btn btn-secondary bar-back" id="btn-step-back" data-bar-step="2" data-i18n-title="common.back" data-i18n-aria="common.back" hidden>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button type="button" class="btn btn-success bar-send" id="btn-send-whatsapp" data-bar-step="2" hidden>
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15c-1.48 0-2.930-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 01-1.25-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.83c.02 4.54-3.68 8.23-8.23 8.23zm4.51-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/></svg>
+            <span data-i18n="send.whatsapp">Send on WhatsApp</span>
           </button>
         </div>
       </section>

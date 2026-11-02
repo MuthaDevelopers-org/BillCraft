@@ -4,7 +4,7 @@
  */
 
 import { Product, Invoice, InvoiceItem, formatCurrency } from './models.js';
-import { addProductLine } from './quickBill.js';
+import { addProductLine, customerKey, rankProducts, recentCustomers } from './quickBill.js';
 import { StorageService } from './storage.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString } from './qrHelper.js';
@@ -14,7 +14,7 @@ import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, s
 import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
 
 const DESKTOP_QUERY = window.matchMedia('(min-width: 1024px)');
-const STEP_COUNT = 3;
+const STEP_COUNT = 2;
 
 const MIC_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>';
 const SPEAK_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>';
@@ -34,6 +34,8 @@ class BillCraftApp {
     this.previewFrame = 0;
     this.editingProductId = null;
     this.expandedItemIds = new Set();
+    this.customerMode = null; // 'new' while a new customer is being typed
+    this.refreshHistoryData();
 
     // Replaced by loadTranslators() before anything is rendered
     this.ui = createTranslator();
@@ -155,7 +157,6 @@ class BillCraftApp {
 
     document.getElementById('btn-step-back').addEventListener('click', () => this.setStep(this.step - 1));
     document.getElementById('btn-step-next').addEventListener('click', () => this.setStep(this.step + 1));
-    document.getElementById('btn-jump-to-preview').addEventListener('click', () => this.setStep(STEP_COUNT));
   }
 
   switchView(viewName) {
@@ -184,10 +185,11 @@ class BillCraftApp {
   }
 
   /**
-   * Mobile guided flow: 1 Customer, 2 Items, 3 Done (preview and share).
-   * On desktop the CSS shows all three panels at once and ignores the step.
+   * Phone flow: 1 Items, 2 Send (customer, preview and sharing).
+   * On desktop the CSS shows every panel at once and ignores the step.
    */
   setStep(step) {
+    const previous = this.step;
     this.step = Math.min(STEP_COUNT, Math.max(1, step));
 
     const layout = document.getElementById('bill-layout');
@@ -204,10 +206,17 @@ class BillCraftApp {
       }
     });
 
-    document.getElementById('btn-step-back').hidden = this.step === 1;
-    document.getElementById('btn-step-next').hidden = this.step === STEP_COUNT;
+    document.querySelector('.step-bar').style.setProperty('--step-index', this.step - 1);
+
+    // The phone bar shows only this step's controls
+    document.querySelectorAll('[data-bar-step]').forEach(el => {
+      el.hidden = Number(el.dataset.barStep) !== this.step;
+    });
+
+    if (this.step !== previous && !DESKTOP_QUERY.matches) window.scrollTo({ top: 0, behavior: 'instant' });
 
     if (this.step === STEP_COUNT) {
+      this.renderCustomerChips();
       this.renderActiveInvoicePreview();
       ExporterService.preload();
     }
@@ -258,6 +267,7 @@ class BillCraftApp {
     this.currentInvoice = invoice;
     this.activeTemplate = invoice.template || this.settings.defaultTemplate || 'modern';
     this.expandedItemIds.clear();
+    this.customerMode = null;
     StorageService.saveActiveDraft(invoice);
     this.switchView('builder');
     this.setStep(step);
@@ -288,11 +298,13 @@ class BillCraftApp {
     document.getElementById('btn-new-bill').addEventListener('click', () => this.startNewBill());
 
     document.querySelectorAll('.btn-save-bill').forEach(btn => {
-      btn.addEventListener('click', () => this.saveCurrentInvoiceToHistory());
+      btn.addEventListener('click', () => {
+        if (this.saveBill()) this.afterSave();
+      });
     });
 
     const inputs = [
-      'inv-number', 'inv-date', 'inv-status',
+      'inv-number', 'inv-date',
       'cust-name', 'cust-phone', 'cust-address', 'cust-notes',
       'inv-shipping', 'inv-discount', 'inv-footer-notes'
     ];
@@ -324,27 +336,45 @@ class BillCraftApp {
       this.renderActiveInvoicePreview();
     });
 
+    // Every way out of the app saves the bill to history first
     document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+      if (!this.saveBill()) return;
       this.flushPreview();
       this.showToast(this.t('toast.pdfPreparing'), 'info');
       await ExporterService.exportPDF('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.pdf`);
-      this.showToast(this.t('toast.pdfReady'), 'success');
+      this.afterSave(this.t('toast.pdfReady'));
     });
 
     document.getElementById('btn-export-image').addEventListener('click', async () => {
+      if (!this.saveBill()) return;
       this.flushPreview();
       this.showToast(this.t('toast.imagePreparing'), 'info');
       await ExporterService.exportImage('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.png`);
-      this.showToast(this.t('toast.imageReady'), 'success');
+      this.afterSave(this.t('toast.imageReady'));
     });
 
-    document.getElementById('btn-share-whatsapp').addEventListener('click', () => {
-      ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill);
-    });
+    document.getElementById('btn-share-whatsapp').addEventListener('click', () => this.sendWhatsApp());
+    document.getElementById('btn-send-whatsapp').addEventListener('click', () => this.sendWhatsApp());
 
     document.getElementById('btn-print-bill').addEventListener('click', () => {
+      if (!this.saveBill()) return;
       this.flushPreview();
       ExporterService.triggerPrint();
+      this.afterSave();
+    });
+
+    document.getElementById('customer-chips').addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-chip]');
+      if (chip) this.chooseCustomer(chip.dataset.chip);
+    });
+
+    document.getElementById('status-toggle').addEventListener('click', (event) => {
+      const option = event.target.closest('[data-status]');
+      if (!option) return;
+      this.currentInvoice.status = option.dataset.status;
+      this.renderStatusToggle();
+      this.schedulePreview();
+      StorageService.saveActiveDraft(this.currentInvoice);
     });
 
     document.querySelectorAll('.btn-speak').forEach(btn => {
@@ -361,7 +391,6 @@ class BillCraftApp {
   syncFormToInvoice() {
     this.currentInvoice.invoiceNumber = document.getElementById('inv-number').value || '';
     this.currentInvoice.date = document.getElementById('inv-date').value || '';
-    this.currentInvoice.status = document.getElementById('inv-status').value || 'Paid';
 
     this.currentInvoice.customer = {
       name: document.getElementById('cust-name').value || '',
@@ -383,7 +412,6 @@ class BillCraftApp {
   renderBuilderForm() {
     document.getElementById('inv-number').value = this.currentInvoice.invoiceNumber || '';
     document.getElementById('inv-date').value = this.currentInvoice.date || '';
-    document.getElementById('inv-status').value = this.currentInvoice.status || 'Paid';
 
     document.getElementById('cust-name').value = this.currentInvoice.customer.name || '';
     document.getElementById('cust-phone').value = this.currentInvoice.customer.phone || '';
@@ -400,6 +428,8 @@ class BillCraftApp {
 
     this.renderAllItemsViews();
     this.updateTotalsCard();
+    this.renderStatusToggle();
+    this.renderCustomerChips();
     this.schedulePreview();
   }
 
@@ -556,6 +586,80 @@ class BillCraftApp {
     document.getElementById('summary-subtotal').textContent = formatCurrency(this.currentInvoice.subtotal, curr);
     document.getElementById('summary-grand-total').textContent = formatCurrency(this.currentInvoice.grandTotal, curr);
     document.getElementById('summary-words').textContent = this.ui.words(this.currentInvoice.grandTotal);
+    this.updateBar();
+  }
+
+  /** The phone bar: how many items, the running total, and Next once the bill has an item */
+  updateBar() {
+    const count = this.currentInvoice.items.length;
+    document.getElementById('bar-count').textContent = this.t(count === 1 ? 'bar.item' : 'bar.items', { count });
+    document.getElementById('bar-total').textContent = formatCurrency(this.currentInvoice.grandTotal, this.settings.currency || '₹');
+    document.getElementById('btn-step-next').disabled = count === 0;
+  }
+
+  /** Paid, Due or Draft, with the pill behind the chosen one */
+  renderStatusToggle() {
+    const toggle = document.getElementById('status-toggle');
+    const options = [...toggle.querySelectorAll('[data-status]')];
+    const index = Math.max(0, options.findIndex(option => option.dataset.status === this.currentInvoice.status));
+    options.forEach((option, i) => option.setAttribute('aria-checked', String(i === index)));
+    toggle.style.setProperty('--active', index);
+  }
+
+  /** Product order and recent customers come from saved bills, so they are refreshed after each save */
+  refreshHistoryData() {
+    const invoices = StorageService.getInvoices();
+    this.recent = recentCustomers(invoices);
+    this.rankedProducts = rankProducts(StorageService.getCatalog(), invoices);
+  }
+
+  /** Which customer chip matches the bill: 'walkin', 'recent-N', or 'new' for anyone else */
+  activeCustomerChip() {
+    const { name = '', phone = '' } = this.currentInvoice.customer;
+    if (this.customerMode === 'new') return 'new';
+    if (!name.trim() && !phone.trim()) return 'walkin';
+    const index = this.recent.findIndex(customer => customerKey(customer) === customerKey({ name, phone }));
+    return index === -1 ? 'new' : `recent-${index}`;
+  }
+
+  /** Walk-in, recent customers, and "+ New", which shows the name and phone fields */
+  renderCustomerChips() {
+    const active = this.activeCustomerChip();
+    const chips = [
+      { key: 'walkin', label: this.t('common.walkIn') },
+      ...this.recent.map((customer, index) => ({ key: `recent-${index}`, label: customer.name })),
+      { key: 'new', label: this.t('customer.new') }
+    ];
+    document.getElementById('customer-chips').innerHTML = chips.map(chip => `
+      <button type="button" class="chip${chip.key === active ? ' active' : ''}" data-chip="${chip.key}" aria-pressed="${chip.key === active}">${this.escape(chip.label)}</button>
+    `).join('');
+    document.getElementById('customer-fields').hidden = active !== 'new';
+  }
+
+  chooseCustomer(key) {
+    const note = this.currentInvoice.customer.note || '';
+    if (key === 'new') {
+      // Tapping "+ New" again keeps what was typed
+      if (this.activeCustomerChip() !== 'new') this.setCustomer({ note });
+      this.customerMode = 'new';
+      this.renderCustomerChips();
+      document.getElementById('cust-name').focus();
+      return;
+    }
+    this.customerMode = null;
+    this.setCustomer({ ...(key === 'walkin' ? {} : this.recent[Number(key.replace('recent-', ''))]), note });
+  }
+
+  /** Puts `customer` on the bill and in the fields */
+  setCustomer({ name = '', phone = '', address = '', note = '' }) {
+    this.currentInvoice.customer = { name, phone, address, note };
+    document.getElementById('cust-name').value = name;
+    document.getElementById('cust-phone').value = phone;
+    document.getElementById('cust-address').value = address;
+    document.getElementById('cust-notes').value = note;
+    this.renderCustomerChips();
+    this.schedulePreview();
+    StorageService.saveActiveDraft(this.currentInvoice);
   }
 
   refreshQR() {
@@ -582,24 +686,47 @@ class BillCraftApp {
     );
   }
 
-  saveCurrentInvoiceToHistory() {
+  /**
+   * Puts the bill into history before it leaves the app (sent, printed, exported or
+   * saved). Saving again updates the same entry. Returns false, with a notice, when
+   * the bill cannot be saved yet.
+   */
+  saveBill() {
     this.syncFormToInvoice();
 
     if (!this.currentInvoice.invoiceNumber) {
       this.showToast(this.t('toast.needNumber'), 'warning');
-      this.setStep(1);
-      return;
+      this.setStep(STEP_COUNT);
+      const field = document.getElementById('inv-number');
+      field.closest('details').open = true;
+      field.focus();
+      return false;
     }
 
     if (this.currentInvoice.items.length === 0) {
       this.showToast(this.t('toast.needItem'), 'warning');
-      this.setStep(2);
-      return;
+      this.setStep(1);
+      return false;
     }
 
     StorageService.saveInvoice(this.currentInvoice);
-    this.showToast(this.t('toast.billSaved', { number: this.currentInvoice.invoiceNumber }), 'success');
+    this.refreshHistoryData();
+    this.customerMode = null;
+    this.renderCustomerChips();
     this.updateBadges();
+    return true;
+  }
+
+  /** The saved notice, with the next bill one tap away */
+  afterSave(message = this.t('toast.billSaved', { number: this.currentInvoice.invoiceNumber })) {
+    this.showToast(message, 'success', { label: this.t('nav.newBill'), onClick: () => this.startNewBill() });
+  }
+
+  /** Saves the bill, then opens WhatsApp with it: straight to the customer's chat when the phone is known */
+  sendWhatsApp() {
+    if (!this.saveBill()) return;
+    ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill);
+    this.afterSave();
   }
 
   // --- Voice ---
@@ -959,7 +1086,7 @@ class BillCraftApp {
           <td style="text-align: right;">
             <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
               <button class="btn btn-secondary btn-sm btn-open-inv" data-id="${inv.id}">${this.escape(this.t('history.open'))}</button>
-              <button class="btn btn-ghost btn-sm btn-dup-inv" data-id="${inv.id}">${this.escape(this.t('history.duplicate'))}</button>
+              <button class="btn btn-ghost btn-sm btn-dup-inv" data-id="${inv.id}">${this.escape(this.t('history.repeat'))}</button>
               <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
                 ${TRASH_ICON}
               </button>
@@ -987,7 +1114,7 @@ class BillCraftApp {
               ${this.escape(this.t('history.openBill'))}
             </button>
             <button class="btn btn-secondary btn-sm btn-dup-inv" data-id="${inv.id}">
-              ${this.escape(this.t('history.duplicate'))}
+              ${this.escape(this.t('history.repeat'))}
             </button>
             <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
               ${TRASH_ICON}
@@ -1019,8 +1146,8 @@ class BillCraftApp {
             date: new Date().toISOString().split('T')[0],
             status: 'Paid',
             createdAt: new Date().toISOString()
-          }), 1);
-          this.showToast(this.t('toast.duplicated', { number: nextNum }), 'success');
+          }), STEP_COUNT);
+          this.showToast(this.t('toast.repeated', { number: nextNum }), 'success');
         }
       });
     });
@@ -1102,6 +1229,7 @@ class BillCraftApp {
           StorageService.importBackupJSON(re.target.result);
           this.settings = StorageService.getSettings();
           this.currentInvoice = StorageService.getActiveDraft() || this.createNewInvoice();
+          this.refreshHistoryData();
           await this.loadTranslators();
           this.refreshAll();
           this.showToast(this.t('toast.restoreDone'), 'success');

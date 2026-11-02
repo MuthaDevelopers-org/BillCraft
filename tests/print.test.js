@@ -44,8 +44,7 @@ const CHROME = [
   '.app-topbar',
   '.view-section:not(#view-builder)', // catalog, history and settings
   '.bill-form-panel',                 // the editor cards
-  '.preview-actions-bar',             // design picker and the PDF, image, print and WhatsApp buttons
-  '.preview-done-actions',            // Save to History on phones
+  '.preview-actions-bar',             // design picker and the PDF, image, print, WhatsApp and Save buttons
   '.step-bar',
   '.step-nav',
   '.mobile-only',

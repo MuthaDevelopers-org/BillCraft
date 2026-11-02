@@ -37,12 +37,12 @@ export default {
     'lang.subtitle': 'वह भाषा चुनें जिसे आप सबसे अच्छी तरह पढ़ते हैं। आप बाद में सेटिंग्स में बदल सकते हैं।',
 
     'step.bar': 'बिल के चरण',
-    'step.customer': 'ग्राहक',
     'step.items': 'सामान',
-    'step.done': 'बिल तैयार',
+    'step.send': 'भेजें',
     'step.more': 'और विकल्प',
 
     'customer.card': 'ग्राहक की जानकारी',
+    'customer.new': '+ नया',
     'field.billNumber': 'बिल नंबर',
     'field.billDate': 'बिल की तारीख',
     'field.status': 'भुगतान की स्थिति',
@@ -57,7 +57,6 @@ export default {
     'ph.customerNote': 'जैसे गिफ़्ट रैप चाहिए',
     'status.paid': 'भुगतान हो गया',
     'status.due': 'बाकी',
-    'status.dueLong': 'बाकी / भुगतान नहीं हुआ',
     'status.draft': 'ड्राफ़्ट',
 
     'items.card': 'सामान और आइटम',
@@ -86,8 +85,11 @@ export default {
     'sum.subtotal': 'उप-योग:',
     'sum.grandTotal': 'कुल योग:',
     'sum.readAloud': 'कुल राशि सुनें',
-    'btn.previewBill': 'बिल देखें',
     'btn.saveHistory': 'इतिहास में सेव करें',
+
+    'bar.item': '{count} चीज़',
+    'bar.items': '{count} चीज़ें',
+    'send.whatsapp': 'WhatsApp पर भेजें',
 
     'preview.template': 'डिज़ाइन:',
     'template.modern': 'मॉडर्न सादा',
@@ -103,6 +105,7 @@ export default {
     'action.whatsapp': 'WhatsApp',
     'action.whatsappTitle': 'WhatsApp पर भेजें',
     'action.speak': 'ज़ोर से सुनें',
+    'action.save': 'सेव करें',
 
     'voice.speak': 'बोलें',
     'voice.listening': 'सुन रहे हैं... अब बोलें',
@@ -158,7 +161,7 @@ export default {
     'history.grandTotal': 'कुल योग',
     'history.open': 'खोलें',
     'history.openBill': 'बिल खोलें',
-    'history.duplicate': 'नकल बनाएँ',
+    'history.repeat': 'फिर से बनाएँ',
     'history.delete': 'हटाएँ',
 
     'settings.sellerCard': 'आपका व्यापार',
@@ -217,7 +220,7 @@ export default {
     'toast.productDeleted': 'सामान हटा दिया गया',
     'toast.productNameRequired': 'सामान का नाम लिखना ज़रूरी है',
     'toast.billOpened': 'बिल #{number} खुल गया',
-    'toast.duplicated': 'नए बिल #{number} में नकल बन गई',
+    'toast.repeated': 'उसी सामान के साथ नया बिल #{number}',
     'toast.billDeleted': 'बिल हटा दिया गया',
     'toast.settingsSaved': 'सेटिंग्स सेव हो गईं',
     'toast.qrReset': 'अपने-आप बनने वाला UPI QR इस्तेमाल होगा',

@@ -69,10 +69,6 @@
     flex-wrap: wrap;
     width: auto;
   }
-
-  .btn-group .btn-whatsapp {
-    grid-column: auto;
-  }
 }
 
 /* 768px and up: tablets. Tables replace the phone cards; three-column forms */
@@ -251,16 +247,19 @@
   }
 
   /* Desktop shows every bill panel together; these match the phone rules in components.css */
-  .bill-builder-layout.step-1 .step-items,
-  .bill-builder-layout.step-2 .step-customer,
-  .bill-builder-layout.step-3 .step-customer,
-  .bill-builder-layout.step-3 .step-items {
+  .bill-builder-layout.step-1 .step-customer,
+  .bill-builder-layout.step-2 .step-items {
     display: block;
   }
 
-  .bill-builder-layout.step-1 .bill-preview-panel,
-  .bill-builder-layout.step-2 .bill-preview-panel {
+  .bill-builder-layout.step-1 .bill-preview-panel {
     display: flex;
+  }
+
+  /* No bottom bar on desktop, so WhatsApp leads the other actions */
+  .btn-group .btn-whatsapp {
+    display: inline-flex;
+    order: -1;
   }
 
   .bill-preview-panel {

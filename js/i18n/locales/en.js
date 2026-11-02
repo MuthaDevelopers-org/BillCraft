@@ -46,13 +46,13 @@ export default {
 
     // Bill builder steps
     'step.bar': 'Bill steps',
-    'step.customer': 'Customer',
     'step.items': 'Items',
-    'step.done': 'Done',
+    'step.send': 'Send',
     'step.more': 'More options',
 
     // Customer details
     'customer.card': 'Customer Details',
+    'customer.new': '+ New',
     'field.billNumber': 'Bill Number',
     'field.billDate': 'Bill Date',
     'field.status': 'Payment Status',
@@ -67,7 +67,6 @@ export default {
     'ph.customerNote': 'e.g. Gift wrap requested',
     'status.paid': 'Paid',
     'status.due': 'Due',
-    'status.dueLong': 'Due / Unpaid',
     'status.draft': 'Draft',
 
     // Items
@@ -98,8 +97,12 @@ export default {
     'sum.subtotal': 'Subtotal:',
     'sum.grandTotal': 'Grand Total:',
     'sum.readAloud': 'Read total aloud',
-    'btn.previewBill': 'Preview Bill',
     'btn.saveHistory': 'Save to History',
+
+    // Phone bar
+    'bar.item': '{count} item',
+    'bar.items': '{count} items',
+    'send.whatsapp': 'Send on WhatsApp',
 
     // Preview and export
     'preview.template': 'Design:',
@@ -116,6 +119,7 @@ export default {
     'action.whatsapp': 'WhatsApp',
     'action.whatsappTitle': 'Share via WhatsApp',
     'action.speak': 'Read aloud',
+    'action.save': 'Save',
 
     // Voice
     'voice.speak': 'Speak',
@@ -175,7 +179,7 @@ export default {
     'history.grandTotal': 'Grand Total',
     'history.open': 'Open',
     'history.openBill': 'Open Bill',
-    'history.duplicate': 'Copy',
+    'history.repeat': 'Repeat',
     'history.delete': 'Delete',
 
     // Settings
@@ -236,7 +240,7 @@ export default {
     'toast.productDeleted': 'Product deleted',
     'toast.productNameRequired': 'Product name is required',
     'toast.billOpened': 'Opened bill #{number}',
-    'toast.duplicated': 'Copied into new bill #{number}',
+    'toast.repeated': 'New bill #{number} with the same items',
     'toast.billDeleted': 'Bill deleted',
     'toast.settingsSaved': 'Settings saved',
     'toast.qrReset': 'Automatic UPI QR will be used',
