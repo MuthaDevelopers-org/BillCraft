@@ -6,7 +6,39 @@
 import { formatCurrency } from './models.js';
 import { createTranslator, statusLabel } from './i18n/i18n.js';
 
+// The export libraries load on first use, so starting the app never waits for them
+const LIBRARIES = {
+  html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+};
+const loading = new Map();
+
+/** Loads a script once. Resolves to false if it cannot load, so the fallbacks run instead. */
+function loadScript(src) {
+  if (!loading.has(src)) {
+    loading.set(src, new Promise(resolve => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => {
+        loading.delete(src); // try again next time, for example once back online
+        script.remove();
+        resolve(false);
+      };
+      document.head.appendChild(script);
+    }));
+  }
+  return loading.get(src);
+}
+
 export const ExporterService = {
+  /** Starts loading the export libraries in the background, before they are needed */
+  preload() {
+    loadScript(LIBRARIES.html2canvas);
+    loadScript(LIBRARIES.jspdf);
+  },
+
   /**
    * Export invoice element as high-resolution PNG image
    */
@@ -16,7 +48,7 @@ export const ExporterService = {
       throw new Error('Invoice container element not found');
     }
 
-    // Check if html2canvas is loaded from CDN
+    await loadScript(LIBRARIES.html2canvas);
     if (typeof window.html2canvas === 'function') {
       try {
         const canvas = await window.html2canvas(el, {
@@ -46,7 +78,7 @@ export const ExporterService = {
       throw new Error('Invoice container element not found');
     }
 
-    // If jsPDF and html2canvas exist
+    await Promise.all([loadScript(LIBRARIES.html2canvas), loadScript(LIBRARIES.jspdf)]);
     if (window.jspdf && typeof window.html2canvas === 'function') {
       try {
         const { jsPDF } = window.jspdf;

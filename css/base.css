@@ -367,6 +367,20 @@ img {
   max-width: 100%;
 }
 
+/* A button inside a notice, such as Undo or New bill */
+.toast-action {
+  margin-inline-start: auto;
+  min-height: 40px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .toast.toast-success {
   border-left: 4px solid var(--success);
 }

@@ -27,6 +27,7 @@ export default {
     'common.next': 'आगे',
     'common.add': 'जोड़ें',
     'common.done': 'हो गया',
+    'common.undo': 'वापस लें',
     'common.walkIn': 'ग्राहक (नकद)',
     'common.valuedCustomer': 'प्रिय ग्राहक',
     'common.localSale': 'स्थानीय बिक्री',
@@ -224,7 +225,6 @@ export default {
     'toast.restoreDone': 'बैकअप वापस आ गया',
     'toast.restoreFailed': 'वापस नहीं ला सके: यह BillCraft की बैकअप फ़ाइल नहीं है',
     'toast.languageChanged': 'भाषा बदल गई',
-    'confirm.newBill': 'क्या नया खाली बिल शुरू करें?',
     'confirm.deleteProduct': 'क्या यह सामान सूची से हटाएँ?',
     'confirm.deleteBill': 'क्या यह बिल हमेशा के लिए हटाएँ?',
 

@@ -34,6 +34,7 @@ export default {
     'common.next': 'Next',
     'common.add': 'Add',
     'common.done': 'Done',
+    'common.undo': 'Undo',
     'common.walkIn': 'Walk-in Customer',
     'common.valuedCustomer': 'Valued Customer',
     'common.localSale': 'Local Sale',
@@ -243,7 +244,6 @@ export default {
     'toast.restoreDone': 'Backup restored',
     'toast.restoreFailed': 'Could not restore: this is not a BillCraft backup file',
     'toast.languageChanged': 'Language changed',
-    'confirm.newBill': 'Start a new blank bill?',
     'confirm.deleteProduct': 'Delete this product from the catalog?',
     'confirm.deleteBill': 'Delete this bill permanently?',
 

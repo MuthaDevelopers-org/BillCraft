@@ -4,6 +4,7 @@
  */
 
 import { Product, Invoice, InvoiceItem, formatCurrency } from './models.js';
+import { addProductLine } from './quickBill.js';
 import { StorageService } from './storage.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString } from './qrHelper.js';
@@ -22,11 +23,15 @@ const TRASH_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor
 class BillCraftApp {
   constructor() {
     this.settings = StorageService.getSettings();
-    this.currentInvoice = StorageService.getActiveDraft() || this.createNewInvoice();
+    // A draft that was already saved (and not changed since) gives way to a fresh bill
+    const draft = StorageService.getActiveDraft();
+    this.currentInvoice = draft && !this.isSaved(draft) ? draft : this.createNewInvoice();
     this.activeTemplate = this.currentInvoice.template || this.settings.defaultTemplate || 'modern';
     this.currentView = 'builder';
     this.step = 1;
     this.qrDataUrl = '';
+    this.qrKey = '';
+    this.previewFrame = 0;
     this.editingProductId = null;
     this.expandedItemIds = new Set();
 
@@ -51,6 +56,8 @@ class BillCraftApp {
     this.decorateVoiceFields(document);
     this.refreshAll();
     if (!this.settings.appLanguage) this.openLanguagePicker(true);
+    // Wide screens show the export buttons from the start, so load their libraries once idle
+    if (DESKTOP_QUERY.matches) setTimeout(() => ExporterService.preload(), 1500);
   }
 
   populateLanguageSelects() {
@@ -143,6 +150,9 @@ class BillCraftApp {
       btn.addEventListener('click', () => this.setStep(Number(btn.dataset.stepGo)));
     });
 
+    // Widening to the desktop layout shows the preview beside the editor
+    DESKTOP_QUERY.addEventListener('change', () => this.schedulePreview());
+
     document.getElementById('btn-step-back').addEventListener('click', () => this.setStep(this.step - 1));
     document.getElementById('btn-step-next').addEventListener('click', () => this.setStep(this.step + 1));
     document.getElementById('btn-jump-to-preview').addEventListener('click', () => this.setStep(STEP_COUNT));
@@ -197,7 +207,10 @@ class BillCraftApp {
     document.getElementById('btn-step-back').hidden = this.step === 1;
     document.getElementById('btn-step-next').hidden = this.step === STEP_COUNT;
 
-    if (this.step === STEP_COUNT) this.renderActiveInvoicePreview();
+    if (this.step === STEP_COUNT) {
+      this.renderActiveInvoicePreview();
+      ExporterService.preload();
+    }
   }
 
   refreshAll() {
@@ -205,8 +218,7 @@ class BillCraftApp {
     this.updateSidebarBrand();
     this.applyThemeAccent(this.settings.themeAccent);
     this.showView(this.currentView);
-    this.refreshQR();
-    this.renderActiveInvoicePreview();
+    this.schedulePreview();
     this.updateBadges();
     this.setStep(this.step);
     this.decorateVoiceFields(document);
@@ -221,29 +233,59 @@ class BillCraftApp {
       template: this.settings.defaultTemplate || 'modern',
       notes: this.settings.defaultNotes,
       status: 'Paid',
-      items: [
-        new InvoiceItem({
-          name: 'Handcrafted Soy Wax Candle (Lavender & Vanilla)',
-          description: 'Eco-friendly 200g jar',
-          quantity: 1,
-          unit: 'pcs',
-          unitPrice: 450
-        })
-      ]
+      items: []
     });
   }
 
-  bindBuilderEvents() {
-    document.getElementById('btn-new-bill').addEventListener('click', () => {
-      if (!confirm(this.t('confirm.newBill'))) return;
-      this.currentInvoice = this.createNewInvoice();
-      this.activeTemplate = this.currentInvoice.template;
-      this.expandedItemIds.clear();
-      StorageService.saveActiveDraft(this.currentInvoice);
-      this.switchView('builder');
-      this.setStep(1);
-      this.showToast(this.t('toast.newBill'), 'info');
+  /** True when history holds this exact bill, so nothing is lost by leaving it */
+  isSaved(invoice) {
+    const saved = StorageService.getInvoiceById(invoice.id);
+    return Boolean(saved) && JSON.stringify(saved) === JSON.stringify(invoice);
+  }
+
+  /** Starts an empty bill at once. If the old bill had unsaved items, the toast offers Undo. */
+  startNewBill() {
+    const previous = this.currentInvoice;
+    const unsaved = previous.items.length > 0 && !this.isSaved(previous);
+    this.openBill(this.createNewInvoice(), 1);
+    this.showToast(this.t('toast.newBill'), 'info', unsaved
+      ? { label: this.t('common.undo'), onClick: () => this.openBill(previous, 1) }
+      : null);
+  }
+
+  /** Makes `invoice` the bill being edited and shows it at `step` */
+  openBill(invoice, step) {
+    this.currentInvoice = invoice;
+    this.activeTemplate = invoice.template || this.settings.defaultTemplate || 'modern';
+    this.expandedItemIds.clear();
+    StorageService.saveActiveDraft(invoice);
+    this.switchView('builder');
+    this.setStep(step);
+  }
+
+  /** The preview is drawn only where it can be seen: the last step, or beside the editor on wide screens */
+  previewVisible() {
+    return DESKTOP_QUERY.matches || this.step === STEP_COUNT;
+  }
+
+  /** Redraws the preview at most once per frame, and only when it can be seen */
+  schedulePreview() {
+    if (this.previewFrame) return;
+    this.previewFrame = requestAnimationFrame(() => {
+      this.previewFrame = 0;
+      if (this.previewVisible()) this.renderActiveInvoicePreview();
     });
+  }
+
+  /** Draws the preview now, before it is printed or exported */
+  flushPreview() {
+    cancelAnimationFrame(this.previewFrame);
+    this.previewFrame = 0;
+    this.renderActiveInvoicePreview();
+  }
+
+  bindBuilderEvents() {
+    document.getElementById('btn-new-bill').addEventListener('click', () => this.startNewBill());
 
     document.querySelectorAll('.btn-save-bill').forEach(btn => {
       btn.addEventListener('click', () => this.saveCurrentInvoiceToHistory());
@@ -283,12 +325,14 @@ class BillCraftApp {
     });
 
     document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+      this.flushPreview();
       this.showToast(this.t('toast.pdfPreparing'), 'info');
       await ExporterService.exportPDF('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.pdf`);
       this.showToast(this.t('toast.pdfReady'), 'success');
     });
 
     document.getElementById('btn-export-image').addEventListener('click', async () => {
+      this.flushPreview();
       this.showToast(this.t('toast.imagePreparing'), 'info');
       await ExporterService.exportImage('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.png`);
       this.showToast(this.t('toast.imageReady'), 'success');
@@ -299,6 +343,7 @@ class BillCraftApp {
     });
 
     document.getElementById('btn-print-bill').addEventListener('click', () => {
+      this.flushPreview();
       ExporterService.triggerPrint();
     });
 
@@ -330,8 +375,7 @@ class BillCraftApp {
     this.currentInvoice.notes = document.getElementById('inv-footer-notes').value || '';
 
     this.updateTotalsCard();
-    this.refreshQR();
-    this.renderActiveInvoicePreview();
+    this.schedulePreview();
 
     StorageService.saveActiveDraft(this.currentInvoice);
   }
@@ -356,8 +400,7 @@ class BillCraftApp {
 
     this.renderAllItemsViews();
     this.updateTotalsCard();
-    this.refreshQR();
-    this.renderActiveInvoicePreview();
+    this.schedulePreview();
   }
 
   renderAllItemsViews() {
@@ -452,7 +495,7 @@ class BillCraftApp {
 
         this.currentInvoice.items[idx][field] = val;
         this.updateTotalsCard();
-        this.renderActiveInvoicePreview();
+        this.schedulePreview();
         StorageService.saveActiveDraft(this.currentInvoice);
       });
     });
@@ -465,7 +508,7 @@ class BillCraftApp {
           this.currentInvoice.items[idx].quantity = Math.max(1, cur - 1);
           this.renderAllItemsViews();
           this.updateTotalsCard();
-          this.renderActiveInvoicePreview();
+          this.schedulePreview();
           StorageService.saveActiveDraft(this.currentInvoice);
         }
       });
@@ -477,7 +520,7 @@ class BillCraftApp {
         this.currentInvoice.items[idx].quantity += 1;
         this.renderAllItemsViews();
         this.updateTotalsCard();
-        this.renderActiveInvoicePreview();
+        this.schedulePreview();
         StorageService.saveActiveDraft(this.currentInvoice);
       });
     });
@@ -488,7 +531,7 @@ class BillCraftApp {
         this.currentInvoice.items.splice(idx, 1);
         this.renderAllItemsViews();
         this.updateTotalsCard();
-        this.renderActiveInvoicePreview();
+        this.schedulePreview();
         StorageService.saveActiveDraft(this.currentInvoice);
       });
     });
@@ -516,20 +559,19 @@ class BillCraftApp {
   }
 
   refreshQR() {
-    if (this.settings.upiId) {
-      const upiUri = buildUPIString({
-        upiId: this.settings.upiId,
-        brandName: this.settings.brandName,
-        amount: this.currentInvoice.grandTotal,
-        invoiceNumber: this.currentInvoice.invoiceNumber
-      });
-      this.qrDataUrl = generateQRCodeURL(upiUri, 3);
-    } else {
-      this.qrDataUrl = '';
-    }
+    const { upiId, brandName } = this.settings;
+    const { grandTotal, invoiceNumber } = this.currentInvoice;
+    // Only a new payee, amount or bill number needs a new code
+    const key = upiId ? [upiId, brandName, grandTotal, invoiceNumber].join('|') : '';
+    if (key === this.qrKey) return;
+    this.qrKey = key;
+    this.qrDataUrl = upiId
+      ? generateQRCodeURL(buildUPIString({ upiId, brandName, amount: grandTotal, invoiceNumber }), 3)
+      : '';
   }
 
   renderActiveInvoicePreview() {
+    this.refreshQR();
     const container = document.getElementById('invoice-render-target');
     container.innerHTML = renderInvoice(
       this.activeTemplate,
@@ -746,20 +788,7 @@ class BillCraftApp {
   }
 
   addProductToBill(product) {
-    const existing = this.currentInvoice.items.find(it => it.productId === product.id);
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      this.currentInvoice.items.push(new InvoiceItem({
-        productId: product.id,
-        name: product.name,
-        description: product.description,
-        unitPrice: product.unitPrice,
-        unit: product.unit,
-        quantity: 1
-      }));
-    }
-
+    addProductLine(this.currentInvoice.items, product, 1);
     this.renderAllItemsViews();
     this.syncFormToInvoice();
   }
@@ -972,10 +1001,7 @@ class BillCraftApp {
       btn.addEventListener('click', () => {
         const inv = StorageService.getInvoiceById(btn.dataset.id);
         if (inv) {
-          this.currentInvoice = new Invoice(inv);
-          this.activeTemplate = this.currentInvoice.template || this.settings.defaultTemplate;
-          this.switchView('builder');
-          this.setStep(STEP_COUNT);
+          this.openBill(new Invoice(inv), STEP_COUNT);
           this.showToast(this.t('toast.billOpened', { number: inv.invoiceNumber }), 'info');
         }
       });
@@ -986,15 +1012,14 @@ class BillCraftApp {
         const inv = StorageService.getInvoiceById(btn.dataset.id);
         if (inv) {
           const nextNum = StorageService.getNextInvoiceNumber();
-          this.currentInvoice = new Invoice({
+          this.openBill(new Invoice({
             ...inv,
             id: 'inv_' + Date.now(),
             invoiceNumber: nextNum,
             date: new Date().toISOString().split('T')[0],
-            status: 'Paid'
-          });
-          this.switchView('builder');
-          this.setStep(1);
+            status: 'Paid',
+            createdAt: new Date().toISOString()
+          }), 1);
           this.showToast(this.t('toast.duplicated', { number: nextNum }), 'success');
         }
       });
@@ -1182,7 +1207,12 @@ class BillCraftApp {
     document.getElementById('nav-history-badge').textContent = StorageService.getInvoices().length;
   }
 
-  showToast(message, type = 'info') {
+  /**
+   * Shows a short notice. `action` ({ label, onClick }) adds a button and keeps the
+   * notice longer. The countdown pauses while the page is hidden (for example while
+   * WhatsApp is open), so the button is still there when the user comes back.
+   */
+  showToast(message, type = 'info', action = null) {
     const container = document.getElementById('toast-container');
 
     const toast = document.createElement('div');
@@ -1190,14 +1220,50 @@ class BillCraftApp {
     const text = document.createElement('span');
     text.textContent = message;
     toast.appendChild(text);
-    container.appendChild(toast);
 
-    setTimeout(() => {
+    let timer = 0;
+    let startedAt = 0;
+    let remaining = action ? 6000 : 3000;
+    let dismissed = false;
+
+    const pause = () => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = 0;
+      remaining -= Date.now() - startedAt;
+    };
+    const resume = () => {
+      if (timer || dismissed) return;
+      startedAt = Date.now();
+      timer = setTimeout(dismiss, Math.max(remaining, 1000));
+    };
+    const onVisibility = () => (document.hidden ? pause() : resume());
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
       toast.style.transition = 'all 200ms ease';
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(10px) scale(0.95)';
       setTimeout(() => toast.remove(), 220);
-    }, 3000);
+    };
+
+    if (action) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'toast-action';
+      button.textContent = action.label;
+      button.addEventListener('click', () => {
+        dismiss();
+        action.onClick();
+      });
+      toast.appendChild(button);
+    }
+
+    container.appendChild(toast);
+    document.addEventListener('visibilitychange', onVisibility);
+    if (!document.hidden) resume();
   }
 
   escape(str) {
