@@ -33,7 +33,6 @@ export default {
     'common.back': 'Back',
     'common.next': 'Next',
     'common.add': 'Add',
-    'common.done': 'Done',
     'common.undo': 'Undo',
     'common.walkIn': 'Walk-in Customer',
     'common.valuedCustomer': 'Valued Customer',
@@ -71,10 +70,10 @@ export default {
 
     // Items
     'items.card': 'Products & Items',
-    'items.fromCatalog': '+ From Catalog',
-    'items.custom': '+ Custom Item',
-    'items.emptyHint': 'No items added yet. Tap "+ From Catalog" or "+ Custom Item".',
-    'items.added': 'Added a new item',
+    'items.emptyHint': 'Tap a product above to add it to the bill.',
+    'grid.other': '+ Other item',
+    'grid.noMatch': 'No product found. Use "+ Other item".',
+    'lines.title': 'In this bill',
     'item.namePh': 'Item name',
     'item.descPh': 'Optional description',
     'item.unitPh': 'pcs',
@@ -82,12 +81,14 @@ export default {
     'item.qty': 'Quantity',
     'item.unit': 'Unit',
     'item.discPct': 'Disc %',
-    'item.more': 'Unit, description & discount',
+    'item.edit': 'Edit',
     'item.decrease': 'Decrease quantity',
     'item.increase': 'Increase quantity',
     'item.remove': 'Remove item',
-    'item.total': 'Total',
+    'item.saveProduct': 'Save to my products',
     'item.default': 'Custom Item',
+    'qty.title': 'How much?',
+    'qty.other': 'Other amount',
 
     // Totals and bill-level fields
     'field.shipping': 'Delivery / Shipping Fee',
@@ -138,10 +139,6 @@ export default {
     'catalog.addToBill': 'Add to bill',
     'catalog.editTitle': 'Edit product',
     'catalog.deleteTitle': 'Delete product',
-    'catalog.pickerTitle': 'Select from Catalog',
-    'catalog.pickerSearch': 'Search products...',
-    'catalog.pickerNone': 'No matching products found',
-    'catalog.pickerAdd': '+ Add',
 
     // Product form
     'product.addTitle': 'Add New Product',
@@ -234,7 +231,6 @@ export default {
     'toast.imagePreparing': 'Preparing image...',
     'toast.imageReady': 'Image downloaded!',
     'toast.productAdded': 'Added "{name}" to the bill',
-    'toast.itemPicked': 'Added {name}',
     'toast.catalogAdded': 'Product added to catalog',
     'toast.productUpdated': 'Product updated',
     'toast.productDeleted': 'Product deleted',

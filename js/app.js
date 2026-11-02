@@ -1,10 +1,13 @@
 /**
  * BillCraft - Main Application Controller
- * Mobile-first: a three-step bill on phones, a split-screen editor on larger screens.
+ * Mobile-first: a two-step bill on phones (Items, Send), a split-screen editor on larger screens.
  */
 
 import { Product, Invoice, InvoiceItem, formatCurrency } from './models.js';
-import { addProductLine, customerKey, rankProducts, recentCustomers } from './quickBill.js';
+import {
+  addProductLine, customerKey, isMeasuredUnit, presetsFor, rankProducts,
+  recentCustomers, roundQty, setLineQuantity, stepQuantity
+} from './quickBill.js';
 import { StorageService } from './storage.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString } from './qrHelper.js';
@@ -14,7 +17,12 @@ import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, s
 import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
 
 const DESKTOP_QUERY = window.matchMedia('(min-width: 1024px)');
+const COARSE_POINTER = window.matchMedia('(pointer: coarse)');
 const STEP_COUNT = 2;
+
+// A steady colour and initial per product, so a tile can be found without reading it
+const tileHue = name => [...String(name)].reduce((hash, char) => (hash * 31 + char.codePointAt(0)) % 360, 7);
+const initialOf = name => (Array.from(String(name).trim())[0] || '?').toUpperCase();
 
 const MIC_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>';
 const SPEAK_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>';
@@ -35,6 +43,8 @@ class BillCraftApp {
     this.editingProductId = null;
     this.expandedItemIds = new Set();
     this.customerMode = null; // 'new' while a new customer is being typed
+    this.searchQuery = '';
+    this.qtyTarget = null; // what the quantity sheet is for
     this.refreshHistoryData();
 
     // Replaced by loadTranslators() before anything is rendered
@@ -312,21 +322,53 @@ class BillCraftApp {
       document.getElementById(id).addEventListener('input', () => this.syncFormToInvoice());
     });
 
-    document.getElementById('btn-add-custom-item').addEventListener('click', () => {
-      this.currentInvoice.items.push(new InvoiceItem({
-        name: '',
-        quantity: 1,
-        unit: 'pcs',
-        unitPrice: 0
-      }));
-      this.renderAllItemsViews();
-      this.syncFormToInvoice();
-      this.focusLastItemName();
-      this.showToast(this.t('items.added'), 'info');
+    const search = document.getElementById('product-search');
+    search.addEventListener('input', () => {
+      this.searchQuery = search.value;
+      this.renderProductGrid();
+    });
+    // With a keyboard, Enter adds the first product that matches
+    search.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const first = document.querySelector('#product-grid [data-product-id]');
+      if (first) this.tapProduct(first.dataset.productId, first);
     });
 
-    document.getElementById('btn-pick-from-catalog').addEventListener('click', () => {
-      this.openCatalogPickerModal();
+    document.getElementById('product-grid').addEventListener('click', (event) => {
+      const tile = event.target.closest('.product-tile');
+      if (!tile) return;
+      if (tile.hasAttribute('data-other-item')) this.addOtherItem();
+      else this.tapProduct(tile.dataset.productId, tile);
+    });
+
+    const lines = document.getElementById('mobile-items-list');
+    lines.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-action]');
+      if (button) this.onLineAction(button.closest('.bill-line'), button.dataset.action);
+    });
+    lines.addEventListener('input', (event) => {
+      if (event.target.dataset.field) this.onLineInput(event.target);
+    });
+    // "toggle" does not bubble, so it is caught on the way down
+    lines.addEventListener('toggle', (event) => {
+      const row = event.target.closest('.bill-line');
+      if (!row) return;
+      if (event.target.open) {
+        this.expandedItemIds.add(row.dataset.itemId);
+      } else {
+        this.expandedItemIds.delete(row.dataset.itemId);
+      }
+    }, true);
+
+    document.getElementById('qty-presets').addEventListener('click', (event) => {
+      const preset = event.target.closest('[data-qty]');
+      if (preset) this.applyQty(preset.dataset.qty);
+    });
+    document.getElementById('qty-input').addEventListener('input', () => this.updateQtyPreview());
+    document.getElementById('form-qty').addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.applyQty(document.getElementById('qty-input').value);
     });
 
     document.getElementById('preview-template-select').addEventListener('change', (e) => {
@@ -382,12 +424,6 @@ class BillCraftApp {
     });
   }
 
-  focusLastItemName() {
-    const scope = '#mobile-items-list';
-    const names = document.querySelectorAll(`${scope} input[data-field="name"]`);
-    names[names.length - 1]?.focus();
-  }
-
   syncFormToInvoice() {
     this.currentInvoice.invoiceNumber = document.getElementById('inv-number').value || '';
     this.currentInvoice.date = document.getElementById('inv-date').value || '';
@@ -426,147 +462,286 @@ class BillCraftApp {
     templateSelect.value = this.currentInvoice.template || this.settings.defaultTemplate || 'modern';
     this.activeTemplate = templateSelect.value;
 
-    this.renderAllItemsViews();
+    this.renderProductGrid();
+    this.renderBillLines({ fresh: true });
     this.updateTotalsCard();
     this.renderStatusToggle();
     this.renderCustomerChips();
     this.schedulePreview();
   }
 
-  renderAllItemsViews() {
-    this.renderMobileItemsCards();
-  }
+  // --- Items: product tiles, bill lines and the quantity sheet ---
 
-
-  renderMobileItemsCards() {
-    const container = document.getElementById('mobile-items-list');
-    container.innerHTML = '';
+  /** Product tiles, most used first, filtered by the search box. "+ Other item" comes last. */
+  renderProductGrid() {
+    const query = this.searchQuery.trim().toLowerCase();
+    const products = query
+      ? this.rankedProducts.filter(product => [product.name, product.description, product.category]
+        .some(text => String(text || '').toLowerCase().includes(query)))
+      : this.rankedProducts;
     const curr = this.settings.currency || '₹';
 
-    if (this.currentInvoice.items.length === 0) {
-      container.innerHTML = `<div class="empty-box">${this.escape(this.t('items.emptyHint'))}</div>`;
+    const tiles = products.map(product => `
+      <button type="button" class="product-tile" data-product-id="${this.escape(product.id)}" style="--tile-hue: ${tileHue(product.name)}">
+        <span class="tile-initial" aria-hidden="true">${this.escape(initialOf(product.name))}</span>
+        <span class="tile-name">${this.escape(product.name)}</span>
+        <span class="tile-price">${formatCurrency(product.unitPrice, curr)}<small>/${this.escape(product.unit || 'pcs')}</small></span>
+        <span class="tile-badge" hidden></span>
+      </button>
+    `).join('');
+    const noMatch = query && !products.length ? `<p class="tile-none">${this.escape(this.t('grid.noMatch'))}</p>` : '';
+
+    document.getElementById('product-grid').innerHTML = `${noMatch}${tiles}
+      <button type="button" class="product-tile product-tile-other" data-other-item>
+        <span class="tile-plus" aria-hidden="true">+</span>
+        <span class="tile-name">${this.escape(this.t('grid.other'))}</span>
+      </button>`;
+    this.updateTileBadges();
+  }
+
+  /** The count on each tile, from the quantities in the bill */
+  updateTileBadges() {
+    const quantities = new Map();
+    for (const item of this.currentInvoice.items) {
+      if (item.productId) quantities.set(item.productId, roundQty((quantities.get(item.productId) || 0) + item.quantity));
+    }
+    document.querySelectorAll('#product-grid [data-product-id]').forEach(tile => {
+      const qty = quantities.get(tile.dataset.productId) || 0;
+      const badge = tile.querySelector('.tile-badge');
+      const text = qty ? String(qty) : '';
+      tile.classList.toggle('in-bill', qty > 0);
+      if (badge.textContent === text) return;
+      badge.textContent = text;
+      badge.hidden = !text;
+    });
+  }
+
+  /** A tap adds one. Products sold by weight or length ask how much instead. */
+  tapProduct(productId, tile) {
+    const product = this.rankedProducts.find(p => p.id === productId);
+    if (!product) return;
+    if (isMeasuredUnit(product.unit)) {
+      const line = this.currentInvoice.items.find(item => item.productId === product.id);
+      this.openQtySheet({ product, line, tile });
       return;
     }
+    addProductLine(this.currentInvoice.items, product, 1);
+    this.afterItemsChange();
+  }
 
-    this.currentInvoice.items.forEach((item, index) => {
-      const card = document.createElement('div');
-      card.className = 'mobile-item-card';
-      card.innerHTML = `
-        <div class="mobile-item-header">
-          <div class="mobile-item-title-wrap">
-            <input type="text" class="form-control item-name-input" placeholder="${this.escape(this.t('item.namePh'))}" value="${this.escape(item.name)}" data-index="${index}" data-field="name" data-voice="text" aria-label="${this.escape(this.t('item.namePh'))}" />
-          </div>
-          <button type="button" class="btn btn-ghost btn-icon btn-del-mob-item" data-index="${index}" title="${this.escape(this.t('item.remove'))}" aria-label="${this.escape(this.t('item.remove'))}" style="color: var(--danger);">
-            ${TRASH_ICON}
-          </button>
+  /** "+ Other item": an empty line, with its name field ready for typing */
+  addOtherItem() {
+    const line = new InvoiceItem({ name: '', quantity: 1, unit: 'pcs', unitPrice: 0 });
+    this.currentInvoice.items.push(line);
+    this.expandedItemIds.add(line.id);
+    this.afterItemsChange();
+    this.lineRow(line.id)?.querySelector('[data-field="name"]')?.focus();
+  }
+
+  /** After any change to the items: lines, tile counts, totals, bar, preview and draft */
+  afterItemsChange() {
+    this.renderBillLines();
+    this.updateTileBadges();
+    this.updateTotalsCard();
+    this.schedulePreview();
+    StorageService.saveActiveDraft(this.currentInvoice);
+  }
+
+  lineRow(itemId) {
+    return document.querySelector(`#mobile-items-list .bill-line[data-item-id="${CSS.escape(itemId)}"]`);
+  }
+
+  /**
+   * One line per item. Lines are kept and updated by item id, so typing keeps its
+   * focus and only real changes move on screen. `fresh` rebuilds them, for another
+   * bill or another language.
+   */
+  renderBillLines({ fresh = false } = {}) {
+    const container = document.getElementById('mobile-items-list');
+    if (fresh) container.textContent = '';
+    const items = this.currentInvoice.items;
+    const ids = new Set(items.map(item => item.id));
+
+    container.querySelectorAll('.bill-line').forEach(row => {
+      if (!ids.has(row.dataset.itemId)) row.remove();
+    });
+
+    const empty = container.querySelector('.empty-box');
+    if (!items.length) {
+      if (!empty) container.innerHTML = `<div class="empty-box">${this.escape(this.t('items.emptyHint'))}</div>`;
+      return;
+    }
+    empty?.remove();
+
+    items.forEach(item => {
+      let row = this.lineRow(item.id);
+      if (!row) {
+        row = this.createBillLine(item);
+        container.appendChild(row);
+      }
+      this.updateBillLine(row, item);
+    });
+    this.decorateVoiceFields(container);
+  }
+
+  createBillLine(item) {
+    const curr = this.settings.currency || '₹';
+    const row = document.createElement('div');
+    row.className = 'bill-line';
+    row.dataset.itemId = item.id;
+    row.innerHTML = `
+      <div class="bill-line-top">
+        <span class="line-name"></span>
+        <span class="line-total"></span>
+      </div>
+      <div class="bill-line-bottom">
+        <div class="line-qty-group">
+          <button type="button" class="line-step" data-action="minus" aria-label="${this.escape(this.t('item.decrease'))}">&minus;</button>
+          <button type="button" class="line-qty" data-action="qty"></button>
+          <button type="button" class="line-step" data-action="plus" aria-label="${this.escape(this.t('item.increase'))}">&#43;</button>
         </div>
-
-        <div class="mobile-item-inputs-grid">
+        <span class="line-rate"></span>
+      </div>
+      <details class="item-more"${this.expandedItemIds.has(item.id) ? ' open' : ''}>
+        <summary>${this.escape(this.t('item.edit'))}</summary>
+        <div class="item-more-body">
+          <div class="field-stack field-wide">
+            <span class="form-label">${this.escape(this.t('item.namePh'))}</span>
+            <input type="text" class="form-control" placeholder="${this.escape(this.t('item.namePh'))}" value="${this.escape(item.name)}" data-field="name" data-voice="text" />
+          </div>
           <div class="field-stack">
             <span class="form-label">${this.escape(this.t('item.rate', { currency: curr }))}</span>
-            <input type="number" inputmode="decimal" step="any" min="0" class="form-control" value="${item.unitPrice}" data-index="${index}" data-field="unitPrice" data-voice="number" />
+            <input type="number" inputmode="decimal" step="any" min="0" class="form-control" value="${item.unitPrice}" data-field="unitPrice" data-voice="number" />
           </div>
-
           <div class="field-stack">
-            <span class="form-label">${this.escape(this.t('item.qty'))}</span>
-            <div class="qty-stepper">
-              <button type="button" class="qty-step-btn btn-mob-qty-minus" data-index="${index}" aria-label="${this.escape(this.t('item.decrease'))}">&minus;</button>
-              <input type="number" inputmode="decimal" step="any" min="0.01" class="qty-stepper-input" value="${item.quantity}" data-index="${index}" data-field="quantity" data-voice="number" aria-label="${this.escape(this.t('item.qty'))}" />
-              <button type="button" class="qty-step-btn btn-mob-qty-plus" data-index="${index}" aria-label="${this.escape(this.t('item.increase'))}">&#43;</button>
-            </div>
+            <span class="form-label">${this.escape(this.t('item.unit'))}</span>
+            <input type="text" class="form-control" placeholder="${this.escape(this.t('item.unitPh'))}" value="${this.escape(item.unit)}" data-field="unit" />
+          </div>
+          <div class="field-stack">
+            <span class="form-label">${this.escape(this.t('item.discPct'))}</span>
+            <input type="number" inputmode="decimal" min="0" max="100" class="form-control" placeholder="0" value="${item.discount || ''}" data-field="discount" />
+          </div>
+          <div class="field-stack field-wide">
+            <span class="form-label">${this.escape(this.t('product.desc'))}</span>
+            <input type="text" class="form-control" placeholder="${this.escape(this.t('item.descPh'))}" value="${this.escape(item.description)}" data-field="description" />
+          </div>
+          <div class="line-actions field-wide">
+            <button type="button" class="btn btn-secondary btn-sm" data-action="save-product">${this.escape(this.t('item.saveProduct'))}</button>
+            <button type="button" class="btn btn-ghost btn-sm line-remove" data-action="remove">${TRASH_ICON}<span>${this.escape(this.t('item.remove'))}</span></button>
           </div>
         </div>
+      </details>
+    `;
+    return row;
+  }
 
-        <details class="item-more" data-item-id="${item.id}"${this.expandedItemIds.has(item.id) ? ' open' : ''}>
-          <summary>${this.escape(this.t('item.more'))}</summary>
-          <div class="item-more-body">
-            <div class="field-stack">
-              <span class="form-label">${this.escape(this.t('item.unit'))}</span>
-              <input type="text" class="form-control" placeholder="${this.escape(this.t('item.unitPh'))}" value="${this.escape(item.unit)}" data-index="${index}" data-field="unit" />
-            </div>
-            <div class="field-stack">
-              <span class="form-label">${this.escape(this.t('item.discPct'))}</span>
-              <input type="number" inputmode="decimal" min="0" max="100" class="form-control" placeholder="0" value="${item.discount || ''}" data-index="${index}" data-field="discount" />
-            </div>
-            <div class="field-stack field-wide">
-              <span class="form-label">${this.escape(this.t('product.desc'))}</span>
-              <input type="text" class="form-control" placeholder="${this.escape(this.t('item.descPh'))}" value="${this.escape(item.description)}" data-index="${index}" data-field="description" />
-            </div>
-          </div>
-        </details>
+  updateBillLine(row, item) {
+    const curr = this.settings.currency || '₹';
+    const qty = roundQty(item.quantity);
+    const name = row.querySelector('.line-name');
+    name.textContent = item.name || this.t('item.namePh');
+    name.classList.toggle('is-placeholder', !item.name);
+    row.querySelector('.line-total').textContent = formatCurrency(item.total, curr);
+    const qtyButton = row.querySelector('.line-qty');
+    qtyButton.innerHTML = `${qty} <small>${this.escape(item.unit)}</small>`;
+    qtyButton.setAttribute('aria-label', `${this.t('item.qty')}: ${qty} ${item.unit}`);
+    row.querySelector('.line-rate').textContent = `× ${formatCurrency(item.unitPrice, curr)}`;
+    // Only typed items can be saved as products; catalog items already are
+    row.querySelector('[data-action="save-product"]').hidden = Boolean(item.productId);
+  }
 
-        <div class="mobile-item-footer">
-          <span class="item-total-caption">${this.escape(this.t('item.total'))}</span>
-          <span class="item-total-badge">${formatCurrency(item.total, curr)}</span>
-        </div>
-      `;
-      container.appendChild(card);
-    });
+  onLineAction(row, action) {
+    const item = row && this.currentInvoice.items.find(line => line.id === row.dataset.itemId);
+    if (!item) return;
+    if (action === 'qty') {
+      this.openQtySheet({ line: item });
+      return;
+    }
+    if (action === 'save-product') {
+      this.saveLineAsProduct(item);
+      return;
+    }
+    // Minus below 1 takes the line off the bill
+    const qty = action === 'remove' ? 0 : stepQuantity(item.quantity, action === 'plus' ? 1 : -1);
+    setLineQuantity(this.currentInvoice.items, item.id, qty);
+    this.afterItemsChange();
+  }
 
-    container.querySelectorAll('details.item-more').forEach(details => {
-      details.addEventListener('toggle', () => {
-        if (details.open) {
-          this.expandedItemIds.add(details.dataset.itemId);
-        } else {
-          this.expandedItemIds.delete(details.dataset.itemId);
-        }
-      });
-    });
+  /** Typing in a line's Edit fields updates that line, the totals and the preview */
+  onLineInput(input) {
+    const row = input.closest('.bill-line');
+    const item = row && this.currentInvoice.items.find(line => line.id === row.dataset.itemId);
+    if (!item) return;
+    const field = input.dataset.field;
+    item[field] = field === 'unitPrice' || field === 'discount' ? parseFloat(input.value) || 0 : input.value;
+    this.updateBillLine(row, item);
+    this.updateTotalsCard();
+    this.schedulePreview();
+    StorageService.saveActiveDraft(this.currentInvoice);
+  }
 
-    container.querySelectorAll('input').forEach(input => {
-      input.addEventListener('input', (e) => {
-        const idx = parseInt(e.target.dataset.index, 10);
-        const field = e.target.dataset.field;
-        let val = e.target.value;
+  /** "Save to my products": a typed item becomes a tile for the next bill */
+  saveLineAsProduct(item) {
+    const name = item.name.trim();
+    if (!name) {
+      this.showToast(this.t('toast.productNameRequired'), 'warning');
+      return;
+    }
+    const product = new Product({ name, unitPrice: item.unitPrice, unit: item.unit, description: item.description });
+    StorageService.addProduct(product);
+    item.productId = product.id;
+    this.refreshHistoryData();
+    this.renderProductGrid();
+    this.afterItemsChange();
+    this.showToast(this.t('toast.catalogAdded'), 'success');
+  }
 
-        if (field === 'unitPrice' || field === 'quantity' || field === 'discount') {
-          val = parseFloat(val) || 0;
-        }
+  /**
+   * How much: presets in one tap, or any amount typed or spoken. For a product not on
+   * the bill yet it adds a line; for a line it sets the quantity.
+   */
+  openQtySheet({ product = null, line = null, tile = null }) {
+    const source = line || product;
+    this.qtyTarget = { product, lineId: line ? line.id : null, tile };
+    document.getElementById('qty-title').textContent = source.name || this.t('item.namePh');
+    document.getElementById('qty-unit').textContent = source.unit || '';
+    document.getElementById('qty-presets').innerHTML = presetsFor(source.unit).map(qty => `
+      <button type="button" class="qty-preset" data-qty="${qty}">${qty} <small>${this.escape(source.unit || '')}</small></button>
+    `).join('');
+    const input = document.getElementById('qty-input');
+    input.value = line ? roundQty(line.quantity) : '';
+    this.updateQtyPreview();
+    this.openModal('modal-qty');
+    // On touch screens the keypad would cover the presets, so it opens only when the field is tapped
+    if (!COARSE_POINTER.matches) input.focus();
+  }
 
-        this.currentInvoice.items[idx][field] = val;
-        this.updateTotalsCard();
-        this.schedulePreview();
-        StorageService.saveActiveDraft(this.currentInvoice);
-      });
-    });
+  updateQtyPreview() {
+    const { product, lineId } = this.qtyTarget;
+    const source = (lineId && this.currentInvoice.items.find(item => item.id === lineId)) || product;
+    const output = document.getElementById('qty-line-total');
+    const qty = roundQty(document.getElementById('qty-input').value);
+    if (!source || !(qty > 0)) {
+      output.textContent = '';
+      return;
+    }
+    const curr = this.settings.currency || '₹';
+    const total = new InvoiceItem({ ...source, quantity: qty }).total;
+    output.textContent = `${qty} ${source.unit || ''} × ${formatCurrency(source.unitPrice, curr)} = ${formatCurrency(total, curr)}`;
+  }
 
-    container.querySelectorAll('.btn-mob-qty-minus').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.index, 10);
-        const cur = this.currentInvoice.items[idx].quantity;
-        if (cur > 1) {
-          this.currentInvoice.items[idx].quantity = Math.max(1, cur - 1);
-          this.renderAllItemsViews();
-          this.updateTotalsCard();
-          this.schedulePreview();
-          StorageService.saveActiveDraft(this.currentInvoice);
-        }
-      });
-    });
-
-    container.querySelectorAll('.btn-mob-qty-plus').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.index, 10);
-        this.currentInvoice.items[idx].quantity += 1;
-        this.renderAllItemsViews();
-        this.updateTotalsCard();
-        this.schedulePreview();
-        StorageService.saveActiveDraft(this.currentInvoice);
-      });
-    });
-
-    container.querySelectorAll('.btn-del-mob-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.index, 10);
-        this.currentInvoice.items.splice(idx, 1);
-        this.renderAllItemsViews();
-        this.updateTotalsCard();
-        this.schedulePreview();
-        StorageService.saveActiveDraft(this.currentInvoice);
-      });
-    });
-
-    this.decorateVoiceFields(container);
+  applyQty(value) {
+    this.closeModal('modal-qty');
+    // An empty field changes nothing
+    if (String(value).trim() === '') return;
+    const qty = roundQty(value);
+    const { product, lineId } = this.qtyTarget;
+    if (lineId) {
+      setLineQuantity(this.currentInvoice.items, lineId, qty);
+    } else if (qty > 0) {
+      addProductLine(this.currentInvoice.items, product, qty);
+    }
+    this.afterItemsChange();
   }
 
   /** Collapsed "More options" sections are always open on desktop. */
@@ -907,6 +1082,8 @@ class BillCraftApp {
       btn.addEventListener('click', () => {
         if (confirm(this.t('confirm.deleteProduct'))) {
           StorageService.deleteProduct(btn.dataset.id);
+          this.refreshHistoryData();
+          this.renderProductGrid();
           this.renderCatalogView();
           this.showToast(this.t('toast.productDeleted'), 'info');
         }
@@ -916,8 +1093,7 @@ class BillCraftApp {
 
   addProductToBill(product) {
     addProductLine(this.currentInvoice.items, product, 1);
-    this.renderAllItemsViews();
-    this.syncFormToInvoice();
+    this.afterItemsChange();
   }
 
   openProductModal(product = null) {
@@ -961,59 +1137,9 @@ class BillCraftApp {
     }
 
     this.closeModal('modal-product');
+    this.refreshHistoryData();
+    this.renderProductGrid();
     this.renderCatalogView();
-  }
-
-  openCatalogPickerModal() {
-    const listContainer = document.getElementById('catalog-picker-list');
-    const searchInput = document.getElementById('catalog-picker-search');
-
-    const renderPickerItems = (q = '') => {
-      let prods = StorageService.getCatalog();
-      if (q.trim()) {
-        const query = q.toLowerCase();
-        prods = prods.filter(p => p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query)));
-      }
-
-      const curr = this.settings.currency || '₹';
-
-      if (prods.length === 0) {
-        listContainer.innerHTML = `<div class="empty-box">${this.escape(this.t('catalog.pickerNone'))}</div>`;
-        return;
-      }
-
-      listContainer.innerHTML = prods.map(p => `
-        <div class="picker-row">
-          <div class="picker-row-text">
-            <div class="picker-row-name">${this.escape(p.name)}</div>
-            <div class="picker-row-desc">${this.escape(p.description || '')}</div>
-            <div class="picker-row-price">
-              ${formatCurrency(p.unitPrice, curr)} <small>/${this.escape(p.unit || 'pcs')}</small>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm btn-pick-item" data-id="${p.id}">
-            ${this.escape(this.t('catalog.pickerAdd'))}
-          </button>
-        </div>
-      `).join('');
-
-      listContainer.querySelectorAll('.btn-pick-item').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const prod = prods.find(p => p.id === btn.dataset.id);
-          if (prod) {
-            this.addProductToBill(prod);
-            this.showToast(this.t('toast.itemPicked', { name: prod.name }), 'success');
-            this.closeModal('modal-catalog-picker');
-          }
-        });
-      });
-    };
-
-    renderPickerItems('');
-    searchInput.value = '';
-    searchInput.oninput = (e) => renderPickerItems(e.target.value);
-
-    this.openModal('modal-catalog-picker');
   }
 
   // --- Invoices History View ---

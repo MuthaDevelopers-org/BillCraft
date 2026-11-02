@@ -252,7 +252,7 @@ textarea.form-control {
 }
 
 
-/* Line Items Table & Mobile Cards */
+/* Tables (the bill history on wider screens) */
 .items-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -289,116 +289,6 @@ textarea.form-control {
 
 .items-table tr:last-child td {
   border-bottom: none;
-}
-
-.item-row-title-input {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.item-row-desc-input {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.item-total-badge {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text-main);
-  white-space: nowrap;
-}
-
-/* ============================================================
-   MOBILE LINE ITEM CARDS (UX Breakthrough for Phones)
-   ============================================================ */
-.mobile-items-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  margin-bottom: 1rem;
-  width: 100%;
-}
-
-.mobile-item-card {
-  background: var(--bg-surface-alt);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 0.95rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  position: relative;
-  box-sizing: border-box;
-}
-
-.mobile-item-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.mobile-item-title-wrap {
-  flex: 1;
-}
-
-.mobile-item-inputs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  align-items: start;
-}
-
-.mobile-item-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 0.6rem;
-  border-top: 1px dashed var(--border-light);
-}
-
-/* Quantity Stepper Control (Thumb-Friendly) */
-.qty-stepper {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  overflow: hidden;
-  height: 48px;
-}
-
-.qty-step-btn {
-  width: 44px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-main);
-  cursor: pointer;
-  user-select: none;
-}
-
-.qty-step-btn:active {
-  background: var(--bg-surface-alt);
-}
-
-.qty-stepper-input {
-  width: 44px;
-  border: none;
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0;
-  background: transparent;
-}
-
-.qty-stepper-input:focus {
-  outline: none;
 }
 
 /* Totals Summary Card */
@@ -1061,13 +951,6 @@ textarea.form-control {
   box-shadow: none;
 }
 
-/* Buttons in the Products & Items card header */
-.card-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 .card-body-flush {
   padding: 0;
 }
@@ -1182,12 +1065,6 @@ textarea.form-control {
   padding: 0.25rem 0 0.5rem;
 }
 
-.item-total-caption {
-  margin-inline-end: 0.4rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
 /* Desktop history table (shown from 768px); item cards are used at every width */
 .desktop-history-table {
   display: none;
@@ -1263,57 +1140,6 @@ textarea.form-control {
   margin-bottom: 0.85rem;
 }
 
-/* Catalog picker for the active bill */
-.picker-search {
-  padding: 1rem 1.25rem 0.5rem;
-}
-
-.picker-list {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 0.5rem 1.25rem 1.25rem;
-}
-
-.picker-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.75rem 0.25rem;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.picker-row-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.picker-row-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text-main);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.picker-row-desc {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.picker-row-price {
-  margin-top: 2px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--theme-accent, #059669);
-}
-
-.picker-row-price small {
-  font-weight: 500;
-  color: var(--text-subtle);
-}
-
 /* Settings: QR code and backup */
 .qr-row {
   display: flex;
@@ -1358,8 +1184,7 @@ textarea.form-control {
   min-width: 0;
 }
 
-.voice-field > .form-control,
-.voice-field > .qty-stepper {
+.voice-field > .form-control {
   flex: 1 1 0;
   width: auto;
   min-width: 0;
@@ -1517,4 +1342,315 @@ textarea.form-control {
 
 .segmented [data-status="Due"][aria-checked="true"] {
   color: var(--warning-text);
+}
+
+/* ============================================================
+   FAST BILL: product tiles, bill lines and the quantity sheet
+   ============================================================ */
+.product-search {
+  margin-bottom: 0.75rem;
+}
+
+/* Tiles: a tap adds one. Two per row on phones, more where there is room. */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.product-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 104px;
+  padding: 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 150ms, background-color 150ms;
+}
+
+.product-tile:active {
+  transform: scale(0.94);
+  transition-duration: 90ms;
+}
+
+.product-tile.in-bill {
+  border-color: var(--theme-accent, #059669);
+  background: var(--theme-accent-soft, #ecfdf5);
+}
+
+/* A coloured initial, so a product can be found without reading its name */
+.tile-initial {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: hsl(var(--tile-hue, 160) 70% 90%);
+  color: hsl(var(--tile-hue, 160) 60% 28%);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.tile-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.tile-price {
+  margin-top: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--theme-accent, #059669);
+}
+
+.tile-price small {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.tile-badge {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--theme-accent, #059669);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+
+.product-tile-other {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  color: var(--theme-accent, #059669);
+}
+
+.tile-plus {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tile-none {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* "In this bill": one line per item */
+.lines-title {
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bill-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.bill-line {
+  padding: 0.65rem 0.75rem 0.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.bill-line-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.line-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.line-name.is-placeholder {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.line-total {
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bill-line-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.line-qty-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+  overflow: hidden;
+}
+
+.line-step,
+.line-qty {
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.line-step {
+  width: 44px;
+  font-size: 1.25rem;
+}
+
+.line-step:active {
+  background: var(--border-light);
+}
+
+.line-qty {
+  min-width: 3.25rem;
+  padding: 0 0.4rem;
+  border-inline: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.line-qty small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.line-rate {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bill-line .item-more {
+  margin-top: 0.5rem;
+}
+
+.bill-line .item-more-body {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.line-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.line-remove {
+  color: var(--danger);
+}
+
+/* Quantity sheet: presets in one tap, or any amount */
+.qty-box {
+  max-width: 480px;
+}
+
+.qty-question {
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.qty-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.qty-preset {
+  min-height: 56px;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.qty-preset small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.qty-preset:active {
+  border-color: var(--theme-accent, #059669);
+  background: var(--theme-accent-soft, #ecfdf5);
+}
+
+.qty-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-entry-row > .form-control,
+.qty-entry-row > .voice-field {
+  flex: 1;
+}
+
+.qty-unit {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.qty-line-total {
+  min-height: 1.5em;
+  margin: 0.6rem 0 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.qty-add {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1rem;
 }

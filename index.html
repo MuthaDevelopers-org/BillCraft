@@ -121,16 +121,18 @@
                   <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                   <span data-i18n="items.card">Products & Items</span>
                 </div>
-                <div class="card-header-actions">
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-pick-from-catalog" data-i18n="items.fromCatalog">+ From Catalog</button>
-                  <button type="button" class="btn btn-primary btn-sm" id="btn-add-custom-item" data-i18n="items.custom">+ Custom Item</button>
-                </div>
               </div>
               <div class="card-body">
-                <!-- Phone item cards -->
-                <div class="mobile-items-container" id="mobile-items-list">
-                  <!-- Rendered dynamically -->
+                <div class="product-search">
+                  <input type="search" id="product-search" class="form-control" data-voice="text" data-i18n-placeholder="catalog.search" placeholder="Search products..." autocomplete="off" enterkeyhint="done" />
                 </div>
+
+                <!-- Product tiles, most used first, then "+ Other item" (rendered by app.js) -->
+                <div class="product-grid" id="product-grid"></div>
+
+                <h3 class="lines-title" data-i18n="lines.title">In this bill</h3>
+                <!-- One line per item (rendered by app.js) -->
+                <div class="bill-lines" id="mobile-items-list"></div>
 
                 <details class="more-options">
                   <summary class="more-summary" data-i18n="step.more">More options</summary>
@@ -682,21 +684,25 @@
     </div>
   </div>
 
-  <!-- MODAL: CATALOG PICKER FOR THE ACTIVE BILL -->
-  <div class="modal-overlay" id="modal-catalog-picker">
-    <div class="modal-box">
+  <!-- SHEET: HOW MUCH (items sold by weight or length, or a tap on a line's quantity) -->
+  <div class="modal-overlay" id="modal-qty">
+    <div class="modal-box qty-box">
       <div class="modal-header">
-        <h3 class="modal-title" data-i18n="catalog.pickerTitle">Select from Catalog</h3>
+        <h3 class="modal-title" id="qty-title">Item</h3>
         <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
       </div>
-      <div class="picker-search">
-        <input type="text" id="catalog-picker-search" class="form-control" data-i18n-placeholder="catalog.pickerSearch" placeholder="Search products..." />
-      </div>
-      <div class="modal-body picker-list" id="catalog-picker-list">
-        <!-- Rendered dynamically -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-close-modal" data-i18n="common.done">Done</button>
+      <div class="modal-body">
+        <p class="qty-question" data-i18n="qty.title">How much?</p>
+        <div class="qty-presets" id="qty-presets"></div>
+        <form id="form-qty">
+          <label class="form-label" for="qty-input" data-i18n="qty.other">Other amount</label>
+          <div class="qty-entry-row">
+            <input type="number" inputmode="decimal" step="any" min="0" id="qty-input" class="form-control" data-voice="number" />
+            <span class="qty-unit" id="qty-unit"></span>
+          </div>
+          <p class="qty-line-total" id="qty-line-total"></p>
+          <button type="submit" class="btn btn-primary qty-add" data-i18n="common.add">Add</button>
+        </form>
       </div>
     </div>
   </div>
