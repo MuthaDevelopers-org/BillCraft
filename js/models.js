@@ -5,6 +5,18 @@
 import english from './i18n/locales/en.js';
 import { spellAmount } from './i18n/numberWords.js';
 
+/**
+ * Rounds an amount to paise (2 decimals), half up. Shifting by exponent avoids
+ * binary errors such as 10.075 * 100 = 1007.4999...
+ */
+export function roundMoney(value) {
+  const n = Number(value) || 0;
+  if (String(n).includes('e')) return Math.round(n * 100) / 100;
+  return Math.round(Number(`${n}e2`)) / 100;
+}
+
+const nonNegative = value => Math.max(0, Number(value) || 0);
+
 export class Product {
   constructor({
     id = 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -42,14 +54,14 @@ export class InvoiceItem {
     this.description = description;
     this.quantity = Number(quantity) > 0 ? Number(quantity) : 1;
     this.unit = unit || 'pcs';
-    this.unitPrice = Number(unitPrice) || 0;
-    this.discount = Number(discount) || 0;
+    this.unitPrice = nonNegative(unitPrice);
+    this.discount = Math.min(100, nonNegative(discount)); // percent
   }
 
+  /** The line amount in paise-exact rupees, so the printed lines add up to the subtotal */
   get total() {
     const gross = this.quantity * this.unitPrice;
-    const discountAmount = (gross * this.discount) / 100;
-    return Math.max(0, gross - discountAmount);
+    return roundMoney(gross - (gross * this.discount) / 100);
   }
 }
 
@@ -79,8 +91,8 @@ export class Invoice {
     this.dueDate = dueDate;
     this.customer = { ...customer };
     this.items = items.map(item => item instanceof InvoiceItem ? item : new InvoiceItem(item));
-    this.shippingFee = Number(shippingFee) || 0;
-    this.billDiscount = Number(billDiscount) || 0;
+    this.shippingFee = nonNegative(shippingFee);
+    this.billDiscount = nonNegative(billDiscount);
     this.notes = notes;
     this.template = template;
     this.status = status;
@@ -88,17 +100,20 @@ export class Invoice {
   }
 
   get subtotal() {
-    return this.items.reduce((sum, item) => sum + item.total, 0);
+    return roundMoney(this.items.reduce((sum, item) => sum + item.total, 0));
   }
 
   get grandTotal() {
-    const sub = this.subtotal;
-    const afterDiscount = Math.max(0, sub - this.billDiscount);
-    return afterDiscount + this.shippingFee;
+    return roundMoney(Math.max(0, this.subtotal - this.billDiscount) + this.shippingFee);
   }
 
   get totalItemsCount() {
-    return this.items.reduce((count, item) => count + item.quantity, 0);
+    return Math.round(this.items.reduce((count, item) => count + item.quantity, 0) * 1000) / 1000;
+  }
+
+  /** True when every line uses the same unit, so a total quantity means something */
+  get hasSingleUnit() {
+    return new Set(this.items.map(item => String(item.unit || 'pcs').trim().toLowerCase())).size <= 1;
   }
 }
 

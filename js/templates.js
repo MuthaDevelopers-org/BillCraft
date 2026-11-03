@@ -98,7 +98,7 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
         <div class="party-col">
           <h4>${t('bill.orderSummary')}</h4>
           <p><strong>${t('bill.lineItems')}:</strong> ${invoice.items.length}</p>
-          <p><strong>${t('bill.totalQty')}:</strong> ${invoice.totalItemsCount}</p>
+          ${invoice.hasSingleUnit ? `<p><strong>${t('bill.totalQty')}:</strong> ${invoice.totalItemsCount}</p>` : ''}
           <p><strong>${t('bill.paymentStatus')}:</strong> ${escapeHTML(statusLabel(t, invoice.status))}</p>
         </div>
       </div>

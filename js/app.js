@@ -1252,7 +1252,9 @@ class BillCraftApp {
             <div style="font-weight: 600;">${customerName(inv)}</div>
             ${inv.customer.phone ? `<small style="color: var(--text-muted);">${this.escape(inv.customer.phone)}</small>` : ''}
           </td>
-          <td style="text-align: center;">${this.escape(this.t('history.itemsCount', { lines: inv.items.length, qty: inv.totalItemsCount }))}</td>
+          <td style="text-align: center;">${this.escape(inv.hasSingleUnit
+            ? this.t('history.itemsCount', { lines: inv.items.length, qty: inv.totalItemsCount })
+            : this.t('history.itemsShort', { lines: inv.items.length }))}</td>
           <td style="font-weight: 800; color: var(--text-main);">${formatCurrency(inv.grandTotal, curr)}</td>
           <td>
             <span class="badge ${badgeClass(inv)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>
