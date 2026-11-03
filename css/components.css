@@ -1034,10 +1034,6 @@ textarea.form-control {
   color: var(--danger-text);
 }
 
-.field-error[hidden] {
-  display: none;
-}
-
 .form-control[aria-invalid="true"] {
   border-color: var(--danger);
 }
@@ -1685,6 +1681,58 @@ textarea.form-control {
   width: 100%;
   min-height: 52px;
   font-size: 1rem;
+}
+
+/* ============================================================
+   FIRST RUN: the shop setup sheet, the empty product grid, and the
+   reminder above the bill while the shop has no name
+   ============================================================ */
+.setup-subtitle {
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.setup-box .modal-footer {
+  justify-content: space-between;
+}
+
+.grid-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.1rem;
+  border: 2px dashed var(--theme-border, var(--border-light));
+  border-radius: var(--radius-md);
+  background: var(--theme-accent-soft, var(--bg-surface-alt));
+}
+
+.grid-empty-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.grid-empty-text {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.setup-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  color: var(--warning-text);
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 /* ============================================================

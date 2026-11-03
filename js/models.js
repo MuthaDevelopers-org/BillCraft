@@ -80,7 +80,7 @@ export class Invoice {
     items = [],
     shippingFee = 0,
     billDiscount = 0, // flat discount
-    notes = 'Thank you for your business! Items once sold can be exchanged within 7 days.',
+    notes = '', // empty prints the bill language's thank-you line
     template = 'modern',
     status = 'Paid', // Paid, Due, Draft
     createdAt = new Date().toISOString()
@@ -117,24 +117,29 @@ export class Invoice {
   }
 }
 
+/**
+ * The seller's own details and preferences. Everything starts empty: the
+ * first-run setup asks for the shop name, phone and UPI ID.
+ */
 export class BusinessSettings {
   constructor({
-    sellerName = 'Aarav Sharma',
-    brandName = 'Craftisan Studio',
-    tagline = 'Handmade Domestic Goods & Curations',
-    phone = '+91 98765 43210',
-    email = 'contact@craftisan.store',
-    address = '12 Green Avenue, Gandhi Nagar, Bengaluru, KA',
+    sellerName = '',
+    brandName = '',
+    tagline = '',
+    phone = '',
+    email = '',
+    address = '',
     currency = '₹',
-    upiId = 'craftisan@upi',
-    paymentNotes = 'Scan QR code or pay to UPI ID for quick settlement.',
+    upiId = '',
+    paymentNotes = '',
     defaultTemplate = 'modern',
     themeAccent = 'emerald',
-    defaultNotes = 'Thank you for supporting our domestic venture! Please retain this bill for your reference.',
+    defaultNotes = '',
     qrCustomImage = '',
     appLanguage = '', // '' = not chosen yet, so the first-run picker is shown
     billLanguage = '', // '' = same as the app language
-    voiceConsent = false // set once the user agrees to voice typing
+    voiceConsent = false, // set once the user agrees to voice typing
+    setupDone = false // set once the shop setup is finished or skipped
   } = {}) {
     this.sellerName = sellerName;
     this.brandName = brandName;
@@ -152,6 +157,7 @@ export class BusinessSettings {
     this.appLanguage = appLanguage;
     this.billLanguage = billLanguage;
     this.voiceConsent = Boolean(voiceConsent);
+    this.setupDone = Boolean(setupDone);
   }
 }
 

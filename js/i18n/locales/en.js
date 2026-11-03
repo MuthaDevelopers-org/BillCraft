@@ -43,6 +43,17 @@ export default {
     'lang.title': 'Choose your language',
     'lang.subtitle': 'Pick the language you read best. You can change it later in Settings.',
 
+    // First-run shop setup
+    'setup.title': 'Your shop',
+    'setup.subtitle': 'These details go on every bill. You can change them later in Settings.',
+    'setup.shopName': 'Shop or business name',
+    'setup.phone': 'Your phone / WhatsApp',
+    'setup.upiHelp': 'Optional. Customers scan the QR code on your bill to pay you.',
+    'setup.skip': 'Skip for now',
+    'setup.start': 'Start billing',
+    'nudge.noShop': 'Your shop name is not on the bill yet.',
+    'nudge.add': 'Add shop details',
+
     // Bill builder steps
     'step.bar': 'Bill steps',
     'step.items': 'Items',
@@ -62,6 +73,8 @@ export default {
     'ph.billNumber': 'BILL-001',
     'ph.customerName': 'e.g. Priya Sharma',
     'ph.phone': 'e.g. +91 98765 43210',
+    'ph.brandName': 'e.g. Asha Candles',
+    'ph.upi': 'e.g. asha@okaxis',
     'ph.address': 'e.g. 104 Blossom Heights, Pune',
     'ph.customerNote': 'e.g. Gift wrap requested',
     'status.paid': 'Paid',
@@ -73,6 +86,8 @@ export default {
     'items.emptyHint': 'Tap a product above to add it to the bill.',
     'grid.other': '+ Other item',
     'grid.noMatch': 'No product found. Use "+ Other item".',
+    'grid.emptyTitle': 'Add the things you sell',
+    'grid.emptyText': 'Each product becomes a button here. Tap it to put it on the bill.',
     'lines.title': 'In this bill',
     'item.namePh': 'Item name',
     'item.descPh': 'Optional description',
@@ -250,7 +265,6 @@ export default {
 
     // Bill document (printed, PDF, image)
     'bill.brandFallback': 'My Business',
-    'bill.sellerFallback': 'Proprietor',
     'bill.authorised': 'Authorized Signatory',
     'bill.forBusiness': 'For {name}',
     'bill.title': 'Domestic Sales Bill',

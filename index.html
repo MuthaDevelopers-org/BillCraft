@@ -75,8 +75,8 @@
 
       <div class="sidebar-footer">
         <div class="business-mini-badge">
-          <div class="business-avatar" id="sidebar-brand-avatar">C</div>
-          <div class="business-mini-name" id="sidebar-brand-name">Craftisan Studio</div>
+          <div class="business-avatar" id="sidebar-brand-avatar">B</div>
+          <div class="business-mini-name" id="sidebar-brand-name">BillCraft</div>
         </div>
       </div>
     </aside>
@@ -237,6 +237,11 @@
 
           <!-- Step 2 on phones (below the customer), the right-hand panel on larger screens -->
           <div class="bill-preview-panel">
+            <!-- Shown while the shop has no name, so bills do not go out as "My Business" -->
+            <div class="setup-nudge no-print" id="setup-nudge" hidden>
+              <span data-i18n="nudge.noShop">Your shop name is not on the bill yet.</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-nudge-setup" data-i18n="nudge.add">Add shop details</button>
+            </div>
             <div class="preview-actions-bar">
               <div class="template-selector-pill">
                 <span data-i18n="preview.template">Design:</span>
@@ -454,7 +459,7 @@
                 <div>
                   <div class="form-group">
                     <label class="form-label" for="settings-upi" data-i18n="settings.upi">UPI ID</label>
-                    <input type="text" id="settings-upi" class="form-control" placeholder="e.g. seller@okaxis" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="settings-upi-help settings-upi-error" />
+                    <input type="text" id="settings-upi" class="form-control" data-i18n-placeholder="ph.upi" placeholder="e.g. asha@okaxis" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="settings-upi-help settings-upi-error" />
                     <small class="field-help" id="settings-upi-help" data-i18n="settings.upiHelp">A payment QR code is made automatically on every bill.</small>
                     <small class="field-error" id="settings-upi-error" data-i18n="settings.upiInvalid" hidden>Check the UPI ID.</small>
                   </div>
@@ -636,6 +641,38 @@
     </div>
   </div>
 
+  <!-- SHEET: SHOP SETUP (first run, after the language; and from the bill when the shop has no name) -->
+  <div class="modal-overlay" id="modal-setup">
+    <div class="modal-box setup-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="setup-title" data-i18n="setup.title">Your shop</h3>
+      </div>
+      <form id="form-setup" novalidate>
+        <div class="modal-body">
+          <p class="setup-subtitle" data-i18n="setup.subtitle">These details go on every bill. You can change them later in Settings.</p>
+          <div class="form-group">
+            <label class="form-label" for="setup-shop" data-i18n="setup.shopName">Shop or business name</label>
+            <input type="text" id="setup-shop" class="form-control" data-voice="text" autocomplete="organization" data-i18n-placeholder="ph.brandName" placeholder="e.g. Asha Candles" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setup-phone" data-i18n="setup.phone">Your phone / WhatsApp</label>
+            <input type="tel" id="setup-phone" class="form-control" data-voice="number" autocomplete="tel" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setup-upi" data-i18n="settings.upi">UPI ID</label>
+            <input type="text" id="setup-upi" class="form-control" autocomplete="off" autocapitalize="none" spellcheck="false" data-i18n-placeholder="ph.upi" placeholder="e.g. asha@okaxis" aria-describedby="setup-upi-help setup-upi-error" />
+            <small class="field-help" id="setup-upi-help" data-i18n="setup.upiHelp">Optional. Customers scan the QR code on your bill to pay you.</small>
+            <small class="field-error" id="setup-upi-error" data-i18n="settings.upiInvalid" hidden>Check the UPI ID.</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-setup-skip" data-i18n="setup.skip">Skip for now</button>
+          <button type="submit" class="btn btn-primary" data-i18n="setup.start">Start billing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: ADD / EDIT PRODUCT -->
   <div class="modal-overlay" id="modal-product">
     <div class="modal-box">
@@ -647,7 +684,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label" for="modal-prod-name" data-i18n="product.name">Product Name *</label>
-            <input type="text" id="modal-prod-name" class="form-control" required data-i18n-placeholder="product.namePh" placeholder="e.g. Handmade Soy Candle" />
+            <input type="text" id="modal-prod-name" class="form-control" required data-voice="text" data-i18n-placeholder="product.namePh" placeholder="e.g. Handmade Soy Candle" />
           </div>
 
           <div class="form-grid-2">
@@ -664,7 +701,7 @@
           <div class="form-grid-2">
             <div class="form-group">
               <label class="form-label" for="modal-prod-price" data-i18n="product.price">Price *</label>
-              <input type="number" inputmode="decimal" step="any" min="0" id="modal-prod-price" class="form-control" required placeholder="450" />
+              <input type="number" inputmode="decimal" step="any" min="0" id="modal-prod-price" class="form-control" required data-voice="number" placeholder="450" />
             </div>
             <div class="form-group">
               <label class="form-label" for="modal-prod-unit" data-i18n="product.unit">Unit Type</label>

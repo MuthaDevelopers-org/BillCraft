@@ -1,60 +1,64 @@
 /**
  * Storage Service for LocalStorage Persistence
  */
-import { Product, Invoice, InvoiceItem, BusinessSettings } from './models.js';
+import { Product, Invoice, BusinessSettings } from './models.js';
 
 const STORAGE_KEYS = {
   SETTINGS: 'billcraft_settings',
   CATALOG: 'billcraft_catalog',
   INVOICES: 'billcraft_invoices',
   ACTIVE_DRAFT: 'billcraft_active_draft',
-  COUNTER: 'billcraft_inv_counter'
+  COUNTER: 'billcraft_inv_counter',
+  SCHEMA: 'billcraft_schema'
 };
 
-const DEFAULT_SAMPLE_PRODUCTS = [
-  new Product({
-    name: 'Handcrafted Soy Wax Candle (Lavender & Vanilla)',
-    description: 'Eco-friendly 200g jar with 40+ hours burn time',
-    unitPrice: 450,
-    unit: 'pcs',
-    category: 'Home & Decor',
-    sku: 'DEC-01'
-  }),
-  new Product({
-    name: 'Raw Organic Forest Honey (500g)',
-    description: 'Unprocessed, wild flower nectar from Western Ghats',
-    unitPrice: 380,
-    unit: 'jar',
-    category: 'Organic Pantry',
-    sku: 'PAN-02'
-  }),
-  new Product({
-    name: 'Handmade Ceramic Coffee Mug (Teal Glaze)',
-    description: 'Microwave and dishwasher safe artisan pottery',
-    unitPrice: 320,
-    unit: 'pcs',
-    category: 'Kitchenware',
-    sku: 'KIT-03'
-  }),
-  new Product({
-    name: 'Pure Cotton Hand-block Printed Tote Bag',
-    description: 'Double-stitched durable daily shoulder bag',
-    unitPrice: 280,
-    unit: 'pcs',
-    category: 'Apparel & Bags',
-    sku: 'APP-04'
-  }),
-  new Product({
-    name: 'Artisan Cold-Pressed Almond Oil (100ml)',
-    description: '100% pure sweet almond skin & hair oil',
-    unitPrice: 350,
-    unit: 'bottle',
-    category: 'Wellness',
-    sku: 'WEL-05'
-  })
-];
+// 2: made-up shop details from versions before 1.0 are cleared (see migrate)
+export const SCHEMA_VERSION = 2;
+
+// Versions before 1.0 started every install with a made-up shop and saved it with
+// the first change of settings. Above all the UPI ID: it belongs to nobody here, and
+// a bill carrying it would ask customers to pay a stranger.
+const OLD_DEMO_SETTINGS = {
+  sellerName: 'Aarav Sharma',
+  brandName: 'Craftisan Studio',
+  tagline: 'Handmade Domestic Goods & Curations',
+  phone: '+91 98765 43210',
+  email: 'contact@craftisan.store',
+  address: '12 Green Avenue, Gandhi Nagar, Bengaluru, KA',
+  upiId: 'craftisan@upi',
+  paymentNotes: 'Scan QR code or pay to UPI ID for quick settlement.',
+  defaultNotes: 'Thank you for supporting our domestic venture! Please retain this bill for your reference.'
+};
+
+/**
+ * Clears each setting that still holds its made-up value from before 1.0. Values
+ * the user typed are kept. Someone who already named their shop skips the setup.
+ */
+export function clearOldDemoSettings(settings) {
+  const cleaned = { ...settings };
+  for (const [field, demo] of Object.entries(OLD_DEMO_SETTINGS)) {
+    if (cleaned[field] === demo) cleaned[field] = '';
+  }
+  if (cleaned.setupDone === undefined) cleaned.setupDone = Boolean(cleaned.brandName);
+  return cleaned;
+}
 
 export const StorageService = {
+  /** Brings stored data up to SCHEMA_VERSION. Runs once at start; safe to run again. */
+  migrate() {
+    const version = Number(localStorage.getItem(STORAGE_KEYS.SCHEMA)) || 1;
+    if (version >= SCHEMA_VERSION) return;
+    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (data) {
+      try {
+        this.saveSettings(clearOldDemoSettings(JSON.parse(data)));
+      } catch (e) {
+        console.error('Could not update the saved settings', e);
+      }
+    }
+    localStorage.setItem(STORAGE_KEYS.SCHEMA, String(SCHEMA_VERSION));
+  },
+
   // --- Settings ---
   getSettings() {
     try {
@@ -74,15 +78,10 @@ export const StorageService = {
   getCatalog() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CATALOG);
-      if (!data) {
-        this.saveCatalog(DEFAULT_SAMPLE_PRODUCTS);
-        return DEFAULT_SAMPLE_PRODUCTS;
-      }
-      const parsed = JSON.parse(data);
-      return parsed.map(p => new Product(p));
+      return data ? JSON.parse(data).map(p => new Product(p)) : [];
     } catch (e) {
       console.error('Error loading catalog:', e);
-      return DEFAULT_SAMPLE_PRODUCTS;
+      return [];
     }
   },
 
@@ -117,13 +116,7 @@ export const StorageService = {
   getInvoices() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.INVOICES);
-      if (!data) {
-        const sampleInvoice = this.createInitialSampleInvoice();
-        this.saveInvoices([sampleInvoice]);
-        return [sampleInvoice];
-      }
-      const parsed = JSON.parse(data);
-      return parsed.map(inv => new Invoice(inv));
+      return data ? JSON.parse(data).map(inv => new Invoice(inv)) : [];
     } catch (e) {
       console.error('Error loading invoices:', e);
       return [];
@@ -172,43 +165,6 @@ export const StorageService = {
     return `BILL-${String(next).padStart(3, '0')}`;
   },
 
-  createInitialSampleInvoice() {
-    return new Invoice({
-      id: 'inv_sample_001',
-      invoiceNumber: 'BILL-001',
-      date: new Date().toISOString().split('T')[0],
-      customer: {
-        name: 'Meera Deshmukh',
-        phone: '+91 99123 45678',
-        address: 'B-402, Lotus Residency, Indiranagar',
-        note: 'Customer requested evening delivery'
-      },
-      items: [
-        new InvoiceItem({
-          name: 'Handcrafted Soy Wax Candle (Lavender & Vanilla)',
-          description: 'Eco-friendly 200g jar with 40+ hours burn time',
-          quantity: 2,
-          unit: 'pcs',
-          unitPrice: 450,
-          discount: 0
-        }),
-        new InvoiceItem({
-          name: 'Pure Cotton Hand-block Printed Tote Bag',
-          description: 'Double-stitched durable daily shoulder bag',
-          quantity: 1,
-          unit: 'pcs',
-          unitPrice: 280,
-          discount: 10
-        })
-      ],
-      shippingFee: 50,
-      billDiscount: 30,
-      notes: 'Thank you for supporting our domestic venture! Please retain this bill for your reference.',
-      template: 'modern',
-      status: 'Paid'
-    });
-  },
-
   // --- Draft Persistence ---
   getActiveDraft() {
     try {
@@ -244,7 +200,7 @@ export const StorageService = {
     if (!data || (!data.settings && !data.catalog && !data.invoices)) {
       throw new Error('Not a BillCraft backup file');
     }
-    if (data.settings) this.saveSettings(data.settings);
+    if (data.settings) this.saveSettings(clearOldDemoSettings(data.settings));
     if (data.catalog) this.saveCatalog(data.catalog);
     if (data.invoices) this.saveInvoices(data.invoices);
   }

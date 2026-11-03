@@ -22,6 +22,11 @@ function escapeHTML(str) {
     .replace(/"/g, '&quot;');
 }
 
+/** The parts that are set, escaped and joined with a bullet, e.g. "Asha &bull; 98765 43210" */
+function joinParts(parts) {
+  return parts.filter(Boolean).map(escapeHTML).join(' &bull; ');
+}
+
 export function renderInvoice(templateId, invoice, settings, qrDataUrl = '', tb = createTranslator()) {
   switch (templateId) {
     case 'classic':
@@ -68,7 +73,7 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
           <div class="inv-brand-name">${escapeHTML(settings.brandName || t('bill.brandFallback'))}</div>
           ${settings.tagline ? `<div class="inv-brand-tagline">${escapeHTML(settings.tagline)}</div>` : ''}
           <div class="inv-seller-info">
-            <strong>${escapeHTML(settings.sellerName || t('bill.sellerFallback'))}</strong><br/>
+            ${settings.sellerName ? `<strong>${escapeHTML(settings.sellerName)}</strong><br/>` : ''}
             ${settings.phone ? `${t('bill.phone')}: ${escapeHTML(settings.phone)}<br/>` : ''}
             ${settings.email ? `${t('bill.email')}: ${escapeHTML(settings.email)}<br/>` : ''}
             ${settings.address ? `<span>${escapeHTML(settings.address)}</span>` : ''}
@@ -209,7 +214,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
           <div class="classic-title">${t('bill.retailTitle')}</div>
           <div class="classic-brand">${escapeHTML(settings.brandName || t('bill.brandFallback'))}</div>
           <div style="font-size: 0.85rem; color: #475569; margin-top: 4px;">
-            ${escapeHTML(settings.sellerName || t('bill.sellerFallback'))} &bull; ${escapeHTML(settings.phone || '')}<br/>
+            ${joinParts([settings.sellerName, settings.phone])}${settings.sellerName || settings.phone ? '<br/>' : ''}
             ${escapeHTML(settings.address || '')}
           </div>
         </div>
@@ -330,7 +335,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
           <div class="boutique-brand-name">${escapeHTML(settings.brandName || t('template.boutique'))}</div>
           <div style="opacity: 0.9; font-size: 0.88rem; margin-top: 4px;">${escapeHTML(settings.tagline || '')}</div>
           <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 6px;">
-            ${escapeHTML(settings.sellerName || '')} &bull; ${escapeHTML(settings.phone || '')}
+            ${joinParts([settings.sellerName, settings.phone])}
           </div>
         </div>
         <div>
@@ -436,7 +441,7 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
     <div class="invoice-paper template-thermal" id="active-invoice-doc">
       <div class="pos-header">
         <div class="pos-store-name">${escapeHTML(settings.brandName || t('bill.brandFallback'))}</div>
-        <div class="pos-meta-line">${escapeHTML(settings.sellerName || '')}</div>
+        ${settings.sellerName ? `<div class="pos-meta-line">${escapeHTML(settings.sellerName)}</div>` : ''}
         ${settings.phone ? `<div class="pos-meta-line">${t('bill.thermalTel')}: ${escapeHTML(settings.phone)}</div>` : ''}
         ${settings.address ? `<div class="pos-meta-line">${escapeHTML(settings.address)}</div>` : ''}
         <div class="pos-receipt-badge">${t('bill.receiptBadge')}</div>

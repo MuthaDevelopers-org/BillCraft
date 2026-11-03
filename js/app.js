@@ -31,6 +31,7 @@ const TRASH_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor
 
 class BillCraftApp {
   constructor() {
+    StorageService.migrate();
     this.settings = StorageService.getSettings();
     // A draft that was already saved (and not changed since) gives way to a fresh bill
     const draft = StorageService.getActiveDraft();
@@ -63,13 +64,19 @@ class BillCraftApp {
     this.bindSettingsEvents();
     this.bindModalEvents();
     this.bindLanguageEvents();
+    this.bindSetupEvents();
     this.bindVoiceEvents();
     this.bindMoreOptions();
     this.populateLanguageSelects();
     this.setupSpeechButtons();
     this.decorateVoiceFields(document);
     this.refreshAll();
-    if (!this.settings.appLanguage) this.openLanguagePicker(true);
+    // First run: the language, then the shop
+    if (!this.settings.appLanguage) {
+      this.openLanguagePicker(true);
+    } else if (!this.settings.setupDone) {
+      this.openSetup();
+    }
     // Wide screens show the export buttons from the start, so load their libraries once idle
     if (DESKTOP_QUERY.matches) setTimeout(() => ExporterService.preload(), 1500);
   }
@@ -136,7 +143,50 @@ class BillCraftApp {
     StorageService.saveSettings(this.settings);
     await this.applyLanguageChange();
     this.closeModal('modal-language');
-    this.showToast(this.t('toast.languageChanged'), 'success');
+    if (this.settings.setupDone) {
+      this.showToast(this.t('toast.languageChanged'), 'success');
+    } else {
+      this.openSetup();
+    }
+  }
+
+  // --- Shop setup: first run, and from the bill while the shop has no name ---
+  bindSetupEvents() {
+    document.getElementById('form-setup').addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.finishSetup(true);
+    });
+    document.getElementById('btn-setup-skip').addEventListener('click', () => this.finishSetup(false));
+    document.getElementById('setup-upi').addEventListener('input', () => this.showFieldError('setup-upi', false));
+    document.getElementById('btn-nudge-setup').addEventListener('click', () => this.openSetup());
+  }
+
+  openSetup() {
+    document.getElementById('setup-shop').value = this.settings.brandName || '';
+    document.getElementById('setup-phone').value = this.settings.phone || '';
+    document.getElementById('setup-upi').value = this.settings.upiId || '';
+    this.showFieldError('setup-upi', false);
+    this.openModal('modal-setup');
+  }
+
+  /** Saves the shop details, or only that the setup was skipped, so it is not asked again */
+  finishSetup(save) {
+    if (save) {
+      const upiField = document.getElementById('setup-upi');
+      const upiId = upiField.value.trim();
+      if (upiId && !isValidUpiId(upiId)) {
+        this.showFieldError('setup-upi', true);
+        upiField.focus();
+        return;
+      }
+      this.settings.brandName = document.getElementById('setup-shop').value.trim();
+      this.settings.phone = document.getElementById('setup-phone').value.trim();
+      this.settings.upiId = upiId;
+    }
+    this.settings.setupDone = true;
+    StorageService.saveSettings(this.settings);
+    this.closeModal('modal-setup');
+    this.refreshAll();
   }
 
   // --- Theme & Brand ---
@@ -344,6 +394,10 @@ class BillCraftApp {
     });
 
     document.getElementById('product-grid').addEventListener('click', (event) => {
+      if (event.target.closest('[data-add-product]')) {
+        this.openProductModal();
+        return;
+      }
       const tile = event.target.closest('.product-tile');
       if (!tile) return;
       if (tile.hasAttribute('data-other-item')) this.addOtherItem();
@@ -498,8 +552,17 @@ class BillCraftApp {
       </button>
     `).join('');
     const noMatch = query && !products.length ? `<p class="tile-none">${this.escape(this.t('grid.noMatch'))}</p>` : '';
+    // No products yet: say what the grid is for, with a way to add the first one
+    const noProducts = !this.rankedProducts.length;
+    document.querySelector('.product-search').hidden = noProducts;
+    const intro = noProducts ? `
+      <div class="grid-empty">
+        <p class="grid-empty-title">${this.escape(this.t('grid.emptyTitle'))}</p>
+        <p class="grid-empty-text">${this.escape(this.t('grid.emptyText'))}</p>
+        <button type="button" class="btn btn-primary" data-add-product>${this.escape(this.t('catalog.addProduct'))}</button>
+      </div>` : '';
 
-    document.getElementById('product-grid').innerHTML = `${noMatch}${tiles}
+    document.getElementById('product-grid').innerHTML = `${intro}${noMatch}${tiles}
       <button type="button" class="product-tile product-tile-other" data-other-item>
         <span class="tile-plus" aria-hidden="true">+</span>
         <span class="tile-name">${this.escape(this.t('grid.other'))}</span>
@@ -887,6 +950,7 @@ class BillCraftApp {
   }
 
   renderActiveInvoicePreview() {
+    document.getElementById('setup-nudge').hidden = Boolean(this.settings.brandName);
     this.refreshQR();
     const container = document.getElementById('invoice-render-target');
     container.innerHTML = renderInvoice(
@@ -1380,7 +1444,7 @@ class BillCraftApp {
     // The preview follows the UPI ID, shop name and currency as they are typed
     ['settings-upi', 'settings-brand-name', 'settings-currency'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
-        if (id === 'settings-upi') this.showUpiError(false);
+        if (id === 'settings-upi') this.showFieldError('settings-upi', false);
         this.renderSettingsQrPreview();
       });
     });
@@ -1447,10 +1511,10 @@ class BillCraftApp {
     }
   }
 
-  /** Marks the UPI ID field as wrong (or clears the mark), with the reason under it */
-  showUpiError(invalid) {
-    document.getElementById('settings-upi').setAttribute('aria-invalid', String(invalid));
-    document.getElementById('settings-upi-error').hidden = !invalid;
+  /** Marks a field as wrong (or clears the mark), showing the reason in its "-error" element */
+  showFieldError(fieldId, invalid) {
+    document.getElementById(fieldId).setAttribute('aria-invalid', String(invalid));
+    document.getElementById(`${fieldId}-error`).hidden = !invalid;
   }
 
   renderSettingsView() {
@@ -1475,7 +1539,7 @@ class BillCraftApp {
       card.classList.toggle('selected', card.dataset.template === (this.settings.defaultTemplate || 'modern'));
     });
 
-    this.showUpiError(false);
+    this.showFieldError('settings-upi', false);
     this.renderSettingsQrPreview();
   }
 
@@ -1484,7 +1548,7 @@ class BillCraftApp {
     const upiField = document.getElementById('settings-upi');
     const upiId = upiField.value.trim();
     if (upiId && !isValidUpiId(upiId)) {
-      this.showUpiError(true);
+      this.showFieldError('settings-upi', true);
       upiField.focus();
       this.showToast(this.t('settings.upiInvalid'), 'warning');
       return;
@@ -1520,8 +1584,8 @@ class BillCraftApp {
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
-        // The language picker can only be dismissed once a language is chosen
-        if (e.target === overlay && overlay.id !== 'modal-language') overlay.classList.remove('active');
+        // The first-run sheets close only through their own buttons
+        if (e.target === overlay && !['modal-language', 'modal-setup'].includes(overlay.id)) overlay.classList.remove('active');
       });
     });
   }
