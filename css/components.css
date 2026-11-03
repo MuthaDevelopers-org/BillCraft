@@ -1026,6 +1026,22 @@ textarea.form-control {
   color: var(--text-muted);
 }
 
+.field-error {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--danger-text);
+}
+
+.field-error[hidden] {
+  display: none;
+}
+
+.form-control[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
 .muted-note {
   font-size: 0.75rem;
   color: var(--text-subtle);

@@ -454,8 +454,9 @@
                 <div>
                   <div class="form-group">
                     <label class="form-label" for="settings-upi" data-i18n="settings.upi">UPI ID</label>
-                    <input type="text" id="settings-upi" class="form-control" placeholder="e.g. seller@okaxis" />
-                    <small class="field-help" data-i18n="settings.upiHelp">A payment QR code is made automatically on every bill.</small>
+                    <input type="text" id="settings-upi" class="form-control" placeholder="e.g. seller@okaxis" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="settings-upi-help settings-upi-error" />
+                    <small class="field-help" id="settings-upi-help" data-i18n="settings.upiHelp">A payment QR code is made automatically on every bill.</small>
+                    <small class="field-error" id="settings-upi-error" data-i18n="settings.upiInvalid" hidden>Check the UPI ID.</small>
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="settings-payment-note" data-i18n="settings.paymentNote">Payment Instructions</label>

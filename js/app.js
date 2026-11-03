@@ -11,7 +11,7 @@ import {
 import { celebrate, countTo, enter, exit, flyTo, nudge, pop, shrink, slideIn } from './motion.js';
 import { StorageService } from './storage.js';
 import { renderInvoice } from './templates.js';
-import { generateQRCodeURL, buildUPIString } from './qrHelper.js';
+import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService } from './exporter.js';
 import { DEFAULT_LANGUAGE, availableLanguages, getLanguage } from './i18n/languages.js';
 import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, statusLabel } from './i18n/i18n.js';
@@ -873,14 +873,16 @@ class BillCraftApp {
   }
 
   refreshQR() {
-    const { upiId, brandName } = this.settings;
+    const { upiId, brandName, currency } = this.settings;
     const { grandTotal, invoiceNumber } = this.currentInvoice;
+    // UPI pays only in rupees, and only to a well-formed UPI ID
+    const payable = isValidUpiId(upiId) && (currency || '₹') === '₹';
     // Only a new payee, amount or bill number needs a new code
-    const key = upiId ? [upiId, brandName, grandTotal, invoiceNumber].join('|') : '';
+    const key = payable ? [upiId, brandName, grandTotal, invoiceNumber].join('|') : '';
     if (key === this.qrKey) return;
     this.qrKey = key;
-    this.qrDataUrl = upiId
-      ? generateQRCodeURL(buildUPIString({ upiId, brandName, amount: grandTotal, invoiceNumber }), 3)
+    this.qrDataUrl = payable
+      ? generateQRCodeURL(buildUPIString({ upiId, brandName, amount: grandTotal, invoiceNumber }))
       : '';
   }
 
@@ -1373,6 +1375,14 @@ class BillCraftApp {
       reader.readAsDataURL(file);
     });
 
+    // The preview follows the UPI ID, shop name and currency as they are typed
+    ['settings-upi', 'settings-brand-name', 'settings-currency'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        if (id === 'settings-upi') this.showUpiError(false);
+        this.renderSettingsQrPreview();
+      });
+    });
+
     document.getElementById('btn-clear-custom-qr').addEventListener('click', () => {
       this.settings.qrCustomImage = '';
       this.renderSettingsQrPreview();
@@ -1413,24 +1423,32 @@ class BillCraftApp {
     });
   }
 
+  /** The QR code the bills will carry, from the fields as typed (before Save) */
   renderSettingsQrPreview() {
     const previewBox = document.getElementById('settings-qr-preview');
+    const upiId = document.getElementById('settings-upi').value.trim();
+    const brandName = document.getElementById('settings-brand-name').value.trim();
+    const currency = document.getElementById('settings-currency').value;
+    const note = key => `<span class="muted-note">${this.escape(this.t(key))}</span>`;
+    const image = src => `<img src="${this.escape(src)}" alt="" style="width: 100%; height: 100%; object-fit: contain;" />`;
+
     if (this.settings.qrCustomImage) {
-      previewBox.innerHTML = `<img src="${this.settings.qrCustomImage}" alt="" style="width: 100%; height: 100%; object-fit: contain;" />`;
-    } else if (this.settings.upiId) {
-      const upiUri = buildUPIString({
-        upiId: this.settings.upiId,
-        brandName: this.settings.brandName,
-        amount: 0,
-        invoiceNumber: ''
-      });
-      const url = generateQRCodeURL(upiUri, 3);
-      previewBox.innerHTML = url
-        ? `<img src="${url}" alt="" style="width: 100%; height: 100%; object-fit: contain;" />`
-        : `<span class="muted-note">${this.escape(this.t('settings.enterUpi'))}</span>`;
+      previewBox.innerHTML = image(this.settings.qrCustomImage);
+    } else if (currency !== '₹') {
+      previewBox.innerHTML = note('settings.upiRupeesOnly');
+    } else if (!upiId) {
+      previewBox.innerHTML = note('settings.enterUpi');
+    } else if (!isValidUpiId(upiId)) {
+      previewBox.innerHTML = note('settings.upiInvalid');
     } else {
-      previewBox.innerHTML = `<span class="muted-note">${this.escape(this.t('settings.noQr'))}</span>`;
+      previewBox.innerHTML = image(generateQRCodeURL(buildUPIString({ upiId, brandName, amount: 0, invoiceNumber: '' })));
     }
+  }
+
+  /** Marks the UPI ID field as wrong (or clears the mark), with the reason under it */
+  showUpiError(invalid) {
+    document.getElementById('settings-upi').setAttribute('aria-invalid', String(invalid));
+    document.getElementById('settings-upi-error').hidden = !invalid;
   }
 
   renderSettingsView() {
@@ -1455,10 +1473,21 @@ class BillCraftApp {
       card.classList.toggle('selected', card.dataset.template === (this.settings.defaultTemplate || 'modern'));
     });
 
+    this.showUpiError(false);
     this.renderSettingsQrPreview();
   }
 
   async saveSettingsFromForm() {
+    // A malformed UPI ID would put a QR code on every bill that cannot be paid
+    const upiField = document.getElementById('settings-upi');
+    const upiId = upiField.value.trim();
+    if (upiId && !isValidUpiId(upiId)) {
+      this.showUpiError(true);
+      upiField.focus();
+      this.showToast(this.t('settings.upiInvalid'), 'warning');
+      return;
+    }
+
     this.settings.sellerName = document.getElementById('settings-seller-name').value.trim();
     this.settings.brandName = document.getElementById('settings-brand-name').value.trim();
     this.settings.tagline = document.getElementById('settings-tagline').value.trim();
@@ -1466,7 +1495,7 @@ class BillCraftApp {
     this.settings.email = document.getElementById('settings-email').value.trim();
     this.settings.address = document.getElementById('settings-address').value.trim();
     this.settings.currency = document.getElementById('settings-currency').value.trim() || '₹';
-    this.settings.upiId = document.getElementById('settings-upi').value.trim();
+    this.settings.upiId = upiId;
     this.settings.paymentNotes = document.getElementById('settings-payment-note').value.trim();
     this.settings.defaultNotes = document.getElementById('settings-default-notes').value.trim();
     this.settings.appLanguage = document.getElementById('settings-app-language').value;

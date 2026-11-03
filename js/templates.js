@@ -253,7 +253,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem;">
         <div style="flex: 1; font-size: 0.82rem; color: #475569;">
           <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-            ${qrImageSrc ? `<img src="${qrImageSrc}" alt="" style="width: 72px; height: 72px; border: 1px solid #cbd5e1; padding: 3px;" />` : ''}
+            ${qrImageSrc ? `<img src="${qrImageSrc}" alt="" style="width: 112px; height: 112px; border: 1px solid #cbd5e1; flex-shrink: 0;" />` : ''}
             <div>
               <strong>${t('bill.paymentSettlement')}:</strong><br/>
               ${settings.upiId ? `${t('bill.upi')}: ${escapeHTML(settings.upiId)}<br/>` : ''}
@@ -366,7 +366,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; flex-wrap: wrap; gap: 1.5rem;">
           <div style="display: flex; align-items: center; gap: 1rem; max-width: 320px;">
-            ${qrImageSrc ? `<img src="${qrImageSrc}" alt="" style="width: 76px; height: 76px; border-radius: 8px; border: 1px solid #e2e8f0; padding: 4px;" />` : ''}
+            ${qrImageSrc ? `<img src="${qrImageSrc}" alt="" style="width: 112px; height: 112px; border-radius: 8px; border: 1px solid #e2e8f0; flex-shrink: 0;" />` : ''}
             <div style="font-size: 0.82rem; color: #475569;">
               <strong>${t('bill.payViaUpi')}:</strong><br/>
               ${settings.upiId ? `<span style="font-family: var(--font-mono); font-weight: 600;">${escapeHTML(settings.upiId)}</span><br/>` : ''}
