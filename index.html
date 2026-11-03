@@ -4,13 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>BillCraft - Domestic Business Bill & Invoice Maker</title>
+  <!-- Everything the page loads comes from this site; inline styles are allowed for the bill designs -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self'; manifest-src 'self'" />
+  <meta name="referrer" content="no-referrer" />
   <link rel="icon" href="data:," />
   <meta name="description" content="Simple bill and invoice maker for small businesses. Works in many Indian languages, on phones and computers, with UPI QR codes and PDF, image and WhatsApp sharing." />
-
-  <!-- Typography (Devanagari for Hindi and Marathi) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- App Stylesheets (mobile-first: base styles are for phones, responsive.css adds larger screens) -->
   <link rel="stylesheet" href="css/variables.css" />

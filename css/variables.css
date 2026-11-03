@@ -45,10 +45,10 @@
   --info-light: #eff6ff;
 
   /* Typography */
-  /* Devanagari falls back to Noto Sans Devanagari; other scripts use the device's own fonts */
-  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, Monaco, monospace;
-  --font-serif: 'Playfair Display', Georgia, serif;
+  /* Latin text uses the app's own Plus Jakarta Sans (css/base.css). Hindi and other
+     scripts use the device's fonts: Noto on Android, Kohinoor on Apple, Nirmala UI on Windows. */
+  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', 'Kohinoor Devanagari', 'Nirmala UI', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
   /* Elevations & Shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);

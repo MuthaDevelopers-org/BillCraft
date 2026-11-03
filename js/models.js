@@ -17,6 +17,9 @@ export function roundMoney(value) {
 
 const nonNegative = value => Math.max(0, Number(value) || 0);
 
+/** The currencies a bill can use (Settings). Amounts are placed into markup, so no other value is kept. */
+export const CURRENCIES = ['₹', '$', '€', '£', 'AED', 'SAR', 'SGD'];
+
 /** Today's date on this device, as YYYY-MM-DD. (toISOString() would give the UTC date, a day early before 5:30 am in India.) */
 export function todayISO(now = new Date()) {
   const pad = n => String(n).padStart(2, '0');
@@ -187,7 +190,7 @@ export class BusinessSettings {
     this.phone = phone;
     this.email = email;
     this.address = address;
-    this.currency = currency;
+    this.currency = CURRENCIES.includes(currency) ? currency : '₹';
     this.upiId = upiId;
     this.paymentNotes = paymentNotes;
     this.defaultTemplate = defaultTemplate;

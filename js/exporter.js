@@ -6,10 +6,12 @@
 import { formatCurrency } from './models.js';
 import { createTranslator, statusLabel } from './i18n/i18n.js';
 
-// The export libraries load on first use, so starting the app never waits for them
+// The export libraries are served with the app (vendor/, byte-identical to the npm
+// releases; see THIRD_PARTY_NOTICES.md) and load on first use, so starting the app
+// never waits for them and exports work offline.
 const LIBRARIES = {
-  html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+  html2canvas: 'vendor/html2canvas-1.4.1.min.js',
+  jspdf: 'vendor/jspdf-2.5.1.umd.min.js'
 };
 const loading = new Map();
 

@@ -12,7 +12,7 @@ import { celebrate, countTo, enter, exit, flyTo, nudge, pop, shrink, slideIn } f
 import { StorageService, StorageFullError } from './storage.js';
 import { BackupError, MAX_BACKUP_BYTES, parseBackup } from './backup.js';
 import { APP_VERSION } from './config.js';
-import { safeImageSrc } from './safe.js';
+import { escapeHTML, safeImageSrc } from './safe.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService } from './exporter.js';
@@ -114,7 +114,7 @@ class BillCraftApp {
       ? language.name
       : `${language.nativeName} (${language.name})`);
     const options = availableLanguages()
-      .map(language => `<option value="${language.code}">${this.escape(labelFor(language))}</option>`)
+      .map(language => `<option value="${this.escape(language.code)}">${this.escape(labelFor(language))}</option>`)
       .join('');
 
     document.getElementById('settings-app-language').innerHTML = options;
@@ -151,7 +151,7 @@ class BillCraftApp {
   openLanguagePicker(firstRun) {
     const grid = document.getElementById('lang-grid');
     grid.innerHTML = availableLanguages().map(language => `
-      <button type="button" class="lang-option${language.code === this.settings.appLanguage ? ' active' : ''}" data-lang="${language.code}" lang="${language.code}">
+      <button type="button" class="lang-option${language.code === this.settings.appLanguage ? ' active' : ''}" data-lang="${this.escape(language.code)}" lang="${this.escape(language.code)}">
         <span class="lang-native">${this.escape(language.nativeName)}</span>
         <span class="lang-english">${this.escape(language.name)}</span>
       </button>
@@ -1216,13 +1216,13 @@ class BillCraftApp {
             <span class="product-card-unit">/${this.escape(p.unit || 'pcs')}</span>
           </div>
           <div class="product-card-actions">
-            <button class="btn btn-secondary btn-sm btn-add-prod-to-bill" data-id="${p.id}" title="${this.escape(this.t('catalog.addToBill'))}">
-              ${this.t('common.add')}
+            <button class="btn btn-secondary btn-sm btn-add-prod-to-bill" data-id="${this.escape(p.id)}" title="${this.escape(this.t('catalog.addToBill'))}">
+              ${this.escape(this.t('common.add'))}
             </button>
-            <button class="btn btn-ghost btn-sm btn-icon btn-edit-product" data-id="${p.id}" title="${this.escape(this.t('catalog.editTitle'))}" aria-label="${this.escape(this.t('catalog.editTitle'))}">
+            <button class="btn btn-ghost btn-sm btn-icon btn-edit-product" data-id="${this.escape(p.id)}" title="${this.escape(this.t('catalog.editTitle'))}" aria-label="${this.escape(this.t('catalog.editTitle'))}">
               <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </button>
-            <button class="btn btn-ghost btn-sm btn-icon btn-delete-product" data-id="${p.id}" title="${this.escape(this.t('catalog.deleteTitle'))}" aria-label="${this.escape(this.t('catalog.deleteTitle'))}" style="color: var(--danger);">
+            <button class="btn btn-ghost btn-sm btn-icon btn-delete-product" data-id="${this.escape(p.id)}" title="${this.escape(this.t('catalog.deleteTitle'))}" aria-label="${this.escape(this.t('catalog.deleteTitle'))}" style="color: var(--danger);">
               ${TRASH_ICON}
             </button>
           </div>
@@ -1380,9 +1380,9 @@ class BillCraftApp {
           </td>
           <td style="text-align: right;">
             <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
-              <button class="btn btn-secondary btn-sm btn-open-inv" data-id="${inv.id}">${this.escape(this.t('history.open'))}</button>
-              <button class="btn btn-ghost btn-sm btn-dup-inv" data-id="${inv.id}">${this.escape(this.t('history.repeat'))}</button>
-              <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
+              <button class="btn btn-secondary btn-sm btn-open-inv" data-id="${this.escape(inv.id)}">${this.escape(this.t('history.open'))}</button>
+              <button class="btn btn-ghost btn-sm btn-dup-inv" data-id="${this.escape(inv.id)}">${this.escape(this.t('history.repeat'))}</button>
+              <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${this.escape(inv.id)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
                 ${TRASH_ICON}
               </button>
             </div>
@@ -1405,13 +1405,13 @@ class BillCraftApp {
           </div>
 
           <div class="history-bill-actions">
-            <button class="btn btn-primary btn-sm btn-open-inv" data-id="${inv.id}" style="flex: 1;">
+            <button class="btn btn-primary btn-sm btn-open-inv" data-id="${this.escape(inv.id)}" style="flex: 1;">
               ${this.escape(this.t('history.openBill'))}
             </button>
-            <button class="btn btn-secondary btn-sm btn-dup-inv" data-id="${inv.id}">
+            <button class="btn btn-secondary btn-sm btn-dup-inv" data-id="${this.escape(inv.id)}">
               ${this.escape(this.t('history.repeat'))}
             </button>
-            <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${inv.id}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
+            <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${this.escape(inv.id)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
               ${TRASH_ICON}
             </button>
           </div>
@@ -1865,13 +1865,9 @@ class BillCraftApp {
     if (!document.hidden) resume();
   }
 
-  escape(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  /** Escapes any value placed into markup (see js/safe.js) */
+  escape(value) {
+    return escapeHTML(value);
   }
 }
 

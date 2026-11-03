@@ -6,7 +6,7 @@
  * changes nothing; unknown fields are dropped and odd values get safe defaults.
  */
 
-import { BusinessSettings, Invoice, InvoiceItem, Product, newId } from './models.js';
+import { BusinessSettings, CURRENCIES, Invoice, InvoiceItem, Product, newId } from './models.js';
 import { getLanguage } from './i18n/languages.js';
 import { safeImageSrc } from './safe.js';
 
@@ -15,7 +15,6 @@ export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
 
 const TEMPLATES = ['modern', 'classic', 'boutique', 'thermal'];
 const ACCENTS = ['emerald', 'sapphire', 'purple', 'rose', 'amber', 'charcoal'];
-const CURRENCIES = ['₹', '$', '€', '£', 'AED', 'SAR', 'SGD'];
 const STATUSES = ['Paid', 'Due', 'Draft'];
 const MAX_TEXT = 300;
 const MAX_LONG_TEXT = 2000;
