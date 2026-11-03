@@ -3,13 +3,16 @@
  * Mobile-first: a two-step bill on phones (Items, Send), a split-screen editor on larger screens.
  */
 
-import { Product, Invoice, InvoiceItem, formatCurrency } from './models.js';
+import { Product, Invoice, InvoiceItem, formatCurrency, formatDate, newId, todayISO } from './models.js';
 import {
   addProductLine, customerKey, isMeasuredUnit, presetsFor, rankProducts,
   recentCustomers, roundQty, setLineQuantity, stepQuantity
 } from './quickBill.js';
 import { celebrate, countTo, enter, exit, flyTo, nudge, pop, shrink, slideIn } from './motion.js';
-import { StorageService } from './storage.js';
+import { StorageService, StorageFullError } from './storage.js';
+import { BackupError, MAX_BACKUP_BYTES, parseBackup } from './backup.js';
+import { APP_VERSION } from './config.js';
+import { safeImageSrc } from './safe.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService } from './exporter.js';
@@ -28,6 +31,31 @@ const initialOf = name => (Array.from(String(name).trim())[0] || '?').toUpperCas
 const MIC_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>';
 const SPEAK_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>';
 const TRASH_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
+
+/**
+ * A picture file made at most `maxSize` pixels on its longer side, as a PNG data URL,
+ * so an uploaded QR code photo does not fill the browser's storage.
+ */
+async function shrinkImage(file, maxSize = 600) {
+  if (!file.type.startsWith('image/') || file.size > 15 * 1024 * 1024) throw new Error('Not a picture we can use');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; // a transparent QR would print black on black in some viewers
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 class BillCraftApp {
   constructor() {
@@ -140,7 +168,7 @@ class BillCraftApp {
 
   async chooseAppLanguage(code) {
     this.settings.appLanguage = code;
-    StorageService.saveSettings(this.settings);
+    this.saveSettings();
     await this.applyLanguageChange();
     this.closeModal('modal-language');
     if (this.settings.setupDone) {
@@ -184,7 +212,7 @@ class BillCraftApp {
       this.settings.upiId = upiId;
     }
     this.settings.setupDone = true;
-    StorageService.saveSettings(this.settings);
+    if (!this.saveSettings()) return;
     this.closeModal('modal-setup');
     this.refreshAll();
   }
@@ -301,10 +329,9 @@ class BillCraftApp {
 
   // --- Bill Builder Logic ---
   createNewInvoice() {
-    const nextNum = StorageService.getNextInvoiceNumber();
     return new Invoice({
-      invoiceNumber: nextNum,
-      date: new Date().toISOString().split('T')[0],
+      invoiceNumber: StorageService.getNextInvoiceNumber(this.settings.billPrefix),
+      date: todayISO(),
       template: this.settings.defaultTemplate || 'modern',
       notes: this.settings.defaultNotes,
       status: 'Paid',
@@ -334,7 +361,7 @@ class BillCraftApp {
     this.activeTemplate = invoice.template || this.settings.defaultTemplate || 'modern';
     this.expandedItemIds.clear();
     this.customerMode = null;
-    StorageService.saveActiveDraft(invoice);
+    this.saveDraft();
     this.switchView('builder');
     this.setStep(step);
   }
@@ -436,7 +463,7 @@ class BillCraftApp {
     document.getElementById('preview-template-select').addEventListener('change', (e) => {
       this.activeTemplate = e.target.value;
       this.currentInvoice.template = this.activeTemplate;
-      StorageService.saveActiveDraft(this.currentInvoice);
+      this.saveDraft();
       this.renderActiveInvoicePreview();
     });
 
@@ -478,7 +505,7 @@ class BillCraftApp {
       this.currentInvoice.status = option.dataset.status;
       this.renderStatusToggle();
       this.schedulePreview();
-      StorageService.saveActiveDraft(this.currentInvoice);
+      this.saveDraft();
     });
 
     document.querySelectorAll('.btn-speak').forEach(btn => {
@@ -504,7 +531,7 @@ class BillCraftApp {
     this.updateTotalsCard();
     this.schedulePreview();
 
-    StorageService.saveActiveDraft(this.currentInvoice);
+    this.saveDraft();
   }
 
   renderBuilderForm() {
@@ -631,7 +658,7 @@ class BillCraftApp {
     this.updateTileBadges();
     this.updateTotalsCard();
     this.schedulePreview();
-    StorageService.saveActiveDraft(this.currentInvoice);
+    this.saveDraft();
   }
 
   lineRow(itemId) {
@@ -769,7 +796,7 @@ class BillCraftApp {
     this.updateBillLine(row, item);
     this.updateTotalsCard();
     this.schedulePreview();
-    StorageService.saveActiveDraft(this.currentInvoice);
+    this.saveDraft();
   }
 
   /** "Save to my products": a typed item becomes a tile for the next bill */
@@ -780,7 +807,7 @@ class BillCraftApp {
       return;
     }
     const product = new Product({ name, unitPrice: item.unitPrice, unit: item.unit, description: item.description });
-    StorageService.addProduct(product);
+    if (!this.store(() => StorageService.addProduct(product))) return;
     item.productId = product.id;
     this.refreshHistoryData();
     this.renderProductGrid();
@@ -932,7 +959,7 @@ class BillCraftApp {
     document.getElementById('cust-notes').value = note;
     this.renderCustomerChips();
     this.schedulePreview();
-    StorageService.saveActiveDraft(this.currentInvoice);
+    this.saveDraft();
   }
 
   refreshQR() {
@@ -970,12 +997,10 @@ class BillCraftApp {
   saveBill() {
     this.syncFormToInvoice();
 
-    if (!this.currentInvoice.invoiceNumber) {
+    const { invoiceNumber, id } = this.currentInvoice;
+    if (!invoiceNumber) {
       this.showToast(this.t('toast.needNumber'), 'warning');
-      this.setStep(STEP_COUNT);
-      const field = document.getElementById('inv-number');
-      field.closest('details').open = true;
-      field.focus();
+      this.focusBillNumber();
       return false;
     }
 
@@ -985,13 +1010,40 @@ class BillCraftApp {
       return false;
     }
 
-    StorageService.saveInvoice(this.currentInvoice);
+    // Two bills with one number would confuse the customer and the records
+    if (StorageService.findInvoiceByNumber(invoiceNumber, id)) {
+      this.showToast(this.t('toast.numberUsed', { number: invoiceNumber }), 'warning');
+      this.focusBillNumber();
+      return false;
+    }
+
+    if (!this.store(() => StorageService.saveInvoice(this.currentInvoice))) return false;
+    this.requestPersistentStorage();
     this.refreshHistoryData();
     this.customerMode = null;
     this.renderCustomerChips();
     this.updateBadges();
     pop(document.getElementById('nav-history-badge'), 1.4);
     return true;
+  }
+
+  /** Shows the bill number field (under More options on the Send step) and puts the cursor in it */
+  focusBillNumber() {
+    this.setStep(STEP_COUNT);
+    const field = document.getElementById('inv-number');
+    field.closest('details').open = true;
+    field.focus();
+  }
+
+  /**
+   * After the first saved bill, asks the browser to keep this site's data even when
+   * the phone runs low on space. Asked once; the browser decides.
+   */
+  requestPersistentStorage() {
+    if (this.settings.persistAsked || !navigator.storage?.persist) return;
+    this.settings.persistAsked = true;
+    this.saveSettings();
+    navigator.storage.persist().catch(() => {});
   }
 
   /** The saved notice, with the next bill one tap away */
@@ -1059,9 +1111,14 @@ class BillCraftApp {
 
   async startVoiceInput(mic) {
     if (!this.settings.voiceConsent) {
-      if (!confirm(this.t('voice.consent'))) return;
+      const allowed = await this.confirm({
+        title: this.t('voice.consentTitle'),
+        message: this.t('voice.consent'),
+        confirmLabel: this.t('voice.allow')
+      });
+      if (!allowed) return;
       this.settings.voiceConsent = true;
-      StorageService.saveSettings(this.settings);
+      this.saveSettings();
     }
 
     const input = mic.closest('.voice-field').querySelector('[data-voice]');
@@ -1191,14 +1248,17 @@ class BillCraftApp {
     });
 
     container.querySelectorAll('.btn-delete-product').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (confirm(this.t('confirm.deleteProduct'))) {
-          StorageService.deleteProduct(btn.dataset.id);
-          this.refreshHistoryData();
-          this.renderProductGrid();
-          this.renderCatalogView();
-          this.showToast(this.t('toast.productDeleted'), 'info');
-        }
+      btn.addEventListener('click', async () => {
+        const remove = await this.confirm({
+          title: this.t('confirm.deleteProduct'),
+          confirmLabel: this.t('common.delete'),
+          danger: true
+        });
+        if (!remove || !this.store(() => StorageService.deleteProduct(btn.dataset.id))) return;
+        this.refreshHistoryData();
+        this.renderProductGrid();
+        this.renderCatalogView();
+        this.showToast(this.t('toast.productDeleted'), 'info');
       });
     });
   }
@@ -1235,18 +1295,12 @@ class BillCraftApp {
       return;
     }
 
-    if (this.editingProductId) {
-      StorageService.updateProduct(new Product({
-        id: this.editingProductId,
-        name, category, description, unitPrice, unit, sku
-      }));
-      this.showToast(this.t('toast.productUpdated'), 'success');
-    } else {
-      StorageService.addProduct(new Product({
-        name, category, description, unitPrice, unit, sku
-      }));
-      this.showToast(this.t('toast.catalogAdded'), 'success');
-    }
+    const fields = { name, category, description, unitPrice, unit, sku };
+    const saved = this.editingProductId
+      ? this.store(() => StorageService.updateProduct(new Product({ id: this.editingProductId, ...fields })))
+      : this.store(() => StorageService.addProduct(new Product(fields)));
+    if (!saved) return;
+    this.showToast(this.t(this.editingProductId ? 'toast.productUpdated' : 'toast.catalogAdded'), 'success');
 
     this.closeModal('modal-product');
     this.refreshHistoryData();
@@ -1267,6 +1321,7 @@ class BillCraftApp {
   }
 
   renderHistoryView(searchQuery = '') {
+    this.renderBackupStatus();
     const tableBody = document.getElementById('history-table-body');
     const mobileContainer = document.getElementById('mobile-history-list');
     const selectedFilter = document.getElementById('history-filter-status').value;
@@ -1378,13 +1433,15 @@ class BillCraftApp {
       btn.addEventListener('click', () => {
         const inv = StorageService.getInvoiceById(btn.dataset.id);
         if (inv) {
-          const nextNum = StorageService.getNextInvoiceNumber();
+          const nextNum = StorageService.getNextInvoiceNumber(this.settings.billPrefix);
           this.openBill(new Invoice({
             ...inv,
-            id: 'inv_' + Date.now(),
+            id: newId('inv'),
             invoiceNumber: nextNum,
-            date: new Date().toISOString().split('T')[0],
+            date: todayISO(),
+            dueDate: '',
             status: 'Paid',
+            items: inv.items.map(({ id, ...item }) => item), // fresh line ids
             createdAt: new Date().toISOString()
           }), STEP_COUNT);
           this.showToast(this.t('toast.repeated', { number: nextNum }), 'success');
@@ -1393,13 +1450,17 @@ class BillCraftApp {
     });
 
     document.querySelectorAll('.btn-del-inv').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (confirm(this.t('confirm.deleteBill'))) {
-          StorageService.deleteInvoice(btn.dataset.id);
-          this.renderHistoryView(document.getElementById('history-search-input').value);
-          this.updateBadges();
-          this.showToast(this.t('toast.billDeleted'), 'info');
-        }
+      btn.addEventListener('click', async () => {
+        const remove = await this.confirm({
+          title: this.t('confirm.deleteBill'),
+          confirmLabel: this.t('common.delete'),
+          danger: true
+        });
+        if (!remove || !this.store(() => StorageService.deleteInvoice(btn.dataset.id))) return;
+        this.refreshHistoryData();
+        this.renderHistoryView(document.getElementById('history-search-input').value);
+        this.updateBadges();
+        this.showToast(this.t('toast.billDeleted'), 'info');
       });
     });
   }
@@ -1418,6 +1479,7 @@ class BillCraftApp {
         sw.classList.add('active');
         this.settings.themeAccent = sw.dataset.color;
         this.applyThemeAccent(sw.dataset.color);
+        this.saveSettings();
       });
     });
 
@@ -1427,18 +1489,23 @@ class BillCraftApp {
         templateCards.forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         this.settings.defaultTemplate = card.dataset.template;
+        this.saveSettings();
       });
     });
 
-    document.getElementById('settings-qr-upload').addEventListener('change', (e) => {
+    document.getElementById('settings-qr-upload').addEventListener('change', async (e) => {
       const file = e.target.files[0];
+      e.target.value = '';
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (re) => {
-        this.settings.qrCustomImage = re.target.result;
-        this.renderSettingsQrPreview();
-      };
-      reader.readAsDataURL(file);
+      try {
+        this.settings.qrCustomImage = await shrinkImage(file);
+      } catch {
+        this.showToast(this.t('toast.imageInvalid'), 'warning');
+        return;
+      }
+      this.saveSettings();
+      this.renderSettingsQrPreview();
+      this.schedulePreview();
     });
 
     // The preview follows the UPI ID, shop name and currency as they are typed
@@ -1451,42 +1518,111 @@ class BillCraftApp {
 
     document.getElementById('btn-clear-custom-qr').addEventListener('click', () => {
       this.settings.qrCustomImage = '';
+      this.saveSettings();
       this.renderSettingsQrPreview();
+      this.schedulePreview();
       this.showToast(this.t('toast.qrReset'), 'info');
     });
 
-    document.getElementById('btn-export-backup').addEventListener('click', () => {
-      const json = StorageService.exportBackupJSON();
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `billcraft_backup_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      this.showToast(this.t('toast.backupDone'), 'success');
-    });
+    document.getElementById('btn-export-backup').addEventListener('click', () => this.exportBackup());
+    document.getElementById('btn-backup-now').addEventListener('click', () => this.exportBackup());
 
     document.getElementById('input-import-backup').addEventListener('change', (e) => {
       const file = e.target.files[0];
       e.target.value = '';
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async (re) => {
-        try {
-          StorageService.importBackupJSON(re.target.result);
-          this.settings = StorageService.getSettings();
-          this.currentInvoice = StorageService.getActiveDraft() || this.createNewInvoice();
-          this.refreshHistoryData();
-          await this.loadTranslators();
-          this.refreshAll();
-          this.showToast(this.t('toast.restoreDone'), 'success');
-        } catch (err) {
-          this.showToast(this.t('toast.restoreFailed'), 'danger');
-        }
-      };
-      reader.readAsText(file);
+      if (file) this.restoreBackup(file);
     });
+  }
+
+  /** Saves every product, bill and setting to a file, and remembers when */
+  exportBackup() {
+    const json = StorageService.exportBackupJSON(APP_VERSION);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `billcraft-backup-${todayISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Some browsers cancel the download if the address is revoked at once
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    this.settings.lastBackupAt = new Date().toISOString();
+    this.saveSettings();
+    this.renderBackupStatus();
+    this.showToast(this.t('toast.backupDone'), 'success');
+  }
+
+  /**
+   * Restores a backup file: checked completely first, then confirmed with what will be
+   * replaced. Undo puts back exactly what was there.
+   */
+  async restoreBackup(file) {
+    let backup;
+    try {
+      if (file.size > MAX_BACKUP_BYTES) throw new BackupError('not-backup');
+      backup = parseBackup(await file.text());
+    } catch (error) {
+      const newer = error instanceof BackupError && error.reason === 'newer';
+      this.showToast(this.t(newer ? 'toast.restoreNewer' : 'toast.restoreFailed'), 'danger');
+      return;
+    }
+
+    const here = { bills: StorageService.getInvoices().length, products: StorageService.getCatalog().length };
+    const replace = await this.confirm({
+      title: this.t('restore.title'),
+      message: this.t('restore.message', {
+        currentBills: here.bills,
+        currentProducts: here.products,
+        bills: backup.invoices ? backup.invoices.length : here.bills,
+        products: backup.catalog ? backup.catalog.length : here.products
+      }),
+      confirmLabel: this.t('restore.confirm'),
+      danger: true
+    });
+    if (!replace) return;
+
+    const before = StorageService.snapshot();
+    if (!this.store(() => StorageService.applyBackup(backup))) {
+      this.store(() => StorageService.restoreSnapshot(before));
+      return;
+    }
+    await this.reloadFromStorage();
+    this.showToast(this.t('toast.restoreDone'), 'success', {
+      label: this.t('common.undo'),
+      onClick: async () => {
+        if (this.store(() => StorageService.restoreSnapshot(before))) await this.reloadFromStorage();
+      }
+    });
+  }
+
+  /** After a restore (or its undo): settings, products and bills are read again */
+  async reloadFromStorage() {
+    this.settings = StorageService.getSettings();
+    const draft = StorageService.getActiveDraft();
+    this.currentInvoice = draft && !this.isSaved(draft) ? draft : this.createNewInvoice();
+    this.refreshHistoryData();
+    await this.loadTranslators();
+    this.refreshAll();
+  }
+
+  /**
+   * True when bills exist that no backup file holds yet: three or more and never backed
+   * up, or any made since a backup that is over a week old
+   */
+  needsBackup() {
+    const last = Date.parse(this.settings.lastBackupAt) || 0;
+    const unsaved = StorageService.getInvoices().filter(inv => (Date.parse(inv.createdAt) || 0) > last).length;
+    if (!last) return unsaved >= 3;
+    return unsaved > 0 && Date.now() - last > 7 * 24 * 60 * 60 * 1000;
+  }
+
+  /** The reminder in History, and the date of the last backup in Settings */
+  renderBackupStatus() {
+    document.getElementById('backup-banner').hidden = !this.needsBackup();
+    const last = this.settings.lastBackupAt;
+    document.getElementById('backup-last').textContent = last
+      ? this.t('backup.last', { date: formatDate(last, this.settings.appLanguage || 'en') })
+      : this.t('backup.never');
   }
 
   /** The QR code the bills will carry, from the fields as typed (before Save) */
@@ -1498,8 +1634,8 @@ class BillCraftApp {
     const note = key => `<span class="muted-note">${this.escape(this.t(key))}</span>`;
     const image = src => `<img src="${this.escape(src)}" alt="" style="width: 100%; height: 100%; object-fit: contain;" />`;
 
-    if (this.settings.qrCustomImage) {
-      previewBox.innerHTML = image(this.settings.qrCustomImage);
+    if (safeImageSrc(this.settings.qrCustomImage)) {
+      previewBox.innerHTML = image(safeImageSrc(this.settings.qrCustomImage));
     } else if (currency !== '₹') {
       previewBox.innerHTML = note('settings.upiRupeesOnly');
     } else if (!upiId) {
@@ -1528,6 +1664,7 @@ class BillCraftApp {
     document.getElementById('settings-upi').value = this.settings.upiId || '';
     document.getElementById('settings-payment-note').value = this.settings.paymentNotes || '';
     document.getElementById('settings-default-notes').value = this.settings.defaultNotes || '';
+    document.getElementById('settings-bill-prefix').value = this.settings.billPrefix;
     document.getElementById('settings-app-language').value = this.settings.appLanguage || DEFAULT_LANGUAGE;
     document.getElementById('settings-bill-language').value = this.settings.billLanguage || '';
 
@@ -1541,6 +1678,7 @@ class BillCraftApp {
 
     this.showFieldError('settings-upi', false);
     this.renderSettingsQrPreview();
+    this.renderBackupStatus();
   }
 
   async saveSettingsFromForm() {
@@ -1566,15 +1704,81 @@ class BillCraftApp {
     this.settings.defaultNotes = document.getElementById('settings-default-notes').value.trim();
     this.settings.appLanguage = document.getElementById('settings-app-language').value;
     this.settings.billLanguage = document.getElementById('settings-bill-language').value;
+    const oldPrefix = this.settings.billPrefix;
+    this.settings.billPrefix = document.getElementById('settings-bill-prefix').value.trim().slice(0, 16);
 
-    StorageService.saveSettings(this.settings);
+    if (!this.saveSettings()) return;
+    // A bill not yet saved takes its number from the new prefix
+    if (this.settings.billPrefix !== oldPrefix && !StorageService.getInvoiceById(this.currentInvoice.id)) {
+      this.currentInvoice.invoiceNumber = StorageService.getNextInvoiceNumber(this.settings.billPrefix);
+      this.saveDraft();
+    }
     await this.loadTranslators();
     this.refreshAll();
     this.showToast(this.t('toast.settingsSaved'), 'success');
   }
 
+  // --- Saving ---
+
+  /** Runs a storage write. When the browser's storage is full it says so (not more than every 15 s) and returns false. */
+  store(write) {
+    try {
+      write();
+      return true;
+    } catch (error) {
+      if (!(error instanceof StorageFullError)) throw error;
+      if (Date.now() - (this.storageWarnedAt || 0) > 15000) {
+        this.storageWarnedAt = Date.now();
+        this.showToast(this.t('toast.storageFull'), 'danger');
+      }
+      return false;
+    }
+  }
+
+  saveSettings() {
+    return this.store(() => StorageService.saveSettings(this.settings));
+  }
+
+  /** The bill being made is kept as a draft after every change, so nothing is lost if the app closes */
+  saveDraft() {
+    return this.store(() => StorageService.saveActiveDraft(this.currentInvoice));
+  }
+
+  /**
+   * A yes/no question in the app's own dialog and language (the browser's confirm()
+   * shows OK and Cancel in the browser's language). Resolves true for yes.
+   */
+  confirm({ title, message = '', confirmLabel, danger = false }) {
+    this.settleConfirm(false); // a question still open is answered "no"
+    document.getElementById('confirm-title').textContent = title;
+    const text = document.getElementById('confirm-message');
+    text.textContent = message;
+    text.hidden = !message;
+    const ok = document.getElementById('btn-confirm-ok');
+    ok.textContent = confirmLabel;
+    ok.className = `btn ${danger ? 'btn-danger' : 'btn-primary'}`;
+    this.openModal('modal-confirm');
+    return new Promise(resolve => {
+      this.confirmAnswer = resolve;
+    });
+  }
+
+  settleConfirm(answer) {
+    const resolve = this.confirmAnswer;
+    if (!resolve) return;
+    this.confirmAnswer = null;
+    this.closeModal('modal-confirm');
+    resolve(answer);
+  }
+
   // --- Modals ---
   bindModalEvents() {
+    document.getElementById('btn-confirm-ok').addEventListener('click', () => this.settleConfirm(true));
+    document.getElementById('btn-confirm-cancel').addEventListener('click', () => this.settleConfirm(false));
+    document.getElementById('modal-confirm').addEventListener('click', (event) => {
+      if (event.target.id === 'modal-confirm') this.settleConfirm(false);
+    });
+
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
       btn.addEventListener('click', () => {
         const modal = btn.closest('.modal-overlay');
@@ -1584,8 +1788,8 @@ class BillCraftApp {
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
-        // The first-run sheets close only through their own buttons
-        if (e.target === overlay && !['modal-language', 'modal-setup'].includes(overlay.id)) overlay.classList.remove('active');
+        // The first-run sheets and the question close only through their own buttons
+        if (e.target === overlay && !['modal-language', 'modal-setup', 'modal-confirm'].includes(overlay.id)) overlay.classList.remove('active');
       });
     });
   }

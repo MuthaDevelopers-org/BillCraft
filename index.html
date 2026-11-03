@@ -329,6 +329,14 @@
 
       <!-- VIEW 3: BILLS HISTORY -->
       <section class="view-section" id="view-history">
+        <div class="backup-banner" id="backup-banner" hidden>
+          <div class="backup-banner-text">
+            <strong data-i18n="backup.reminderTitle">Your bills are only on this phone</strong>
+            <span data-i18n="backup.reminderText">Save a backup file, so a lost or broken phone does not take them with it.</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-backup-now" data-i18n="settings.exportJson">Save Backup File</button>
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon-wrap">
@@ -586,6 +594,12 @@
               </div>
 
               <div class="form-group">
+                <label class="form-label" for="settings-bill-prefix" data-i18n="settings.billPrefix">Bill numbers start with</label>
+                <input type="text" id="settings-bill-prefix" class="form-control" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="settings-bill-prefix-help" />
+                <small class="field-help" id="settings-bill-prefix-help" data-i18n="settings.billPrefixHelp">For example, BILL- gives BILL-001, BILL-002 and so on.</small>
+              </div>
+
+              <div class="form-group">
                 <label class="form-label" for="settings-default-notes" data-i18n="settings.defaultTerms">Default Terms & Conditions</label>
                 <textarea id="settings-default-notes" class="form-control" rows="2" placeholder="e.g. Items once sold can be exchanged within 7 days."></textarea>
               </div>
@@ -606,6 +620,7 @@
               </div>
             </div>
             <div class="card-body">
+              <p class="backup-last" id="backup-last"></p>
               <p class="backup-text" data-i18n="settings.backupText">Your products, settings and bills are stored only in this browser. Save a backup file regularly, or restore it on another phone.</p>
               <div class="backup-actions">
                 <button type="button" class="btn btn-secondary" id="btn-export-backup">
@@ -741,6 +756,20 @@
           <p class="qty-line-total" id="qty-line-total"></p>
           <button type="submit" class="btn btn-primary qty-add" data-i18n="common.add">Add</button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIALOG: a yes/no question in the app language (replaces the browser's confirm()) -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-box confirm-box">
+      <div class="modal-body">
+        <h3 class="modal-title" id="confirm-title">Are you sure?</h3>
+        <p class="confirm-message" id="confirm-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-confirm-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-ok">OK</button>
       </div>
     </div>
   </div>

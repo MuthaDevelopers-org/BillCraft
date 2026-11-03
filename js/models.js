@@ -17,9 +17,46 @@ export function roundMoney(value) {
 
 const nonNegative = value => Math.max(0, Number(value) || 0);
 
+/** Today's date on this device, as YYYY-MM-DD. (toISOString() would give the UTC date, a day early before 5:30 am in India.) */
+export function todayISO(now = new Date()) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
+ * A date for people to read, in their language with Latin digits: "3 Nov 2026",
+ * "3 नव॰ 2026". A YYYY-MM-DD value is a calendar date; a full timestamp is shown
+ * in this device's time zone. Anything else is returned as it is.
+ */
+export function formatDate(value, language = 'en') {
+  const text = String(value || '');
+  const calendarDate = /^\d{4}-\d{2}-\d{2}$/.test(text);
+  const date = new Date(calendarDate ? `${text}T00:00:00Z` : text);
+  if (!text || Number.isNaN(date.getTime())) return text;
+  try {
+    return new Intl.DateTimeFormat(`${language}-IN`, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      numberingSystem: 'latn',
+      ...(calendarDate ? { timeZone: 'UTC' } : {})
+    }).format(date);
+  } catch {
+    return text.slice(0, 10);
+  }
+}
+
+/** A new unique id such as "inv_1f0c…". Random where the browser can, so two made in the same millisecond differ. */
+export function newId(prefix) {
+  const random = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${random}`;
+}
+
 export class Product {
   constructor({
-    id = 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    id = newId('prod'),
     name = '',
     description = '',
     unitPrice = 0,
@@ -39,7 +76,7 @@ export class Product {
 
 export class InvoiceItem {
   constructor({
-    id = 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    id = newId('item'),
     productId = null,
     name = '',
     description = '',
@@ -67,9 +104,9 @@ export class InvoiceItem {
 
 export class Invoice {
   constructor({
-    id = 'inv_' + Date.now(),
+    id = newId('inv'),
     invoiceNumber = 'BILL-001',
-    date = new Date().toISOString().split('T')[0],
+    date = todayISO(),
     dueDate = '',
     customer = {
       name: '',
@@ -139,7 +176,10 @@ export class BusinessSettings {
     appLanguage = '', // '' = not chosen yet, so the first-run picker is shown
     billLanguage = '', // '' = same as the app language
     voiceConsent = false, // set once the user agrees to voice typing
-    setupDone = false // set once the shop setup is finished or skipped
+    setupDone = false, // set once the shop setup is finished or skipped
+    billPrefix = 'BILL-', // bill numbers are this followed by 001, 002, ...
+    lastBackupAt = '', // ISO time of the last backup file saved
+    persistAsked = false // set once the browser was asked to keep this data
   } = {}) {
     this.sellerName = sellerName;
     this.brandName = brandName;
@@ -158,6 +198,9 @@ export class BusinessSettings {
     this.billLanguage = billLanguage;
     this.voiceConsent = Boolean(voiceConsent);
     this.setupDone = Boolean(setupDone);
+    this.billPrefix = String(billPrefix ?? 'BILL-');
+    this.lastBackupAt = lastBackupAt;
+    this.persistAsked = Boolean(persistAsked);
   }
 }
 

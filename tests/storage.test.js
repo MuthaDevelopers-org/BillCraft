@@ -1,13 +1,18 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { StorageService, SCHEMA_VERSION, clearOldDemoSettings } from '../js/storage.js';
+import { StorageService, SCHEMA_VERSION, StorageFullError } from '../js/storage.js';
+import { clearOldDemoSettings } from '../js/backup.js';
+import { Invoice } from '../js/models.js';
 
 // A stand-in for the browser's localStorage, emptied before each test
 class MemoryStorage {
-  constructor() { this.map = new Map(); }
+  constructor() { this.map = new Map(); this.full = false; }
   getItem(key) { return this.map.has(key) ? this.map.get(key) : null; }
-  setItem(key, value) { this.map.set(key, String(value)); }
+  setItem(key, value) {
+    if (this.full) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    this.map.set(key, String(value));
+  }
   removeItem(key) { this.map.delete(key); }
   clear() { this.map.clear(); }
 }
@@ -104,4 +109,61 @@ test('clearing old demo settings does not change the object passed in', () => {
   const original = { ...OLD_SETTINGS };
   clearOldDemoSettings(original);
   assert.equal(original.upiId, 'craftisan@upi');
+});
+
+test('a full storage is reported, and nothing is half written', () => {
+  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'BILL-001' }));
+  localStorage.full = true;
+  assert.throws(() => StorageService.saveInvoice(new Invoice({ id: 'inv_2', invoiceNumber: 'BILL-002' })), StorageFullError);
+  localStorage.full = false;
+  assert.deepEqual(StorageService.getInvoices().map(inv => inv.id), ['inv_1']);
+});
+
+test('bill numbers only go up, even after the latest bill is deleted', () => {
+  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-001');
+  StorageService.saveInvoice(new Invoice({ id: 'inv_5', invoiceNumber: 'BILL-005' }));
+  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-006');
+  StorageService.deleteInvoice('inv_5');
+  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-006');
+  assert.equal(StorageService.getNextInvoiceNumber('INV/2026/'), 'INV/2026/006');
+});
+
+test('a bill number already used by another bill is found, ignoring case and spaces', () => {
+  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'BILL-007' }));
+  assert.equal(StorageService.findInvoiceByNumber(' bill-007 ', 'inv_2').id, 'inv_1');
+  assert.equal(StorageService.findInvoiceByNumber('BILL-007', 'inv_1'), null, 'the bill itself does not count');
+  assert.equal(StorageService.findInvoiceByNumber('BILL-008', 'inv_2'), null);
+});
+
+test('a restore can be undone exactly', () => {
+  StorageService.saveSettings({ brandName: 'Asha Candles' });
+  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'BILL-001' }));
+  const before = StorageService.snapshot();
+  StorageService.importBackupJSON(JSON.stringify({ app: 'BillCraft', format: 2, settings: { brandName: 'Other' }, catalog: [], invoices: [] }));
+  assert.equal(StorageService.getSettings().brandName, 'Other');
+  StorageService.restoreSnapshot(before);
+  assert.equal(StorageService.getSettings().brandName, 'Asha Candles');
+  assert.equal(StorageService.getInvoices()[0].id, 'inv_1');
+  assert.equal(localStorage.getItem('billcraft_catalog'), null, 'a section that did not exist is removed again');
+});
+
+test('a backup without a section leaves that section as it is', () => {
+  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'BILL-001' }));
+  StorageService.importBackupJSON(JSON.stringify({ app: 'BillCraft', format: 2, catalog: [{ name: 'Soap', unitPrice: 40 }] }));
+  assert.equal(StorageService.getInvoices().length, 1);
+  assert.equal(StorageService.getCatalog()[0].name, 'Soap');
+});
+
+test('a backup round trip keeps everything', () => {
+  StorageService.saveSettings({ brandName: 'Asha Candles', upiId: 'asha@okaxis', setupDone: true });
+  StorageService.addProduct({ id: 'prod_1', name: 'Soap', unitPrice: 40, unit: 'pcs', category: 'General', sku: '', description: '' });
+  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'BILL-009', items: [{ id: 'item_1', name: 'Soap', quantity: 2, unitPrice: 40 }] }));
+  const json = StorageService.exportBackupJSON('1.0.0');
+  globalThis.localStorage = new MemoryStorage();
+  StorageService.importBackupJSON(json);
+  assert.equal(StorageService.getSettings().upiId, 'asha@okaxis');
+  assert.equal(StorageService.getCatalog()[0].id, 'prod_1');
+  const [bill] = StorageService.getInvoices();
+  assert.equal(bill.grandTotal, 80);
+  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-010');
 });

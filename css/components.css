@@ -1736,6 +1736,57 @@ textarea.form-control {
 }
 
 /* ============================================================
+   SAVED DATA: the in-app question, the backup reminder and status
+   ============================================================ */
+.confirm-box {
+  max-width: 420px;
+}
+
+.confirm-box .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.confirm-message {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.confirm-box .modal-footer {
+  justify-content: flex-end;
+}
+
+.backup-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  color: var(--warning-text);
+}
+
+.backup-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.88rem;
+}
+
+.backup-last {
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* ============================================================
    MOTION (driven by js/motion.js)
    ============================================================ */
 /* Flying "+1" bubbles and the burst of dots float above everything */
