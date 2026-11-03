@@ -1787,6 +1787,40 @@ textarea.form-control {
 }
 
 /* ============================================================
+   SETTINGS: the App card (install, update, version, privacy)
+   ============================================================ */
+.app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.app-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.app-row p {
+  flex: 1 1 220px;
+}
+
+.privacy-note {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.app-version {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
    MOTION (driven by js/motion.js)
    ============================================================ */
 /* Flying "+1" bubbles and the burst of dots float above everything */

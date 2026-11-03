@@ -93,6 +93,7 @@ class BillCraftApp {
     this.bindModalEvents();
     this.bindLanguageEvents();
     this.bindSetupEvents();
+    this.bindAppEvents();
     this.bindVoiceEvents();
     this.bindMoreOptions();
     this.populateLanguageSelects();
@@ -107,6 +108,90 @@ class BillCraftApp {
     }
     // Wide screens show the export buttons from the start, so load their libraries once idle
     if (DESKTOP_QUERY.matches) setTimeout(() => ExporterService.preload(), 1500);
+    this.registerServiceWorker();
+  }
+
+  // --- The app itself: offline use, install and updates ---
+
+  /**
+   * The service worker keeps the app's files on this device, so it opens without
+   * internet. Browsers allow it on HTTPS; locally it runs only with ?sw=1, so
+   * development never shows stale files.
+   */
+  registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+    if (local && !new URLSearchParams(location.search).has('sw')) return;
+
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((registration) => {
+      this.swRegistration = registration;
+      if (registration.waiting && navigator.serviceWorker.controller) this.offerUpdate(registration.waiting);
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        worker?.addEventListener('statechange', () => {
+          // "installed" while a version is running means an update waits
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) this.offerUpdate(worker);
+        });
+      });
+    }).catch(error => console.warn('Offline use is not available here', error));
+
+    // Look for a new version when the app comes back to the screen, at most hourly
+    let checkedAt = Date.now();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden || !this.swRegistration || Date.now() - checkedAt < 60 * 60 * 1000) return;
+      checkedAt = Date.now();
+      this.swRegistration.update().catch(() => {});
+    });
+
+    // Reload only when the person asked for the update, never on the first install
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (this.updating) location.reload();
+    });
+  }
+
+  /** A new version is ready: offer it, in a notice and in Settings */
+  offerUpdate(worker) {
+    this.updateWorker = worker;
+    this.renderAppCard();
+    this.showToast(this.t('update.ready'), 'info', { label: this.t('update.now'), onClick: () => this.applyUpdate() }, 15000);
+  }
+
+  applyUpdate() {
+    if (!this.updateWorker) return;
+    this.updating = true;
+    this.updateWorker.postMessage('skip-waiting');
+  }
+
+  bindAppEvents() {
+    // Browsers that can install the app offer it here instead of in their own menu
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      this.installPrompt = event;
+      this.renderAppCard();
+    });
+    window.addEventListener('appinstalled', () => {
+      this.installPrompt = null;
+      this.renderAppCard();
+    });
+    document.getElementById('btn-install-app').addEventListener('click', async () => {
+      const prompt = this.installPrompt;
+      if (!prompt) return;
+      this.installPrompt = null;
+      prompt.prompt();
+      await prompt.userChoice.catch(() => {});
+      this.renderAppCard();
+    });
+    document.getElementById('btn-update-app').addEventListener('click', () => this.applyUpdate());
+  }
+
+  /** Settings → App: install (or how to, on iPhone), a waiting update, and the version */
+  renderAppCard() {
+    const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    document.getElementById('install-row').hidden = installed || !this.installPrompt;
+    document.getElementById('install-ios').hidden = installed || !apple;
+    document.getElementById('update-row').hidden = !this.updateWorker;
+    document.getElementById('app-version').textContent = this.t('settings.version', { version: APP_VERSION });
   }
 
   populateLanguageSelects() {
@@ -1679,6 +1764,7 @@ class BillCraftApp {
     this.showFieldError('settings-upi', false);
     this.renderSettingsQrPreview();
     this.renderBackupStatus();
+    this.renderAppCard();
   }
 
   async saveSettingsFromForm() {
@@ -1808,10 +1894,10 @@ class BillCraftApp {
 
   /**
    * Shows a short notice. `action` ({ label, onClick }) adds a button and keeps the
-   * notice longer. The countdown pauses while the page is hidden (for example while
+   * notice longer; `duration` (ms) overrides how long it stays. The countdown pauses while the page is hidden (for example while
    * WhatsApp is open), so the button is still there when the user comes back.
    */
-  showToast(message, type = 'info', action = null) {
+  showToast(message, type = 'info', action = null, duration = action ? 6000 : 3000) {
     const container = document.getElementById('toast-container');
 
     const toast = document.createElement('div');
@@ -1822,7 +1908,7 @@ class BillCraftApp {
 
     let timer = 0;
     let startedAt = 0;
-    let remaining = action ? 6000 : 3000;
+    let remaining = duration;
     let dismissed = false;
 
     const pause = () => {

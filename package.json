@@ -5,8 +5,12 @@
   "description": "Offline-first bill and invoice maker for small domestic businesses",
   "type": "module",
   "scripts": {
-    "serve": "python3 -m http.server 8089 --bind 127.0.0.1",
-    "check": "find js -name '*.js' -exec node --check {} \\;",
-    "test": "node --test tests/*.test.js"
+    "serve": "node scripts/serve.mjs",
+    "check": "for f in sw.js $(find js scripts tests -name '*.js' -o -name '*.mjs'); do node --check \"$f\" || exit 1; done",
+    "test": "node --test tests/*.test.js",
+    "stamp": "node scripts/stamp-sw.mjs"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

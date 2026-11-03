@@ -7,7 +7,15 @@
   <!-- Everything the page loads comes from this site; inline styles are allowed for the bill designs -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self'; manifest-src 'self'" />
   <meta name="referrer" content="no-referrer" />
-  <link rel="icon" href="data:," />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="BillCraft" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="Simple bill and invoice maker for small businesses. Works in many Indian languages, on phones and computers, with UPI QR codes and PDF, image and WhatsApp sharing." />
 
   <!-- App Stylesheets (mobile-first: base styles are for phones, responsive.css adds larger screens) -->
@@ -629,8 +637,30 @@
                   <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                   <span data-i18n="settings.restoreJson">Restore Backup File</span>
                 </label>
-                <input type="file" id="input-import-backup" accept=".json" hidden />
+                <input type="file" id="input-import-backup" accept=".json,application/json" hidden />
               </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                <span data-i18n="settings.appCard">App</span>
+              </div>
+            </div>
+            <div class="card-body app-card">
+              <div class="app-row" id="install-row" hidden>
+                <p data-i18n="install.text">Install BillCraft on this device. It opens from the home screen and works without internet.</p>
+                <button type="button" class="btn btn-primary" id="btn-install-app" data-i18n="install.button">Install app</button>
+              </div>
+              <p class="app-row" id="install-ios" data-i18n="install.ios" hidden>On iPhone or iPad: tap Share, then Add to Home Screen.</p>
+              <div class="app-row" id="update-row" hidden>
+                <p data-i18n="update.ready">A new version of BillCraft is ready.</p>
+                <button type="button" class="btn btn-secondary" id="btn-update-app" data-i18n="update.now">Update now</button>
+              </div>
+              <p class="privacy-note" data-i18n="settings.privacy">Your bills, products and settings are stored only on this device. BillCraft has no account and does not send your data anywhere. Voice typing, if you use it, goes through your phone's speech service.</p>
+              <p class="app-version" id="app-version"></p>
             </div>
           </div>
         </form>
