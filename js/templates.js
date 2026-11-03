@@ -43,6 +43,8 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
   const { t, words } = tb;
   const curr = settings.currency || '₹';
   const qrImageSrc = settings.qrCustomImage || qrDataUrl;
+  // The discount column appears only when an item has a discount
+  const hasDiscount = invoice.items.some(item => item.discount > 0);
 
   const itemsRows = invoice.items.map((item, idx) => `
     <tr>
@@ -53,7 +55,7 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
       </td>
       <td class="num">${formatCurrency(item.unitPrice, curr)}</td>
       <td class="num" style="font-weight: 600;">${item.quantity} ${escapeHTML(item.unit || 'pcs')}</td>
-      <td class="num" style="color: #64748b;">${item.discount > 0 ? `${item.discount}%` : '-'}</td>
+      ${hasDiscount ? `<td class="num" style="color: #64748b;">${item.discount > 0 ? `${item.discount}%` : '-'}</td>` : ''}
       <td class="num" style="font-weight: 700; color: #0f172a;">${formatCurrency(item.total, curr)}</td>
     </tr>
   `).join('');
@@ -109,12 +111,12 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
             <th>${t('bill.itemDescription')}</th>
             <th class="num">${t('bill.unitPrice')}</th>
             <th class="num">${t('bill.qty')}</th>
-            <th class="num">${t('bill.disc')}</th>
+            ${hasDiscount ? `<th class="num">${t('bill.disc')}</th>` : ''}
             <th class="num">${t('bill.total')}</th>
           </tr>
         </thead>
         <tbody>
-          ${itemsRows.length ? itemsRows : `<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #94a3b8;">${t('bill.noItems')}</td></tr>`}
+          ${itemsRows.length ? itemsRows : `<tr><td colspan="${hasDiscount ? 6 : 5}" style="text-align:center; padding: 2rem; color: #94a3b8;">${t('bill.noItems')}</td></tr>`}
         </tbody>
       </table>
 
@@ -184,6 +186,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
   const { t, words } = tb;
   const curr = settings.currency || '₹';
   const qrImageSrc = settings.qrCustomImage || qrDataUrl;
+  const hasDiscount = invoice.items.some(item => item.discount > 0);
 
   const rows = invoice.items.map((item, idx) => `
     <tr>
@@ -194,7 +197,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
       </td>
       <td class="num">${formatCurrency(item.unitPrice, curr)}</td>
       <td class="num">${item.quantity} ${escapeHTML(item.unit || 'pcs')}</td>
-      <td class="num">${item.discount > 0 ? `${item.discount}%` : '-'}</td>
+      ${hasDiscount ? `<td class="num">${item.discount > 0 ? `${item.discount}%` : '-'}</td>` : ''}
       <td class="num"><strong>${formatCurrency(item.total, curr)}</strong></td>
     </tr>
   `).join('');
@@ -210,7 +213,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
             ${escapeHTML(settings.address || '')}
           </div>
         </div>
-        <div style="text-align: right;">
+        <div class="classic-number-block">
           <div style="font-size: 1.25rem; font-weight: 800;">${escapeHTML(invoice.invoiceNumber)}</div>
           <div style="font-size: 0.85rem; color: #475569;">${t('bill.date')}: ${escapeHTML(invoice.date)}</div>
           <div style="margin-top: 8px;">
@@ -241,16 +244,16 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
             <th>${t('bill.itemDetails')}</th>
             <th class="num">${t('bill.rate')}</th>
             <th class="num">${t('bill.qty')}</th>
-            <th class="num">${t('bill.disc')}</th>
+            ${hasDiscount ? `<th class="num">${t('bill.disc')}</th>` : ''}
             <th class="num">${t('bill.amount')}</th>
           </tr>
         </thead>
         <tbody>
-          ${rows.length ? rows : `<tr><td colspan="6" style="text-align: center; padding: 2rem;">${t('bill.noItemsShort')}</td></tr>`}
+          ${rows.length ? rows : `<tr><td colspan="${hasDiscount ? 6 : 5}" style="text-align: center; padding: 2rem;">${t('bill.noItemsShort')}</td></tr>`}
         </tbody>
       </table>
 
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem;">
+      <div class="classic-bottom">
         <div style="flex: 1; font-size: 0.82rem; color: #475569;">
           <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
             ${qrImageSrc ? `<img src="${qrImageSrc}" alt="" style="width: 112px; height: 112px; border: 1px solid #cbd5e1; flex-shrink: 0;" />` : ''}
@@ -312,6 +315,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
       <td>
         <div style="font-weight: 800; color: #0f172a;">${escapeHTML(item.name || t('item.default'))}</div>
         ${item.description ? `<div style="font-size: 0.78rem; color: #64748b;">${escapeHTML(item.description)}</div>` : ''}
+        ${item.discount > 0 ? `<div style="font-size: 0.78rem; color: #64748b;">${t('bill.disc')} ${item.discount}%</div>` : ''}
       </td>
       <td class="num" style="color: #475569;">${formatCurrency(item.unitPrice, curr)}</td>
       <td class="num" style="font-weight: 600;">${item.quantity} ${escapeHTML(item.unit || 'pcs')}</td>

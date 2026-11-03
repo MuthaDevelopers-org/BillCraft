@@ -20,50 +20,6 @@
     gap: 1rem;
   }
 
-  .template-modern .inv-parties-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 1.25rem;
-  }
-
-  .template-modern .inv-bottom-section {
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 1.25rem;
-  }
-
-  .template-classic .classic-grid-meta {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .template-modern .inv-meta-block {
-    text-align: right;
-    min-width: 140px;
-  }
-
-  .template-modern .inv-table th {
-    padding: 0.65rem 0.75rem;
-    font-size: 0.72rem;
-  }
-
-  .template-modern .inv-table td {
-    padding: 0.75rem 0.75rem;
-    font-size: 0.88rem;
-  }
-
-  .template-modern .inv-table td:nth-child(2),
-  .template-classic .classic-table td:nth-child(2) {
-    min-width: 0;
-  }
-
-  .template-classic .classic-table th {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.74rem;
-  }
-
-  .template-classic .classic-table td {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.85rem;
-  }
-
   .btn-group {
     display: flex;
     flex-wrap: wrap;
@@ -140,11 +96,6 @@
     max-height: 90vh;
     animation-name: modalPop;
     animation-duration: 200ms;
-  }
-
-  .invoice-paper {
-    padding: 1.75rem;
-    font-size: 13.5px;
   }
 }
 
@@ -273,11 +224,6 @@
     min-height: 600px;
   }
 
-  .invoice-paper {
-    padding: 2.25rem;
-    font-size: 13.5px;
-  }
-
   .toast-container {
     top: auto;
     bottom: 24px;
@@ -285,5 +231,114 @@
     right: 24px;
     max-width: 380px;
     align-items: flex-end;
+  }
+}
+
+/* ============================================================
+   THE BILL: laid out by the width of the paper, not the screen.
+   The preview column, the printed page and the exported file are
+   each a different width, so these are container queries on the
+   bill's frame (.invoice-render-wrapper, named "bill"). The narrow
+   layout is the default in invoice-templates.css.
+   ============================================================ */
+@container bill (min-width: 560px) {
+  .invoice-paper:not(.template-boutique):not(.template-thermal) {
+    padding: 1.75rem;
+  }
+
+  .invoice-paper {
+    font-size: 13.5px;
+  }
+
+  .template-modern .inv-parties-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .template-modern .inv-bottom-section {
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 1.25rem;
+  }
+
+  .template-modern .inv-meta-block {
+    text-align: right;
+    min-width: 140px;
+  }
+
+  .template-modern .inv-table th {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.72rem;
+  }
+
+  .template-modern .inv-table td {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.88rem;
+  }
+
+  .template-modern .inv-table td:nth-child(2),
+  .template-classic .classic-table td:nth-child(2) {
+    min-width: 0;
+  }
+
+  .template-classic .classic-grid-meta {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .template-classic .meta-cell {
+    border-right: 1px solid #cbd5e1;
+    border-bottom: none;
+  }
+
+  .template-classic .meta-cell:last-child {
+    border-right: none;
+  }
+
+  .template-classic .classic-number-block {
+    text-align: right;
+  }
+
+  .template-classic .classic-table th {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.74rem;
+  }
+
+  .template-classic .classic-table td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .template-classic .classic-bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+
+  .template-classic .classic-bottom .classic-summary-wrap {
+    order: 0;
+  }
+
+  .template-classic .classic-summary-table {
+    width: 300px;
+  }
+
+  .template-boutique .boutique-banner,
+  .template-boutique .boutique-body {
+    padding: 1.75rem 2rem;
+  }
+
+  .template-boutique .boutique-table th {
+    padding: 0.55rem 0.85rem;
+  }
+
+  .template-boutique .boutique-table tr.boutique-row td {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.86rem;
+  }
+}
+
+@container bill (min-width: 720px) {
+  .invoice-paper:not(.template-boutique):not(.template-thermal) {
+    padding: 2.25rem;
   }
 }
