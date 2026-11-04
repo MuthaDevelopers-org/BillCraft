@@ -1349,7 +1349,7 @@ class BillCraftApp {
         <div>
           <div class="product-card-top">
             <div class="product-card-title">${this.escape(p.name)}</div>
-            <span class="product-card-tag">${this.escape(p.category || 'General')}</span>
+            <span class="product-card-tag">${this.escape(this.categoryLabel(p.category))}</span>
           </div>
           <div class="product-card-desc">${this.escape(p.description || this.t('catalog.noDesc'))}</div>
         </div>
@@ -1406,6 +1406,11 @@ class BillCraftApp {
     });
   }
 
+  /** A product's category for display: the stored default 'General' in the app language */
+  categoryLabel(category) {
+    return !category || category === 'General' ? this.t('catalog.general') : category;
+  }
+
   addProductToBill(product) {
     addProductLine(this.currentInvoice.items, product, 1);
     this.afterItemsChange();
@@ -1416,7 +1421,8 @@ class BillCraftApp {
 
     document.getElementById('modal-product-title').textContent = this.t(product ? 'product.editTitle' : 'product.addTitle');
     document.getElementById('modal-prod-name').value = product ? product.name : '';
-    document.getElementById('modal-prod-category').value = product ? (product.category || 'General') : 'General';
+    // The default category is stored as 'General' (like statuses, in English); the field shows it empty
+    document.getElementById('modal-prod-category').value = product && product.category !== 'General' ? product.category : '';
     document.getElementById('modal-prod-desc').value = product ? (product.description || '') : '';
     document.getElementById('modal-prod-price').value = product ? product.unitPrice : '';
     document.getElementById('modal-prod-unit').value = product ? (product.unit || 'pcs') : 'pcs';

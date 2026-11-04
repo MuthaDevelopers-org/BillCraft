@@ -70,3 +70,25 @@ test('scripts look up only element IDs that exist in index.html or that they cre
   }
   assert.deepEqual(missing, []);
 });
+
+test('every placeholder, title and aria-label in index.html has a translation key', () => {
+  const missing = [];
+  for (const tag of read('index.html').match(/<[a-zA-Z][^>]*>/g)) {
+    for (const [attribute, i18n] of [['placeholder', 'data-i18n-placeholder'], ['title', 'data-i18n-title'], ['aria-label', 'data-i18n-aria']]) {
+      const value = tag.match(new RegExp(`\\s${attribute}="([^"]*)"`));
+      // Number-only placeholders such as "0" need no translation
+      if (value && !tag.includes(`${i18n}=`) && !(attribute === 'placeholder' && /^[\d.,\s]*$/.test(value[1]))) {
+        missing.push(`${attribute}="${value[1]}"`);
+      }
+    }
+  }
+  assert.deepEqual(missing, []);
+});
+
+test('every option in index.html has a translation key', () => {
+  // The language lists are filled by js/app.js from the language registry
+  const untranslated = [...read('index.html').matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)]
+    .filter(match => !match[0].includes('data-i18n='))
+    .map(match => match[1]);
+  assert.deepEqual(untranslated, []);
+});

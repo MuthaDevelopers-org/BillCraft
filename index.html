@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>BillCraft - Domestic Business Bill & Invoice Maker</title>
+  <title data-i18n="app.title">BillCraft: bills for small businesses</title>
   <!-- Everything the page loads comes from this site; inline styles are allowed for the bill designs -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self'; manifest-src 'self'" />
   <meta name="referrer" content="no-referrer" />
@@ -442,33 +442,33 @@
               <div class="form-grid-2">
                 <div class="form-group">
                   <label class="form-label" for="settings-seller-name" data-i18n="settings.sellerName">Owner Name</label>
-                  <input type="text" id="settings-seller-name" class="form-control" placeholder="e.g. Aarav Sharma" />
+                  <input type="text" id="settings-seller-name" class="form-control" data-i18n-placeholder="ph.sellerName" placeholder="e.g. Asha Sharma" />
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="settings-brand-name" data-i18n="settings.brandName">Business Name</label>
-                  <input type="text" id="settings-brand-name" class="form-control" placeholder="e.g. Craftisan Studio" />
+                  <input type="text" id="settings-brand-name" class="form-control" data-i18n-placeholder="ph.brandName" placeholder="e.g. Asha Candles" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="form-group">
                   <label class="form-label" for="settings-tagline" data-i18n="settings.tagline">Tagline</label>
-                  <input type="text" id="settings-tagline" class="form-control" placeholder="e.g. Handmade Domestic Goods" />
+                  <input type="text" id="settings-tagline" class="form-control" data-i18n-placeholder="ph.tagline" placeholder="e.g. Handmade candles and gifts" />
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="settings-phone" data-i18n="settings.phone">Business Phone / WhatsApp</label>
-                  <input type="tel" id="settings-phone" class="form-control" placeholder="e.g. +91 98765 43210" />
+                  <input type="tel" id="settings-phone" class="form-control" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="form-group">
                   <label class="form-label" for="settings-email" data-i18n="settings.email">Email Address</label>
-                  <input type="email" id="settings-email" class="form-control" placeholder="e.g. contact@craftisan.store" />
+                  <input type="email" id="settings-email" class="form-control" data-i18n-placeholder="ph.email" placeholder="e.g. hello@ashacandles.in" />
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="settings-address" data-i18n="settings.address">Business Address</label>
-                  <input type="text" id="settings-address" class="form-control" placeholder="e.g. 12 Green Avenue, Bengaluru" />
+                  <input type="text" id="settings-address" class="form-control" data-i18n-placeholder="ph.businessAddress" placeholder="e.g. 12 MG Road, Pune" />
                 </div>
               </div>
             </div>
@@ -492,7 +492,7 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="settings-payment-note" data-i18n="settings.paymentNote">Payment Instructions</label>
-                    <input type="text" id="settings-payment-note" class="form-control" placeholder="e.g. Scan the QR code to pay" />
+                    <input type="text" id="settings-payment-note" class="form-control" data-i18n-placeholder="ph.paymentNote" placeholder="e.g. Scan the QR code to pay" />
                   </div>
                 </div>
 
@@ -537,13 +537,13 @@
                 <div class="form-group">
                   <label class="form-label" for="settings-currency" data-i18n="settings.currency">Currency Symbol</label>
                   <select id="settings-currency" class="form-control">
-                    <option value="₹">₹ (INR - Indian Rupee)</option>
-                    <option value="$">$ (USD / International)</option>
-                    <option value="€">€ (EUR - Euro)</option>
-                    <option value="£">£ (GBP - British Pound)</option>
-                    <option value="AED">AED (UAE Dirham)</option>
-                    <option value="SAR">SAR (Saudi Riyal)</option>
-                    <option value="SGD">SGD (Singapore Dollar)</option>
+                    <option value="₹" data-i18n="currency.inr">₹ (INR, Indian rupee)</option>
+                    <option value="$" data-i18n="currency.usd">$ (USD, US dollar)</option>
+                    <option value="€" data-i18n="currency.eur">€ (EUR, euro)</option>
+                    <option value="£" data-i18n="currency.gbp">£ (GBP, British pound)</option>
+                    <option value="AED" data-i18n="currency.aed">AED (UAE dirham)</option>
+                    <option value="SAR" data-i18n="currency.sar">SAR (Saudi riyal)</option>
+                    <option value="SGD" data-i18n="currency.sgd">SGD (Singapore dollar)</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -601,10 +601,10 @@
                   </button>
 
                   <button type="button" class="template-card-choice" data-template="thermal">
-                    <div class="template-mock-thumb" style="border: 1px dashed #64748b; font-family: monospace; font-size: 6px; padding: 6px; justify-content: center; align-items: center;">
-                      <div>--- RECEIPT ---</div>
+                    <div class="template-mock-thumb" style="border: 1px dashed #64748b; padding: 6px; justify-content: center; align-items: center;">
+                      <div class="mock-bar" style="width: 60%;"></div>
                       <div style="width: 80%; border-bottom: 1px dashed #cbd5e1; margin: 3px 0;"></div>
-                      <div>TOTAL: ₹***</div>
+                      <div class="mock-bar" style="width: 40%;"></div>
                     </div>
                     <div class="template-choice-label" data-i18n="template.thermal">Compact Thermal POS</div>
                     <div class="template-choice-desc" data-i18n="settings.tpl.thermalDesc">Receipt slip style</div>
@@ -620,7 +620,7 @@
 
               <div class="form-group">
                 <label class="form-label" for="settings-default-notes" data-i18n="settings.defaultTerms">Default Terms & Conditions</label>
-                <textarea id="settings-default-notes" class="form-control" rows="2" placeholder="e.g. Items once sold can be exchanged within 7 days."></textarea>
+                <textarea id="settings-default-notes" class="form-control" rows="2" data-i18n-placeholder="ph.defaultTerms" placeholder="e.g. Items can be exchanged within 7 days."></textarea>
               </div>
             </div>
             <div class="card-footer">
