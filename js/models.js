@@ -219,10 +219,10 @@ export function numberToWords(num) {
  * Currency formatter. Always Indian digit grouping with Latin digits, so
  * amounts match what the customer sees in UPI and payment apps.
  */
-export function formatCurrency(amount, currency = '₹') {
+export function formatCurrency(amount, currency = '₹', decimals = 2) {
   const num = Number(amount) || 0;
   return `${currency} ${num.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
   })}`;
 }

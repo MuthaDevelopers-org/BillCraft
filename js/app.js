@@ -17,7 +17,7 @@ import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService, fileNameFor } from './exporter.js';
 import { DEFAULT_LANGUAGE, availableLanguages, getLanguage } from './i18n/languages.js';
-import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, statusLabel } from './i18n/i18n.js';
+import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, statusBadgeClass, statusLabel } from './i18n/i18n.js';
 import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
 
 const DESKTOP_QUERY = window.matchMedia('(min-width: 1024px)');
@@ -211,8 +211,9 @@ class BillCraftApp {
   // --- Translation ---
   async loadTranslators() {
     const appCode = this.settings.appLanguage || DEFAULT_LANGUAGE;
-    this.ui = createTranslator(await loadLocale(appCode));
-    this.bill = createTranslator(await loadLocale(this.settings.billLanguage || appCode));
+    const billCode = this.settings.billLanguage || appCode;
+    this.ui = createTranslator(await loadLocale(appCode), appCode);
+    this.bill = createTranslator(await loadLocale(billCode), billCode);
     setDocumentLanguage(appCode);
   }
 
@@ -492,7 +493,7 @@ class BillCraftApp {
     });
 
     const inputs = [
-      'inv-number', 'inv-date',
+      'inv-number', 'inv-date', 'inv-due-date',
       'cust-name', 'cust-phone', 'cust-address', 'cust-notes',
       'inv-shipping', 'inv-discount', 'inv-footer-notes'
     ];
@@ -596,6 +597,7 @@ class BillCraftApp {
   syncFormToInvoice() {
     this.currentInvoice.invoiceNumber = document.getElementById('inv-number').value || '';
     this.currentInvoice.date = document.getElementById('inv-date').value || '';
+    this.currentInvoice.dueDate = document.getElementById('inv-due-date').value || '';
 
     this.currentInvoice.customer = {
       name: document.getElementById('cust-name').value || '',
@@ -617,6 +619,7 @@ class BillCraftApp {
   renderBuilderForm() {
     document.getElementById('inv-number').value = this.currentInvoice.invoiceNumber || '';
     document.getElementById('inv-date').value = this.currentInvoice.date || '';
+    document.getElementById('inv-due-date').value = this.currentInvoice.dueDate || '';
 
     document.getElementById('cust-name').value = this.currentInvoice.customer.name || '';
     document.getElementById('cust-phone').value = this.currentInvoice.customer.phone || '';
@@ -999,6 +1002,7 @@ class BillCraftApp {
     const index = Math.max(0, options.findIndex(option => option.dataset.status === this.currentInvoice.status));
     options.forEach((option, i) => option.setAttribute('aria-checked', String(i === index)));
     toggle.style.setProperty('--active', index);
+    document.getElementById('due-date-group').hidden = this.currentInvoice.status !== 'Due';
   }
 
   /** Product order and recent customers come from saved bills, so they are refreshed after each save */
@@ -1184,15 +1188,10 @@ class BillCraftApp {
     }
   }
 
-  /** The language bills are written in: the bill language, else the app language */
-  billLanguage() {
-    return this.settings.billLanguage || this.settings.appLanguage || 'en';
-  }
-
   /** Saves the bill, then opens WhatsApp with it: straight to the customer's chat when the phone is known */
   sendWhatsApp(button) {
     if (!this.saveBill()) return;
-    ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill, this.billLanguage());
+    ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill);
     this.celebrateButton(button);
     this.afterSave();
   }
@@ -1438,161 +1437,163 @@ class BillCraftApp {
     this.renderCatalogView();
   }
 
-  // --- Invoices History View ---
+  // --- Bills history ---
   bindHistoryEvents() {
-    const searchInput = document.getElementById('history-search-input');
-    searchInput.addEventListener('input', (e) => {
-      this.renderHistoryView(e.target.value);
-    });
-
-    document.getElementById('history-filter-status').addEventListener('change', () => {
-      this.renderHistoryView(searchInput.value);
+    document.getElementById('history-search-input').addEventListener('input', () => this.renderHistoryView());
+    document.getElementById('history-filter-status').addEventListener('change', () => this.renderHistoryView());
+    // One listener for the buttons of every bill, since the list is redrawn often
+    document.getElementById('view-history').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-bill-action]');
+      if (button) this.onBillAction(button.dataset.billAction, button.dataset.id);
     });
   }
 
-  renderHistoryView(searchQuery = '') {
+  /** Paid sales today and this month (by bill date), and what is still due */
+  renderHistoryStats(invoices) {
+    const today = todayISO();
+    const month = today.slice(0, 7);
+    const sum = list => list.reduce((total, inv) => total + inv.grandTotal, 0);
+    const money = value => formatCurrency(value, this.settings.currency || '₹', 0);
+    const paid = invoices.filter(inv => inv.status === 'Paid');
+    const due = invoices.filter(inv => inv.status === 'Due');
+    document.getElementById('stat-today').textContent = money(sum(paid.filter(inv => inv.date === today)));
+    document.getElementById('stat-month').textContent = money(sum(paid.filter(inv => inv.date.startsWith(month))));
+    document.getElementById('stat-due').textContent = money(sum(due));
+    document.getElementById('stat-due-label').textContent = due.length === 0
+      ? this.t('stats.dueNone')
+      : this.t(due.length === 1 ? 'stats.dueOne' : 'stats.dueMany', { count: due.length });
+  }
+
+  renderHistoryView() {
     this.renderBackupStatus();
+    const all = StorageService.getInvoices();
+    this.renderHistoryStats(all);
+
+    const filter = document.getElementById('history-filter-status').value;
+    const query = document.getElementById('history-search-input').value.trim().toLowerCase();
+    const list = all.filter(inv => (filter === 'all' || inv.status.toLowerCase() === filter)
+      && (!query || [inv.invoiceNumber, inv.customer.name, inv.customer.phone].some(text => String(text || '').toLowerCase().includes(query))));
+
     const tableBody = document.getElementById('history-table-body');
-    const mobileContainer = document.getElementById('mobile-history-list');
-    const selectedFilter = document.getElementById('history-filter-status').value;
-
-    let list = StorageService.getInvoices();
-
-    // Stats
-    const totalSales = list.reduce((sum, inv) => sum + (inv.status === 'Paid' ? inv.grandTotal : 0), 0);
-    const pendingAmount = list.reduce((sum, inv) => sum + (inv.status === 'Due' ? inv.grandTotal : 0), 0);
+    const cards = document.getElementById('mobile-history-list');
+    if (!list.length) {
+      const empty = this.escape(this.t('history.empty'));
+      tableBody.innerHTML = `<tr><td colspan="7" class="history-empty-cell">${empty}</td></tr>`;
+      cards.innerHTML = `<div class="empty-box">${empty}</div>`;
+      return;
+    }
 
     const curr = this.settings.currency || '₹';
-    document.getElementById('stat-total-sales').textContent = formatCurrency(totalSales, curr);
-    document.getElementById('stat-total-count').textContent = list.length;
-    document.getElementById('stat-pending-amount').textContent = formatCurrency(pendingAmount, curr);
+    const language = this.settings.appLanguage || 'en';
+    const id = inv => this.escape(inv.id);
+    const date = inv => this.escape(formatDate(inv.date, language));
+    const items = inv => this.escape(this.t(inv.items.length === 1 ? 'bar.item' : 'bar.items', { count: inv.items.length }));
+    const customer = inv => this.escape(inv.customer.name || this.t('common.walkIn'));
+    const status = inv => `<span class="badge ${statusBadgeClass(inv.status)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>`;
+    const payBy = inv => (inv.status === 'Due' && inv.dueDate
+      ? `<div class="history-due">${this.escape(this.t('history.payBy', { date: formatDate(inv.dueDate, language) }))}</div>`
+      : '');
+    const action = (name, inv, label, style) => `<button type="button" class="btn btn-sm ${style}" data-bill-action="${name}" data-id="${id(inv)}">${this.escape(label)}</button>`;
+    const removeButton = inv => `<button type="button" class="btn btn-ghost btn-sm btn-icon btn-delete" data-bill-action="delete" data-id="${id(inv)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}">${TRASH_ICON}</button>`;
+    const dueActions = inv => (inv.status === 'Due'
+      ? action('paid', inv, this.t('history.markPaid'), 'btn-success') + action('remind', inv, this.t('history.remind'), 'btn-secondary')
+      : '');
 
-    if (selectedFilter !== 'all') {
-      list = list.filter(inv => inv.status.toLowerCase() === selectedFilter.toLowerCase());
-    }
+    tableBody.innerHTML = list.map(inv => `
+      <tr>
+        <td class="history-number">${this.escape(inv.invoiceNumber)}</td>
+        <td class="history-date">${date(inv)}${payBy(inv)}</td>
+        <td>
+          <div class="history-customer">${customer(inv)}</div>
+          ${inv.customer.phone ? `<small class="history-phone">${this.escape(inv.customer.phone)}</small>` : ''}
+        </td>
+        <td class="history-items">${items(inv)}</td>
+        <td class="history-total">${formatCurrency(inv.grandTotal, curr)}</td>
+        <td>${status(inv)}</td>
+        <td><div class="history-row-actions">
+          ${action('open', inv, this.t('history.open'), 'btn-secondary')}
+          ${action('repeat', inv, this.t('history.repeat'), 'btn-ghost')}
+          ${dueActions(inv)}
+          ${removeButton(inv)}
+        </div></td>
+      </tr>
+    `).join('');
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(inv =>
-        (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(q)) ||
-        (inv.customer.name && inv.customer.name.toLowerCase().includes(q)) ||
-        (inv.customer.phone && inv.customer.phone.toLowerCase().includes(q))
-      );
-    }
-
-    const badgeClass = inv => (inv.status === 'Paid' ? 'badge-paid' : 'badge-unpaid');
-    const customerName = inv => this.escape(inv.customer.name || this.t('common.walkIn'));
-
-    if (list.length === 0) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
-            ${this.escape(this.t('history.empty'))}
-          </td>
-        </tr>
-      `;
-      mobileContainer.innerHTML = `<div class="empty-box">${this.escape(this.t('history.empty'))}</div>`;
-    } else {
-      tableBody.innerHTML = list.map(inv => `
-        <tr>
-          <td style="font-weight: 700; color: var(--text-main);">${this.escape(inv.invoiceNumber)}</td>
-          <td style="font-size: 0.85rem; color: var(--text-muted);">${this.escape(inv.date)}</td>
-          <td>
-            <div style="font-weight: 600;">${customerName(inv)}</div>
-            ${inv.customer.phone ? `<small style="color: var(--text-muted);">${this.escape(inv.customer.phone)}</small>` : ''}
-          </td>
-          <td style="text-align: center;">${this.escape(inv.hasSingleUnit
-            ? this.t('history.itemsCount', { lines: inv.items.length, qty: inv.totalItemsCount })
-            : this.t('history.itemsShort', { lines: inv.items.length }))}</td>
-          <td style="font-weight: 800; color: var(--text-main);">${formatCurrency(inv.grandTotal, curr)}</td>
-          <td>
-            <span class="badge ${badgeClass(inv)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>
-          </td>
-          <td style="text-align: right;">
-            <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
-              <button class="btn btn-secondary btn-sm btn-open-inv" data-id="${this.escape(inv.id)}">${this.escape(this.t('history.open'))}</button>
-              <button class="btn btn-ghost btn-sm btn-dup-inv" data-id="${this.escape(inv.id)}">${this.escape(this.t('history.repeat'))}</button>
-              <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${this.escape(inv.id)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
-                ${TRASH_ICON}
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-
-      mobileContainer.innerHTML = list.map(inv => `
-        <div class="history-bill-card">
-          <div class="history-bill-card-top">
-            <span class="history-bill-number">${this.escape(inv.invoiceNumber)}</span>
-            <span class="badge ${badgeClass(inv)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>
-          </div>
-          <div class="history-bill-customer">${customerName(inv)}</div>
-          <div class="history-bill-meta">${this.escape(inv.date)} &bull; ${this.escape(this.t('history.itemsShort', { lines: inv.items.length }))}</div>
-
-          <div class="history-bill-details-row">
-            <span class="history-bill-meta">${this.escape(this.t('history.grandTotal'))}</span>
-            <span class="history-bill-amount">${formatCurrency(inv.grandTotal, curr)}</span>
-          </div>
-
-          <div class="history-bill-actions">
-            <button class="btn btn-primary btn-sm btn-open-inv" data-id="${this.escape(inv.id)}" style="flex: 1;">
-              ${this.escape(this.t('history.openBill'))}
-            </button>
-            <button class="btn btn-secondary btn-sm btn-dup-inv" data-id="${this.escape(inv.id)}">
-              ${this.escape(this.t('history.repeat'))}
-            </button>
-            <button class="btn btn-ghost btn-sm btn-icon btn-del-inv" data-id="${this.escape(inv.id)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}" style="color: var(--danger);">
-              ${TRASH_ICON}
-            </button>
-          </div>
+    cards.innerHTML = list.map(inv => `
+      <div class="history-bill-card">
+        <div class="history-bill-card-top">
+          <span class="history-bill-number">${this.escape(inv.invoiceNumber)}</span>
+          ${status(inv)}
         </div>
-      `).join('');
+        <div class="history-bill-customer">${customer(inv)}</div>
+        <div class="history-bill-meta">${date(inv)} &bull; ${items(inv)}</div>
+        ${payBy(inv)}
+        <div class="history-bill-details-row">
+          <span class="history-bill-meta">${this.escape(this.t('history.grandTotal'))}</span>
+          <span class="history-bill-amount">${formatCurrency(inv.grandTotal, curr)}</span>
+        </div>
+        ${inv.status === 'Due' ? `<div class="history-bill-actions history-due-actions">${dueActions(inv)}</div>` : ''}
+        <div class="history-bill-actions">
+          ${action('open', inv, this.t('history.openBill'), 'btn-primary history-open')}
+          ${action('repeat', inv, this.t('history.repeat'), 'btn-secondary')}
+          ${removeButton(inv)}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /** The buttons on a saved bill: open, repeat, delete, mark paid, remind */
+  async onBillAction(action, id) {
+    const inv = StorageService.getInvoiceById(id);
+    if (!inv) return;
+    if (action === 'open') {
+      this.openBill(inv, STEP_COUNT);
+      this.showToast(this.t('toast.billOpened', { number: inv.invoiceNumber }), 'info');
+    } else if (action === 'repeat') {
+      const nextNum = StorageService.getNextInvoiceNumber(this.settings.billPrefix);
+      this.openBill(new Invoice({
+        ...inv,
+        id: newId('inv'),
+        invoiceNumber: nextNum,
+        date: todayISO(),
+        dueDate: '',
+        status: 'Paid',
+        items: inv.items.map(({ id: lineId, ...item }) => item), // fresh line ids
+        createdAt: new Date().toISOString()
+      }), STEP_COUNT);
+      this.showToast(this.t('toast.repeated', { number: nextNum }), 'success');
+    } else if (action === 'delete') {
+      const remove = await this.confirm({ title: this.t('confirm.deleteBill'), confirmLabel: this.t('common.delete'), danger: true });
+      if (!remove || !this.store(() => StorageService.deleteInvoice(id))) return;
+      this.refreshHistoryData();
+      this.renderHistoryView();
+      this.updateBadges();
+      this.showToast(this.t('toast.billDeleted'), 'info');
+    } else if (action === 'paid') {
+      this.setBillStatus(inv, 'Paid', true);
+    } else if (action === 'remind') {
+      ExporterService.sendReminder(inv, this.settings, this.bill);
     }
+  }
 
-    document.querySelectorAll('.btn-open-inv').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const inv = StorageService.getInvoiceById(btn.dataset.id);
-        if (inv) {
-          this.openBill(new Invoice(inv), STEP_COUNT);
-          this.showToast(this.t('toast.billOpened', { number: inv.invoiceNumber }), 'info');
-        }
+  /** Changes a saved bill's status (with Undo when asked). The bill open in the builder follows. */
+  setBillStatus(invoice, status, offerUndo) {
+    const before = invoice.status;
+    invoice.status = status;
+    if (!this.store(() => StorageService.saveInvoice(invoice))) return;
+    if (this.currentInvoice.id === invoice.id) {
+      this.currentInvoice.status = status;
+      this.renderStatusToggle();
+      this.schedulePreview();
+      this.saveDraft();
+    }
+    this.renderHistoryView();
+    if (offerUndo) {
+      this.showToast(this.t('toast.markedPaid', { number: invoice.invoiceNumber }), 'success', {
+        label: this.t('common.undo'),
+        onClick: () => this.setBillStatus(invoice, before, false)
       });
-    });
-
-    document.querySelectorAll('.btn-dup-inv').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const inv = StorageService.getInvoiceById(btn.dataset.id);
-        if (inv) {
-          const nextNum = StorageService.getNextInvoiceNumber(this.settings.billPrefix);
-          this.openBill(new Invoice({
-            ...inv,
-            id: newId('inv'),
-            invoiceNumber: nextNum,
-            date: todayISO(),
-            dueDate: '',
-            status: 'Paid',
-            items: inv.items.map(({ id, ...item }) => item), // fresh line ids
-            createdAt: new Date().toISOString()
-          }), STEP_COUNT);
-          this.showToast(this.t('toast.repeated', { number: nextNum }), 'success');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-del-inv').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const remove = await this.confirm({
-          title: this.t('confirm.deleteBill'),
-          confirmLabel: this.t('common.delete'),
-          danger: true
-        });
-        if (!remove || !this.store(() => StorageService.deleteInvoice(btn.dataset.id))) return;
-        this.refreshHistoryData();
-        this.renderHistoryView(document.getElementById('history-search-input').value);
-        this.updateBadges();
-        this.showToast(this.t('toast.billDeleted'), 'info');
-      });
-    });
+    }
   }
 
   // --- Settings View ---

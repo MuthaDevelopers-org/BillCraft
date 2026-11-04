@@ -114,7 +114,7 @@
   color: var(--success-text);
 }
 
-.badge-unpaid {
+.badge-due {
   background: var(--danger-light);
   color: var(--danger-text);
 }
@@ -1818,6 +1818,71 @@ textarea.form-control {
 .app-version {
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+/* ============================================================
+   HISTORY: due dates and the buttons for a bill that is due
+   ============================================================ */
+.stat-val {
+  white-space: nowrap;
+}
+
+.history-due {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger-text);
+}
+
+.history-due-actions .btn {
+  flex: 1;
+}
+
+.history-open {
+  flex: 1;
+}
+
+.btn-delete {
+  color: var(--danger);
+}
+
+.history-empty-cell {
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.history-number,
+.history-total {
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.history-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.history-customer {
+  font-weight: 600;
+}
+
+.history-phone {
+  color: var(--text-muted);
+}
+
+.history-items {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.history-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
 }
 
 /* ============================================================

@@ -131,6 +131,18 @@ img {
   display: block;
 }
 
+/* html2canvas (PDF and image export) measures each font's baseline with a hidden
+   <div> of text and a 1px <img>, appended to <body>. The image reset above and the
+   body's line height would put every exported line of text about half a line too
+   low, so its measuring box keeps the browser defaults. */
+body > div[style*="visibility: hidden"][style*="white-space: nowrap"] {
+  line-height: normal;
+}
+
+body > div[style*="visibility: hidden"][style*="white-space: nowrap"] > img {
+  display: inline;
+}
+
 /* Reduced motion: transitions and keyframes finish at once (js/motion.js skips its own) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

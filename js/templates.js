@@ -10,9 +10,14 @@
  * (see createTranslator in i18n/i18n.js). Only that language is used here.
  */
 
-import { formatCurrency } from './models.js';
-import { createTranslator, statusLabel } from './i18n/i18n.js';
+import { formatCurrency, formatDate } from './models.js';
+import { createTranslator, statusBadgeClass, statusLabel } from './i18n/i18n.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
+
+/** The "Pay by" line of a Due bill that has a due date, built by `line(date)`; '' for any other bill */
+function payBy(invoice, language, line) {
+  return invoice.status === 'Due' && invoice.dueDate ? line(escapeHTML(formatDate(invoice.dueDate, language))) : '';
+}
 
 /** The parts that are set, escaped and joined with a bullet, e.g. "Asha &bull; 98765 43210" */
 function joinParts(parts) {
@@ -37,7 +42,7 @@ export function renderInvoice(templateId, invoice, settings, qrDataUrl = '', tb 
 // TEMPLATE 1: MODERN MINIMAL
 // ============================================================
 export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTranslator()) {
-  const { t, words } = tb;
+  const { t, words, language } = tb;
   const curr = settings.currency || '₹';
   const qrImageSrc = escapeHTML(safeImageSrc(settings.qrCustomImage) || safeImageSrc(qrDataUrl));
   // The discount column appears only when an item has a discount
@@ -75,10 +80,10 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
         <div class="inv-meta-block">
           <div class="inv-title-badge">${escapeHTML(t('bill.title'))}</div>
           <div class="inv-number">${escapeHTML(invoice.invoiceNumber || 'BILL-001')}</div>
-          <div class="inv-date-row"><strong>${escapeHTML(t('bill.date'))}:</strong> ${escapeHTML(invoice.date)}</div>
-          ${invoice.dueDate ? `<div class="inv-date-row"><strong>${escapeHTML(t('bill.due'))}:</strong> ${escapeHTML(invoice.dueDate)}</div>` : ''}
+          <div class="inv-date-row"><strong>${escapeHTML(t('bill.date'))}:</strong> ${escapeHTML(formatDate(invoice.date, language))}</div>
+          ${payBy(invoice, language, label => `<div class="inv-date-row"><strong>${escapeHTML(t('bill.payBy'))}:</strong> ${label}</div>`)}
           <div style="margin-top: 6px;">
-            <span class="badge ${invoice.status === 'Paid' ? 'badge-paid' : (invoice.status === 'Due' ? 'badge-unpaid' : 'badge-draft')}">${escapeHTML(statusLabel(t, invoice.status))}</span>
+            <span class="badge ${statusBadgeClass(invoice.status)}">${escapeHTML(statusLabel(t, invoice.status))}</span>
           </div>
         </div>
       </div>
@@ -180,7 +185,7 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
 // TEMPLATE 2: CLASSIC EXECUTIVE
 // ============================================================
 export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createTranslator()) {
-  const { t, words } = tb;
+  const { t, words, language } = tb;
   const curr = settings.currency || '₹';
   const qrImageSrc = escapeHTML(safeImageSrc(settings.qrCustomImage) || safeImageSrc(qrDataUrl));
   const hasDiscount = invoice.items.some(item => item.discount > 0);
@@ -212,9 +217,10 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
         </div>
         <div class="classic-number-block">
           <div style="font-size: 1.25rem; font-weight: 800;">${escapeHTML(invoice.invoiceNumber)}</div>
-          <div style="font-size: 0.85rem; color: #475569;">${escapeHTML(t('bill.date'))}: ${escapeHTML(invoice.date)}</div>
+          <div style="font-size: 0.85rem; color: #475569;">${escapeHTML(t('bill.date'))}: ${escapeHTML(formatDate(invoice.date, language))}</div>
+          ${payBy(invoice, language, label => `<div style="font-size: 0.85rem; color: #475569;">${escapeHTML(t('bill.payBy'))}: ${label}</div>`)}
           <div style="margin-top: 8px;">
-            <span class="badge ${invoice.status === 'Paid' ? 'badge-paid' : 'badge-unpaid'}">${escapeHTML(statusLabel(t, invoice.status))}</span>
+            <span class="badge ${statusBadgeClass(invoice.status)}">${escapeHTML(statusLabel(t, invoice.status))}</span>
           </div>
         </div>
       </div>
@@ -302,7 +308,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
 // TEMPLATE 3: ARTISAN BOUTIQUE
 // ============================================================
 export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = createTranslator()) {
-  const { t, words } = tb;
+  const { t, words, language } = tb;
   const curr = settings.currency || '₹';
   const qrImageSrc = escapeHTML(safeImageSrc(settings.qrCustomImage) || safeImageSrc(qrDataUrl));
 
@@ -332,7 +338,8 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
         </div>
         <div>
           <div class="boutique-pill">${escapeHTML(invoice.invoiceNumber)}</div>
-          <div style="text-align: right; font-size: 0.82rem; margin-top: 6px; opacity: 0.9;">${escapeHTML(t('bill.date'))}: ${escapeHTML(invoice.date)}</div>
+          <div style="text-align: right; font-size: 0.82rem; margin-top: 6px; opacity: 0.9;">${escapeHTML(t('bill.date'))}: ${escapeHTML(formatDate(invoice.date, language))}</div>
+          ${payBy(invoice, language, label => `<div style="text-align: right; font-size: 0.82rem; margin-top: 2px; opacity: 0.9;">${escapeHTML(t('bill.payBy'))}: ${label}</div>`)}
         </div>
       </div>
 
@@ -346,7 +353,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
           </div>
           <div style="text-align: right;">
             <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b; margin-bottom: 4px;">${escapeHTML(t('bill.billStatus'))}</div>
-            <span class="badge ${invoice.status === 'Paid' ? 'badge-paid' : 'badge-unpaid'}" style="font-size: 0.85rem; padding: 0.35rem 0.8rem;">${escapeHTML(statusLabel(t, invoice.status))}</span>
+            <span class="badge ${statusBadgeClass(invoice.status)}" style="font-size: 0.85rem; padding: 0.35rem 0.8rem;">${escapeHTML(statusLabel(t, invoice.status))}</span>
           </div>
         </div>
 
@@ -415,7 +422,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
 // TEMPLATE 4: COMPACT THERMAL / POS RECEIPT
 // ============================================================
 export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createTranslator()) {
-  const { t, words } = tb;
+  const { t, words, language } = tb;
   const curr = settings.currency || '₹';
   const qrImageSrc = escapeHTML(safeImageSrc(settings.qrCustomImage) || safeImageSrc(qrDataUrl));
 
@@ -441,7 +448,8 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
 
       <div class="pos-customer-info">
         <div><strong>${escapeHTML(t('bill.billNoCaps'))}:</strong> ${escapeHTML(invoice.invoiceNumber)}</div>
-        <div><strong>${escapeHTML(t('bill.dateCaps'))}:</strong> ${escapeHTML(invoice.date)}</div>
+        <div><strong>${escapeHTML(t('bill.dateCaps'))}:</strong> ${escapeHTML(formatDate(invoice.date, language))}</div>
+        ${payBy(invoice, language, label => `<div><strong>${escapeHTML(t('bill.payBy').toUpperCase())}:</strong> ${label}</div>`)}
         <div><strong>${escapeHTML(t('bill.customerCaps'))}:</strong> ${escapeHTML(invoice.customer.name || t('bill.walkIn'))}</div>
         ${invoice.customer.phone ? `<div><strong>${escapeHTML(t('bill.phoneCaps'))}:</strong> ${escapeHTML(invoice.customer.phone)}</div>` : ''}
         <div><strong>${escapeHTML(t('bill.statusCaps'))}:</strong> [${escapeHTML(statusLabel(t, invoice.status).toUpperCase())}]</div>

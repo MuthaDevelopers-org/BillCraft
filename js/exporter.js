@@ -296,8 +296,8 @@ export const ExporterService = {
   },
 
   /** The WhatsApp text for a bill, in the bill language `tb` */
-  formatInvoiceText(invoice, settings, tb = createTranslator(), language = 'en') {
-    const { t } = tb;
+  formatInvoiceText(invoice, settings, tb = createTranslator()) {
+    const { t, language } = tb;
     const curr = settings.currency || '₹';
     const lines = [
       `🧾 *${t('wa.billFrom', { name: settings.brandName || t('wa.defaultShop') })}*`,
@@ -335,8 +335,8 @@ export const ExporterService = {
   },
 
   /** A short, polite reminder for a bill that is still due, in the bill language */
-  formatReminderText(invoice, settings, tb = createTranslator(), language = 'en') {
-    const { t } = tb;
+  formatReminderText(invoice, settings, tb = createTranslator()) {
+    const { t, language } = tb;
     const lines = [
       `🔔 *${t('wa.reminderTitle', { name: settings.brandName || t('wa.defaultShop') })}*`,
       t('wa.reminderBill', { number: invoice.invoiceNumber, date: formatDate(invoice.date, language) }),
@@ -351,11 +351,11 @@ export const ExporterService = {
   },
 
   /** Opens WhatsApp with the bill: straight to the customer's chat when the phone is known */
-  shareWhatsApp(invoice, settings, tb = createTranslator(), language = 'en') {
-    openWhatsApp(invoice.customer.phone, this.formatInvoiceText(invoice, settings, tb, language));
+  shareWhatsApp(invoice, settings, tb = createTranslator()) {
+    openWhatsApp(invoice.customer.phone, this.formatInvoiceText(invoice, settings, tb));
   },
 
-  sendReminder(invoice, settings, tb = createTranslator(), language = 'en') {
-    openWhatsApp(invoice.customer.phone, this.formatReminderText(invoice, settings, tb, language));
+  sendReminder(invoice, settings, tb = createTranslator()) {
+    openWhatsApp(invoice.customer.phone, this.formatReminderText(invoice, settings, tb));
   }
 };

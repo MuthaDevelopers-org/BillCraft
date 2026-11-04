@@ -47,6 +47,11 @@
     margin-bottom: 1.25rem;
   }
 
+  /* On phones the third card spans the row; here all three share it */
+  .stats-grid .stat-card:last-child {
+    grid-column: auto;
+  }
+
   .view-section {
     padding: 1.25rem 1.5rem 1.5rem;
   }

@@ -55,19 +55,19 @@ const bill = () => new Invoice({
 
 test('the bill message shows dates in the bill language, the due date, and a tidy contact line', () => {
   const settings = new BusinessSettings({ brandName: 'Asha Candles', phone: '98765 43210', upiId: 'asha@okaxis' });
-  const text = ExporterService.formatInvoiceText(bill(), settings, createTranslator(english), 'en');
+  const text = ExporterService.formatInvoiceText(bill(), settings, createTranslator(english, 'en'));
   assert.match(text, /Date: 3 Nov 2026/);
   assert.match(text, /Please pay by 10 Nov 2026\./);
   assert.match(text, /Contact: 98765 43210$/m);
   assert.match(text, /₹ 900\.00/);
 
-  const hindiText = ExporterService.formatInvoiceText(bill(), settings, createTranslator(hindi), 'hi');
+  const hindiText = ExporterService.formatInvoiceText(bill(), settings, createTranslator(hindi, 'hi'));
   assert.match(hindiText, /3 नव॰ 2026/);
 });
 
 test('a reminder names the bill, the amount due, the date and how to pay', () => {
   const settings = new BusinessSettings({ brandName: 'Asha Candles', sellerName: 'Asha', phone: '98765 43210', upiId: 'asha@okaxis' });
-  const text = ExporterService.formatReminderText(bill(), settings, createTranslator(english), 'en');
+  const text = ExporterService.formatReminderText(bill(), settings, createTranslator(english, 'en'));
   assert.equal(text, [
     '🔔 *Payment reminder from Asha Candles*',
     'Bill BILL-012, 3 Nov 2026',

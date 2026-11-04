@@ -35,11 +35,12 @@ export async function loadLocale(code) {
 }
 
 /**
- * Builds `t(key, params)` and `words(amount)` for one locale. A key missing
- * from the locale falls back to English, then to the key itself, so a
- * half-finished translation never shows a blank label.
+ * Builds `t(key, params)` and `words(amount)` for one locale, and keeps its
+ * language code (for dates). A key missing from the locale falls back to
+ * English, then to the key itself, so a half-finished translation never shows
+ * a blank label.
  */
-export function createTranslator(locale = english) {
+export function createTranslator(locale = english, language = DEFAULT_LANGUAGE) {
   const messages = locale.messages || {};
   const fallback = english.messages;
 
@@ -52,7 +53,7 @@ export function createTranslator(locale = english) {
 
   const words = (amount) => spellAmount(amount, locale.words || english.words);
 
-  return { t, words };
+  return { t, words, language };
 }
 
 /** Sets <html lang> and <html dir> for the chosen language. */
@@ -88,4 +89,9 @@ const STATUS_KEYS = { paid: 'status.paid', due: 'status.due', draft: 'status.dra
 export function statusLabel(t, status) {
   const key = STATUS_KEYS[String(status || '').toLowerCase()];
   return key ? t(key) : String(status || '');
+}
+
+/** The badge colour for a status: green for Paid, red for Due, grey for Draft */
+export function statusBadgeClass(status) {
+  return { paid: 'badge-paid', due: 'badge-due', draft: 'badge-draft' }[String(status || '').toLowerCase()] || 'badge-draft';
 }
