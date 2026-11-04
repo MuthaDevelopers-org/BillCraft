@@ -119,13 +119,35 @@ test('a full storage is reported, and nothing is half written', () => {
   assert.deepEqual(StorageService.getInvoices().map(inv => inv.id), ['inv_1']);
 });
 
-test('bill numbers only go up, even after the latest bill is deleted', () => {
-  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-001');
-  StorageService.saveInvoice(new Invoice({ id: 'inv_5', invoiceNumber: 'BILL-005' }));
-  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-006');
+test('bill numbers count up within their period, even after the latest bill is deleted', () => {
+  assert.equal(StorageService.nextBillNumber('month', 'AC', '2026-11-04'), 'AC-2611-001');
+  StorageService.saveInvoice(new Invoice({ id: 'inv_5', invoiceNumber: 'AC-2611-005' }));
+  assert.equal(StorageService.nextBillNumber('month', 'AC', '2026-11-20'), 'AC-2611-006');
   StorageService.deleteInvoice('inv_5');
-  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-006');
-  assert.equal(StorageService.getNextInvoiceNumber('INV/2026/'), 'INV/2026/006');
+  assert.equal(StorageService.nextBillNumber('month', 'AC', '2026-11-20'), 'AC-2611-006', 'a deleted number is not given out again');
+  assert.equal(StorageService.nextBillNumber('month', 'AC', '2026-12-01'), 'AC-2612-001', 'a new month starts again');
+  assert.equal(StorageService.nextBillNumber('day', 'AC', '2026-11-04'), 'AC-261104-01');
+  assert.equal(StorageService.nextBillNumber('fy', 'AC', '2026-11-04'), 'AC/26-27/0001');
+});
+
+test('migration 3: the old prefix becomes the shop code, and its counter stays with old numbers', () => {
+  localStorage.setItem('billcraft_schema', '2');
+  localStorage.setItem('billcraft_settings', JSON.stringify({ brandName: 'Asha Candles', billPrefix: 'INV/', setupDone: true }));
+  localStorage.setItem('billcraft_inv_counter', '17');
+  StorageService.migrate();
+  const settings = stored('billcraft_settings');
+  assert.equal(settings.billCode, 'INV');
+  assert.equal('billPrefix' in settings, false);
+  assert.equal(StorageService.getSettings().billFormat, 'month');
+  assert.equal(StorageService.getCounters()['INV/'], 17);
+  assert.equal(localStorage.getItem('billcraft_schema'), String(SCHEMA_VERSION));
+});
+
+test('migration 3: the default BILL- prefix gives way to the shop initials', () => {
+  localStorage.setItem('billcraft_schema', '2');
+  localStorage.setItem('billcraft_settings', JSON.stringify({ brandName: 'Asha Candles', billPrefix: 'BILL-', setupDone: true }));
+  StorageService.migrate();
+  assert.equal(stored('billcraft_settings').billCode, '');
 });
 
 test('a bill number already used by another bill is found, ignoring case and spaces', () => {
@@ -157,13 +179,15 @@ test('a backup without a section leaves that section as it is', () => {
 test('a backup round trip keeps everything', () => {
   StorageService.saveSettings({ brandName: 'Asha Candles', upiId: 'asha@okaxis', setupDone: true });
   StorageService.addProduct({ id: 'prod_1', name: 'Soap', unitPrice: 40, unit: 'pcs', category: 'General', sku: '', description: '' });
-  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'BILL-009', items: [{ id: 'item_1', name: 'Soap', quantity: 2, unitPrice: 40 }] }));
-  const json = StorageService.exportBackupJSON('1.0.0');
+  StorageService.saveInvoice(new Invoice({ id: 'inv_1', invoiceNumber: 'AC-2611-009', items: [{ id: 'item_1', name: 'Soap', quantity: 2, unitPrice: 40 }] }));
+  StorageService.saveInvoice(new Invoice({ id: 'inv_2', invoiceNumber: 'AC-2611-012' }));
+  StorageService.deleteInvoice('inv_2');
+  const json = StorageService.exportBackupJSON('1.1.0');
   globalThis.localStorage = new MemoryStorage();
   StorageService.importBackupJSON(json);
   assert.equal(StorageService.getSettings().upiId, 'asha@okaxis');
   assert.equal(StorageService.getCatalog()[0].id, 'prod_1');
   const [bill] = StorageService.getInvoices();
   assert.equal(bill.grandTotal, 80);
-  assert.equal(StorageService.getNextInvoiceNumber(), 'BILL-010');
+  assert.equal(StorageService.nextBillNumber('month', 'AC', '2026-11-30'), 'AC-2611-013', 'the counters travel with the backup');
 });

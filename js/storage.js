@@ -5,21 +5,24 @@
  */
 import { Product, Invoice, BusinessSettings } from './models.js';
 import { buildBackup, clearOldDemoSettings, parseBackup } from './backup.js';
+import { billScope, formatBillNumber, normalizeShopCode, splitBillNumber } from './billNumber.js';
 
 const STORAGE_KEYS = {
   SETTINGS: 'billcraft_settings',
   CATALOG: 'billcraft_catalog',
   INVOICES: 'billcraft_invoices',
   ACTIVE_DRAFT: 'billcraft_active_draft',
-  COUNTER: 'billcraft_inv_counter',
+  COUNTER: 'billcraft_inv_counter', // before 1.1: one counter for all bills
+  COUNTERS: 'billcraft_counters', // the last count used in each period, e.g. { "AC-2611-": 42 }
   SCHEMA: 'billcraft_schema'
 };
 
 // The data that a backup holds and a restore replaces (the open draft is not part of it)
-const BACKED_UP_KEYS = [STORAGE_KEYS.SETTINGS, STORAGE_KEYS.CATALOG, STORAGE_KEYS.INVOICES, STORAGE_KEYS.COUNTER];
+const BACKED_UP_KEYS = [STORAGE_KEYS.SETTINGS, STORAGE_KEYS.CATALOG, STORAGE_KEYS.INVOICES, STORAGE_KEYS.COUNTER, STORAGE_KEYS.COUNTERS];
 
-// 2: made-up shop details from versions before 1.0 are cleared (see migrate)
-export const SCHEMA_VERSION = 2;
+// 2: made-up shop details from versions before 1.0 are cleared
+// 3: bill numbers by period (a shop code and a format replace the prefix)
+export const SCHEMA_VERSION = 3;
 
 /** The browser refused to store more: the user must free space (back up, delete old bills) */
 export class StorageFullError extends Error {
@@ -53,12 +56,6 @@ function readList(key, Model) {
   }
 }
 
-/** The number at the end of a bill number, e.g. 12 for "BILL-012", or null */
-export function trailingNumber(invoiceNumber) {
-  const match = String(invoiceNumber || '').match(/(\d+)\s*$/);
-  return match ? Number.parseInt(match[1], 10) : null;
-}
-
 const sameNumber = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 
 export const StorageService = {
@@ -66,14 +63,26 @@ export const StorageService = {
   migrate() {
     const version = Number(localStorage.getItem(STORAGE_KEYS.SCHEMA)) || 1;
     if (version >= SCHEMA_VERSION) return;
-    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    if (data) {
-      try {
-        this.saveSettings(clearOldDemoSettings(JSON.parse(data)));
-      } catch (error) {
-        console.error('Could not update the saved settings', error);
+    let settings = null;
+    try {
+      settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || 'null');
+    } catch (error) {
+      console.error('Could not read the saved settings', error);
+    }
+    if (settings && version < 2) settings = clearOldDemoSettings(settings);
+    if (version < 3) {
+      // The old prefix becomes the shop code, unless it was the default BILL-;
+      // the old counter stays with the numbers made with that prefix
+      const prefix = settings && typeof settings.billPrefix === 'string' ? settings.billPrefix : 'BILL-';
+      const oldCount = Number(localStorage.getItem(STORAGE_KEYS.COUNTER)) || 0;
+      if (oldCount) this.saveCounters({ ...this.getCounters(), [prefix]: Math.max(oldCount, this.getCounters()[prefix] || 0) });
+      if (settings) {
+        const code = normalizeShopCode(prefix);
+        if (settings.billCode === undefined) settings.billCode = code === 'BILL' ? '' : code;
+        delete settings.billPrefix;
       }
     }
+    if (settings) this.saveSettings(settings);
     write(STORAGE_KEYS.SCHEMA, String(SCHEMA_VERSION));
   },
 
@@ -133,7 +142,7 @@ export const StorageService = {
     write(STORAGE_KEYS.INVOICES, invoices);
   },
 
-  /** Adds the bill, or replaces the saved one with the same id. The bill number is then never reused. */
+  /** Adds the bill, or replaces the saved one with the same id. Its number is then never given out again. */
   saveInvoice(invoice) {
     const list = this.getInvoices();
     const existingIndex = list.findIndex(i => i.id === invoice.id);
@@ -162,17 +171,42 @@ export const StorageService = {
     return this.getInvoices().find(inv => inv.id !== exceptId && sameNumber(inv.invoiceNumber, invoiceNumber)) || null;
   },
 
-  // --- Bill numbers: a counter that only goes up, so a deleted bill's number is not given out again ---
-  getNextInvoiceNumber(prefix = 'BILL-') {
-    const counter = Number(localStorage.getItem(STORAGE_KEYS.COUNTER)) || 0;
-    const highest = this.getInvoices().reduce((max, inv) => Math.max(max, trailingNumber(inv.invoiceNumber) || 0), counter);
-    return `${prefix}${String(highest + 1).padStart(3, '0')}`;
+  // --- Bill numbers: a count per period that only goes up (see js/billNumber.js) ---
+  getCounters() {
+    try {
+      const counters = JSON.parse(localStorage.getItem(STORAGE_KEYS.COUNTERS) || '{}');
+      return counters && typeof counters === 'object' && !Array.isArray(counters) ? counters : {};
+    } catch {
+      return {};
+    }
   },
 
+  saveCounters(counters) {
+    write(STORAGE_KEYS.COUNTERS, counters);
+  },
+
+  /**
+   * The next number for a bill dated `dateISO`: one more than the highest count used
+   * in that period, saved or deleted, so a number is never given out twice.
+   */
+  nextBillNumber(format, code, dateISO) {
+    const scope = billScope(format, code, dateISO);
+    const same = text => text.toLowerCase() === scope.toLowerCase();
+    const counters = this.getCounters();
+    const counted = Object.entries(counters).reduce((max, [key, value]) => (same(key) ? Math.max(max, Number(value) || 0) : max), 0);
+    const highest = this.getInvoices().reduce((max, inv) => {
+      const split = splitBillNumber(inv.invoiceNumber);
+      return split && same(split.scope) ? Math.max(max, split.count) : max;
+    }, counted);
+    return formatBillNumber(format, code, dateISO, highest + 1);
+  },
+
+  /** Remembers the count of a saved bill's number in its period */
   noteBillNumber(invoiceNumber) {
-    const number = trailingNumber(invoiceNumber);
-    const counter = Number(localStorage.getItem(STORAGE_KEYS.COUNTER)) || 0;
-    if (number !== null && number > counter) write(STORAGE_KEYS.COUNTER, String(number));
+    const split = splitBillNumber(invoiceNumber);
+    if (!split) return;
+    const counters = this.getCounters();
+    if (split.count > (Number(counters[split.scope]) || 0)) this.saveCounters({ ...counters, [split.scope]: split.count });
   },
 
   // --- Draft Persistence ---
@@ -199,18 +233,20 @@ export const StorageService = {
       settings: this.getSettings(),
       catalog: this.getCatalog(),
       invoices: this.getInvoices(),
-      counter: Number(localStorage.getItem(STORAGE_KEYS.COUNTER)) || 0,
+      counters: this.getCounters(),
       appVersion
     });
   },
 
   /** Writes a checked backup (see parseBackup). Sections missing from the file are left as they are. */
-  applyBackup({ settings, catalog, invoices, counter }) {
+  applyBackup({ settings, catalog, invoices, counters }) {
     if (settings) this.saveSettings(settings);
     if (catalog) this.saveCatalog(catalog);
     if (invoices) this.saveInvoices(invoices);
-    const current = Number(localStorage.getItem(STORAGE_KEYS.COUNTER)) || 0;
-    if (counter > current) write(STORAGE_KEYS.COUNTER, String(counter));
+    // Counts only go up: keep the higher of the phone's and the file's for each period
+    const merged = { ...this.getCounters() };
+    for (const [scope, count] of Object.entries(counters || {})) merged[scope] = Math.max(Number(merged[scope]) || 0, count);
+    this.saveCounters(merged);
   },
 
   importBackupJSON(jsonString) {

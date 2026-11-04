@@ -243,7 +243,8 @@
                     <div class="form-grid-2">
                       <div class="form-group">
                         <label class="form-label" for="inv-number" data-i18n="field.billNumber">Bill Number</label>
-                        <input type="text" id="inv-number" class="form-control" data-i18n-placeholder="ph.billNumber" placeholder="BILL-001" />
+                        <input type="text" id="inv-number" class="form-control" data-i18n-placeholder="ph.billNumber" placeholder="AC-2611-001" aria-describedby="inv-number-meaning" />
+                        <small class="field-help" id="inv-number-meaning" hidden></small>
                       </div>
                       <div class="form-group">
                         <label class="form-label" for="inv-date" data-i18n="field.billDate">Bill Date</label>
@@ -628,10 +629,33 @@
                 </div>
               </div>
 
+              <!-- Bill numbers: a shop code, the period and a count (js/billNumber.js) -->
               <div class="form-group">
-                <label class="form-label" for="settings-bill-prefix" data-i18n="settings.billPrefix">Bill numbers start with</label>
-                <input type="text" id="settings-bill-prefix" class="form-control" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="settings-bill-prefix-help" />
-                <small class="field-help" id="settings-bill-prefix-help" data-i18n="settings.billPrefixHelp">For example, BILL- gives BILL-001, BILL-002 and so on.</small>
+                <span class="form-label" id="bill-format-label" data-i18n="settings.billFormat">Bill numbers</span>
+                <div class="bill-format-choices" id="bill-format-choices" role="radiogroup" aria-labelledby="bill-format-label">
+                  <button type="button" role="radio" aria-checked="true" class="bill-format-card" data-bill-format="month">
+                    <span class="bill-format-emoji" aria-hidden="true">🗓️</span>
+                    <span class="bill-format-name" data-i18n="settings.billFormat.month">By month</span>
+                    <code class="bill-format-example" data-example="month"></code>
+                  </button>
+                  <button type="button" role="radio" aria-checked="false" class="bill-format-card" data-bill-format="day">
+                    <span class="bill-format-emoji" aria-hidden="true">📆</span>
+                    <span class="bill-format-name" data-i18n="settings.billFormat.day">By day</span>
+                    <code class="bill-format-example" data-example="day"></code>
+                  </button>
+                  <button type="button" role="radio" aria-checked="false" class="bill-format-card" data-bill-format="fy">
+                    <span class="bill-format-emoji" aria-hidden="true">📊</span>
+                    <span class="bill-format-name" data-i18n="settings.billFormat.fy">By financial year</span>
+                    <code class="bill-format-example" data-example="fy"></code>
+                  </button>
+                </div>
+                <p class="bill-format-meaning" id="bill-format-meaning"></p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="settings-bill-code" data-i18n="settings.billCode">Shop code in bill numbers</label>
+                <input type="text" id="settings-bill-code" class="form-control bill-code-input" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="settings-bill-code-help" />
+                <small class="field-help" id="settings-bill-code-help" data-i18n="settings.billCodeHelp">2 to 4 letters or digits. Leave it empty to use your shop's initials.</small>
               </div>
 
               <div class="form-group">

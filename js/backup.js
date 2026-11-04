@@ -9,8 +9,10 @@
 import { BusinessSettings, CURRENCIES, Invoice, InvoiceItem, Product, newId } from './models.js';
 import { getLanguage } from './i18n/languages.js';
 import { safeImageSrc } from './safe.js';
+import { BILL_FORMATS, DEFAULT_BILL_FORMAT, normalizeShopCode } from './billNumber.js';
 
-export const BACKUP_FORMAT = 2;
+// 3: bill-number counters per period, discount type and value, product pictures
+export const BACKUP_FORMAT = 3;
 export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
 
 const TEMPLATES = ['modern', 'classic', 'boutique', 'thermal'];
@@ -80,6 +82,28 @@ function uniqueId(value, prefix, seen) {
   return id;
 }
 
+/** The shop code, or from a backup made before 1.1, its bill prefix unless it was the default BILL- */
+function legacyShopCode(raw) {
+  if (raw.billCode !== undefined) return normalizeShopCode(raw.billCode);
+  const code = normalizeShopCode(raw.billPrefix);
+  return code === 'BILL' ? '' : code;
+}
+
+/** Counts per bill-number period; a backup made before 1.1 has one counter for its prefix */
+function readCounters(data) {
+  const counters = {};
+  if (isObject(data.counters)) {
+    for (const [scope, count] of Object.entries(data.counters)) {
+      if (scope.length <= 40 && Number.isInteger(count) && count > 0) counters[scope] = count;
+    }
+  }
+  if (Number.isInteger(data.counter) && data.counter > 0) {
+    const prefix = isObject(data.settings) && typeof data.settings.billPrefix === 'string' ? data.settings.billPrefix : 'BILL-';
+    counters[prefix] = Math.max(counters[prefix] || 0, data.counter);
+  }
+  return counters;
+}
+
 function readSettings(raw) {
   return new BusinessSettings({
     sellerName: text(raw.sellerName),
@@ -99,7 +123,8 @@ function readSettings(raw) {
     billLanguage: languageCode(raw.billLanguage),
     voiceConsent: raw.voiceConsent === true,
     setupDone: raw.setupDone === true,
-    billPrefix: raw.billPrefix === undefined ? 'BILL-' : text(raw.billPrefix, 16),
+    billFormat: oneOf(raw.billFormat, BILL_FORMATS, DEFAULT_BILL_FORMAT),
+    billCode: legacyShopCode(raw),
     lastBackupAt: timestamp(raw.lastBackupAt),
     persistAsked: raw.persistAsked === true,
     installTipShown: raw.installTipShown === true
@@ -155,12 +180,13 @@ function readInvoice(raw, seen) {
     notes: text(raw.notes, MAX_LONG_TEXT),
     template: oneOf(raw.template, TEMPLATES, 'modern'),
     status: oneOf(raw.status, STATUSES, 'Paid'),
-    createdAt: timestamp(raw.createdAt) || new Date().toISOString()
+    createdAt: timestamp(raw.createdAt) || new Date().toISOString(),
+    numberAuto: raw.numberAuto === true
   });
 }
 
 /**
- * Reads a backup file's text. Returns { settings, catalog, invoices, counter }, where a
+ * Reads a backup file's text. Returns { settings, catalog, invoices, counters }, where a
  * section missing from the file is null (left as it is on the phone). Throws a
  * BackupError when the file is not a BillCraft backup.
  */
@@ -183,12 +209,12 @@ export function parseBackup(json) {
     settings: hasSettings ? readSettings(clearOldDemoSettings(data.settings)) : null,
     catalog: hasCatalog ? data.catalog.map(product => readProduct(product, seen)).filter(Boolean) : null,
     invoices: hasInvoices ? data.invoices.map(invoice => readInvoice(invoice, seen)).filter(Boolean) : null,
-    counter: Number.isInteger(data.counter) && data.counter > 0 ? data.counter : 0
+    counters: readCounters(data)
   };
 }
 
 /** The text of a backup file */
-export function buildBackup({ settings, catalog, invoices, counter, appVersion }) {
+export function buildBackup({ settings, catalog, invoices, counters, appVersion }) {
   return JSON.stringify({
     app: 'BillCraft',
     format: BACKUP_FORMAT,
@@ -197,7 +223,7 @@ export function buildBackup({ settings, catalog, invoices, counter, appVersion }
     settings,
     catalog,
     invoices,
-    counter
+    counters
   }, null, 2);
 }
 

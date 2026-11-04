@@ -123,7 +123,8 @@ export class Invoice {
     notes = '', // empty prints the bill language's thank-you line
     template = 'modern',
     status = 'Paid', // Paid, Due, Draft
-    createdAt = new Date().toISOString()
+    createdAt = new Date().toISOString(),
+    numberAuto = null // true while the number is automatic and follows the bill date; null before 1.1
   } = {}) {
     this.id = id;
     this.invoiceNumber = invoiceNumber;
@@ -137,6 +138,7 @@ export class Invoice {
     this.template = template;
     this.status = status;
     this.createdAt = createdAt;
+    this.numberAuto = numberAuto === null ? null : Boolean(numberAuto);
   }
 
   get subtotal() {
@@ -180,7 +182,8 @@ export class BusinessSettings {
     billLanguage = '', // '' = same as the app language
     voiceConsent = false, // set once the user agrees to voice typing
     setupDone = false, // set once the shop setup is finished or skipped
-    billPrefix = 'BILL-', // bill numbers are this followed by 001, 002, ...
+    billFormat = 'month', // bill numbers: 'month' AC-2611-042, 'day' AC-261104-03, 'fy' AC/26-27/0412
+    billCode = '', // the shop code in bill numbers; '' = from the shop name (js/billNumber.js)
     lastBackupAt = '', // ISO time of the last backup file saved
     persistAsked = false, // set once the browser was asked to keep this data
     installTipShown = false // set once the phone was shown the add-to-home-screen tip
@@ -202,7 +205,8 @@ export class BusinessSettings {
     this.billLanguage = billLanguage;
     this.voiceConsent = Boolean(voiceConsent);
     this.setupDone = Boolean(setupDone);
-    this.billPrefix = String(billPrefix ?? 'BILL-');
+    this.billFormat = ['month', 'day', 'fy'].includes(billFormat) ? billFormat : 'month';
+    this.billCode = String(billCode || '');
     this.lastBackupAt = lastBackupAt;
     this.persistAsked = Boolean(persistAsked);
     this.installTipShown = Boolean(installTipShown);

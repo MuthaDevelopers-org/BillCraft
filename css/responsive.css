@@ -20,6 +20,10 @@
     gap: 1rem;
   }
 
+  .bill-format-choices {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .btn-group {
     display: flex;
     flex-wrap: wrap;

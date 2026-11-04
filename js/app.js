@@ -13,6 +13,7 @@ import { StorageService, StorageFullError } from './storage.js';
 import { BackupError, MAX_BACKUP_BYTES, invoicesToCSV, parseBackup } from './backup.js';
 import { APP_VERSION } from './config.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
+import { BILL_FORMATS, normalizeShopCode, readBillNumber, shopCode } from './billNumber.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService, fileNameFor } from './exporter.js';
@@ -63,9 +64,7 @@ class BillCraftApp {
   constructor() {
     StorageService.migrate();
     this.settings = StorageService.getSettings();
-    // A draft that was already saved (and not changed since) gives way to a fresh bill
-    const draft = StorageService.getActiveDraft();
-    this.currentInvoice = draft && !this.isSaved(draft) ? draft : this.createNewInvoice();
+    this.currentInvoice = this.openingBill();
     this.activeTemplate = this.currentInvoice.template || this.settings.defaultTemplate || 'modern';
     this.currentView = 'builder';
     this.step = 1;
@@ -348,6 +347,8 @@ class BillCraftApp {
     }
     this.settings.setupDone = true;
     if (!this.saveSettings()) return;
+    this.renumberIfAutomatic();
+    this.saveDraft();
     this.closeModal('modal-setup');
     this.refreshAll();
   }
@@ -469,10 +470,72 @@ class BillCraftApp {
   }
 
   // --- Bill Builder Logic ---
+  /**
+   * The bill to show when the app opens: the draft, unless history already holds it
+   * unchanged. A draft from before 1.1 gets a number in the new style.
+   */
+  openingBill() {
+    const draft = StorageService.getActiveDraft();
+    if (!draft || this.isSaved(draft)) return this.createNewInvoice();
+    if (draft.numberAuto === null) {
+      draft.numberAuto = true;
+      draft.invoiceNumber = this.nextBillNumber(draft.date || todayISO());
+    }
+    return draft;
+  }
+
+  // --- Bill numbers (js/billNumber.js) ---
+
+  /** The shop code in bill numbers: the one typed in Settings, else from the shop name */
+  billCode() {
+    return normalizeShopCode(this.settings.billCode) || shopCode(this.settings.brandName);
+  }
+
+  /** The next automatic number for a bill dated `date`, in the chosen format */
+  nextBillNumber(date = todayISO()) {
+    return StorageService.nextBillNumber(this.settings.billFormat, this.billCode(), date);
+  }
+
+  /** What a bill number says, in the app language: "Nov 2026 · bill 42 of the month"; '' for other numbers */
+  describeBillNumber(number) {
+    const info = readBillNumber(number);
+    if (!info) return '';
+    const language = this.settings.appLanguage || 'en';
+    const two = n => String(n).padStart(2, '0');
+    if (info.format === 'day') {
+      return this.t('billno.day', { date: formatDate(`${info.year}-${two(info.month)}-${two(info.day)}`, language), count: info.count });
+    }
+    if (info.format === 'month') {
+      const month = new Intl.DateTimeFormat(`${language}-IN`, { month: 'short', year: 'numeric', timeZone: 'UTC', numberingSystem: 'latn' })
+        .format(new Date(Date.UTC(info.year, info.month - 1, 1)));
+      return this.t('billno.month', { month, count: info.count });
+    }
+    return this.t('billno.fy', { year: `${info.fyStart}-${two((info.fyStart + 1) % 100)}`, count: info.count });
+  }
+
+  /** The line under the bill number on the Send step */
+  renderBillNumberMeaning() {
+    const meaning = this.describeBillNumber(this.currentInvoice.invoiceNumber);
+    const hint = document.getElementById('inv-number-meaning');
+    hint.textContent = meaning;
+    hint.hidden = !meaning;
+  }
+
+  /** A bill not saved yet, with an automatic number, takes the next number for its date and format */
+  renumberIfAutomatic() {
+    const bill = this.currentInvoice;
+    if (!bill.numberAuto || StorageService.getInvoiceById(bill.id)) return;
+    bill.invoiceNumber = this.nextBillNumber(bill.date || todayISO());
+    document.getElementById('inv-number').value = bill.invoiceNumber;
+    this.renderBillNumberMeaning();
+  }
+
   createNewInvoice() {
+    const date = todayISO();
     return new Invoice({
-      invoiceNumber: StorageService.getNextInvoiceNumber(this.settings.billPrefix),
-      date: todayISO(),
+      invoiceNumber: this.nextBillNumber(date),
+      numberAuto: true,
+      date,
       template: this.settings.defaultTemplate || 'modern',
       notes: this.settings.defaultNotes,
       status: 'Paid',
@@ -548,6 +611,10 @@ class BillCraftApp {
       document.getElementById(id).addEventListener('input', () => this.syncFormToInvoice());
     });
     document.getElementById('cust-name').addEventListener('change', () => this.fillKnownCustomer());
+    // A number typed by hand is kept as typed, even when the date changes
+    document.getElementById('inv-number').addEventListener('input', () => {
+      this.currentInvoice.numberAuto = false;
+    });
 
     const search = document.getElementById('product-search');
     search.addEventListener('input', () => {
@@ -643,8 +710,12 @@ class BillCraftApp {
   }
 
   syncFormToInvoice() {
+    const date = document.getElementById('inv-date').value || '';
+    const dateChanged = date !== this.currentInvoice.date;
     this.currentInvoice.invoiceNumber = document.getElementById('inv-number').value || '';
-    this.currentInvoice.date = document.getElementById('inv-date').value || '';
+    this.currentInvoice.date = date;
+    if (dateChanged && date) this.renumberIfAutomatic();
+    this.renderBillNumberMeaning();
     this.currentInvoice.dueDate = document.getElementById('inv-due-date').value || '';
 
     this.currentInvoice.customer = {
@@ -667,6 +738,7 @@ class BillCraftApp {
   renderBuilderForm() {
     document.getElementById('inv-number').value = this.currentInvoice.invoiceNumber || '';
     document.getElementById('inv-date').value = this.currentInvoice.date || '';
+    this.renderBillNumberMeaning();
     document.getElementById('inv-due-date').value = this.currentInvoice.dueDate || '';
 
     document.getElementById('cust-name').value = this.currentInvoice.customer.name || '';
@@ -1641,11 +1713,12 @@ class BillCraftApp {
       this.openBill(inv, STEP_COUNT);
       this.showToast(this.t('toast.billOpened', { number: inv.invoiceNumber }), 'info');
     } else if (action === 'repeat') {
-      const nextNum = StorageService.getNextInvoiceNumber(this.settings.billPrefix);
+      const nextNum = this.nextBillNumber(todayISO());
       this.openBill(new Invoice({
         ...inv,
         id: newId('inv'),
         invoiceNumber: nextNum,
+        numberAuto: true,
         date: todayISO(),
         dueDate: '',
         status: 'Paid',
@@ -1704,6 +1777,18 @@ class BillCraftApp {
         this.saveSettings();
       });
     });
+
+    // Bill number format: saved at once; the examples follow the shop code as it is typed
+    document.getElementById('bill-format-choices').addEventListener('click', (event) => {
+      const card = event.target.closest('[data-bill-format]');
+      if (!card) return;
+      this.settings.billFormat = card.dataset.billFormat;
+      this.saveSettings();
+      this.renumberIfAutomatic();
+      this.saveDraft();
+      this.renderBillFormatChoices();
+    });
+    document.getElementById('settings-bill-code').addEventListener('input', () => this.renderBillFormatChoices());
 
     const templateCards = document.querySelectorAll('.template-card-choice');
     templateCards.forEach(card => {
@@ -1817,8 +1902,7 @@ class BillCraftApp {
   /** After a restore (or its undo): settings, products and bills are read again */
   async reloadFromStorage() {
     this.settings = StorageService.getSettings();
-    const draft = StorageService.getActiveDraft();
-    this.currentInvoice = draft && !this.isSaved(draft) ? draft : this.createNewInvoice();
+    this.currentInvoice = this.openingBill();
     this.refreshHistoryData();
     await this.loadTranslators();
     this.refreshAll();
@@ -1866,6 +1950,22 @@ class BillCraftApp {
     }
   }
 
+  /** Settings → Bill numbers: each format's next number, and what the chosen one means */
+  renderBillFormatChoices() {
+    const field = document.getElementById('settings-bill-code');
+    const derived = shopCode(document.getElementById('settings-brand-name').value || this.settings.brandName);
+    const code = normalizeShopCode(field.value) || derived;
+    field.placeholder = derived;
+    const today = todayISO();
+    document.querySelectorAll('[data-bill-format]').forEach(card => {
+      const format = card.dataset.billFormat;
+      card.setAttribute('aria-checked', String(format === this.settings.billFormat));
+      card.querySelector('[data-example]').textContent = StorageService.nextBillNumber(format, code, today);
+    });
+    const next = StorageService.nextBillNumber(this.settings.billFormat, code, today);
+    document.getElementById('bill-format-meaning').textContent = `${this.t('settings.nextBill', { number: next })} · ${this.describeBillNumber(next)}`;
+  }
+
   /** Marks a field as wrong (or clears the mark), showing the reason in its "-error" element */
   showFieldError(fieldId, invalid) {
     document.getElementById(fieldId).setAttribute('aria-invalid', String(invalid));
@@ -1883,7 +1983,8 @@ class BillCraftApp {
     document.getElementById('settings-upi').value = this.settings.upiId || '';
     document.getElementById('settings-payment-note').value = this.settings.paymentNotes || '';
     document.getElementById('settings-default-notes').value = this.settings.defaultNotes || '';
-    document.getElementById('settings-bill-prefix').value = this.settings.billPrefix;
+    document.getElementById('settings-bill-code').value = this.settings.billCode;
+    this.renderBillFormatChoices();
     document.getElementById('settings-app-language').value = this.settings.appLanguage || DEFAULT_LANGUAGE;
     document.getElementById('settings-bill-language').value = this.settings.billLanguage || '';
 
@@ -1924,15 +2025,12 @@ class BillCraftApp {
     this.settings.defaultNotes = document.getElementById('settings-default-notes').value.trim();
     this.settings.appLanguage = document.getElementById('settings-app-language').value;
     this.settings.billLanguage = document.getElementById('settings-bill-language').value;
-    const oldPrefix = this.settings.billPrefix;
-    this.settings.billPrefix = document.getElementById('settings-bill-prefix').value.trim().slice(0, 16);
+    this.settings.billCode = normalizeShopCode(document.getElementById('settings-bill-code').value);
 
     if (!this.saveSettings()) return;
-    // A bill not yet saved takes its number from the new prefix
-    if (this.settings.billPrefix !== oldPrefix && !StorageService.getInvoiceById(this.currentInvoice.id)) {
-      this.currentInvoice.invoiceNumber = StorageService.getNextInvoiceNumber(this.settings.billPrefix);
-      this.saveDraft();
-    }
+    // A new shop code (or shop name) gives a bill not yet saved its new number
+    this.renumberIfAutomatic();
+    this.saveDraft();
     await this.loadTranslators();
     this.refreshAll();
     this.showToast(this.t('toast.settingsSaved'), 'success');

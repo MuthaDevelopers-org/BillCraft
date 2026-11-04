@@ -32,7 +32,8 @@ const PRODUCTS = [
   { id: 'prod_honey', name: 'Forest honey', unitPrice: 380, unit: 'jar' },
   { id: 'prod_dal', name: 'Toor dal', unitPrice: 140, unit: 'kg' }
 ];
-const DRAFT = { id: 'inv_test', invoiceNumber: 'BILL-001', date: '2026-11-03', status: 'Paid', customer: { name: 'Meera', phone: '99123 45678' }, items: [{ id: 'l1', name: 'Soy candle', quantity: 3, unitPrice: 450 }] };
+// numberAuto: false keeps these numbers as typed (an automatic number follows the shop code and date)
+const DRAFT = { id: 'inv_test', invoiceNumber: 'BILL-001', numberAuto: false, date: '2026-11-03', status: 'Paid', customer: { name: 'Meera', phone: '99123 45678' }, items: [{ id: 'l1', name: 'Soy candle', quantity: 3, unitPrice: 450 }] };
 
 /** A fresh browser with helpers for the app */
 async function openBrowser() {
@@ -188,11 +189,13 @@ await journey('Weighed items and the payment QR code', async (page) => {
   await page.click('#qty-presets [data-qty="0.5"]');
   await sleep(400);
   check('0.5 kg of ₹140 is ₹70', (await page.evaluate("document.querySelector('#mobile-items-list .line-total').textContent")) === '₹ 70.00');
+  const number = await page.evaluate('window.app.currentInvoice.invoiceNumber');
+  check('a new bill is numbered by shop and month', /^AC-\d{4}-001$/.test(number), number);
   const decoded = await decodeQR(page, '#invoice-render-target img');
   if (decoded === null) {
     skip('the QR code on the bill pays the shop exactly', 'no BarcodeDetector on this platform');
   } else {
-    check('the QR code on the bill pays the shop exactly', decoded === 'upi://pay?pa=asha.candles@okaxis&pn=Asha%20Candles&am=70.00&cu=INR&tn=Bill%20BILL-001', decoded);
+    check('the QR code on the bill pays the shop exactly', decoded === `upi://pay?pa=asha.candles@okaxis&pn=Asha%20Candles&am=70.00&cu=INR&tn=Bill%20${number}`, decoded);
   }
 });
 

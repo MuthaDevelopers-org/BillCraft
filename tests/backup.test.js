@@ -34,7 +34,8 @@ test('backups from before 1.0 still restore', () => {
   const parsed = parseBackup(JSON.stringify(old));
   assert.equal(parsed.settings.brandName, 'Asha Candles');
   assert.equal(parsed.settings.setupDone, true, 'a named shop skips the setup');
-  assert.equal(parsed.settings.billPrefix, 'BILL-');
+  assert.equal(parsed.settings.billFormat, 'month');
+  assert.equal(parsed.settings.billCode, '', 'the default BILL- prefix gives way to the shop initials');
   assert.equal(parsed.catalog[0].id, 'prod_1700000000000_ab12');
   const [bill] = parsed.invoices;
   assert.equal(bill.id, 'inv_1700000000000');
@@ -121,18 +122,19 @@ test('sections missing from the file are left alone', () => {
 
 test('a written backup reads back the same', () => {
   const json = buildBackup({
-    settings: { brandName: 'Asha', billPrefix: 'INV/', setupDone: true },
+    settings: { brandName: 'Asha', billFormat: 'fy', billCode: 'as', setupDone: true },
     catalog: [{ id: 'prod_1', name: 'Soap', unitPrice: 40 }],
     invoices: [],
-    counter: 12,
+    counters: { 'AS/26-27/': 12, 'bad': -3 },
     appVersion: '1.0.0'
   });
   const data = JSON.parse(json);
   assert.equal(data.app, 'BillCraft');
-  assert.equal(data.format, 2);
+  assert.equal(data.format, 3);
   const parsed = parseBackup(json);
-  assert.equal(parsed.settings.billPrefix, 'INV/');
-  assert.equal(parsed.counter, 12);
+  assert.equal(parsed.settings.billFormat, 'fy');
+  assert.equal(parsed.settings.billCode, 'AS');
+  assert.deepEqual(parsed.counters, { 'AS/26-27/': 12 });
   assert.equal(parsed.catalog[0].name, 'Soap');
 });
 
@@ -189,4 +191,10 @@ test('the bills spreadsheet has headings, plain numbers and a BOM for Hindi name
   assert.equal(lines[0], 'Bill number,Date,Customer,Phone,Items,Subtotal,Bill discount,Delivery,Total,Status,Pay by');
   assert.equal(lines[1], 'BILL-002,2026-11-03,मीरा,99123 45678,1,900,30,50,920,Due,2026-11-10');
   assert.equal(lines[2], "'=cmd,2026-11-02,,,0,0,0,0,0,Paid,");
+});
+
+test('a backup from before 1.1 keeps its counter with its prefix', () => {
+  const parsed = parseBackup(JSON.stringify({ version: '1.0', settings: { billPrefix: 'INV-' }, invoices: [], counter: 7 }));
+  assert.deepEqual(parsed.counters, { 'INV-': 7 });
+  assert.equal(parsed.settings.billCode, 'INV');
 });
