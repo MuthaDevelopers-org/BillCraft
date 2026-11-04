@@ -79,6 +79,7 @@ class BillCraftApp {
     this.customerMode = null; // 'new' while a new customer is being typed
     this.searchQuery = '';
     this.qtyTarget = null; // what the quantity sheet is for
+    this.payTarget = null; // what the payment sheet is for: { invoice, fromBuilder }
     this.modalOpeners = new Map(); // dialog id -> the element focus returns to
     this.refreshHistoryData();
 
@@ -596,6 +597,10 @@ class BillCraftApp {
 
   bindBuilderEvents() {
     document.getElementById('btn-new-bill').addEventListener('click', () => this.startNewBill());
+    document.getElementById('btn-clear-bill').addEventListener('click', () => this.clearBill());
+    document.getElementById('btn-payment-qr').addEventListener('click', () => this.openPaymentSheet(this.currentInvoice, true));
+    document.getElementById('btn-payment-received').addEventListener('click', () => this.receivePayment());
+    document.getElementById('btn-pay-add-upi').addEventListener('click', () => this.addUpiFromPaySheet());
 
     document.querySelectorAll('.btn-save-bill').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -848,6 +853,7 @@ class BillCraftApp {
     this.updateTotalsCard();
     this.renderStatusToggle();
     this.renderCustomerChips();
+    this.updateClearButton();
     this.schedulePreview();
   }
 
@@ -1352,6 +1358,7 @@ class BillCraftApp {
     document.getElementById('summary-delivery-row').hidden = !(shippingFee > 0);
     document.getElementById('summary-delivery').textContent = `+ ${money(shippingFee)}`;
     countTo(document.getElementById('summary-grand-total'), this.currentInvoice.grandTotal, money);
+    this.renderPaymentBanner();
     document.getElementById('summary-words').textContent = this.ui.words(this.currentInvoice.grandTotal);
     this.updateBar();
   }
@@ -1427,6 +1434,94 @@ class BillCraftApp {
     options.forEach((option, i) => option.setAttribute('aria-checked', String(i === index)));
     toggle.style.setProperty('--active', index);
     document.getElementById('due-date-group').hidden = this.currentInvoice.status !== 'Due';
+    this.renderPaymentBanner();
+  }
+
+  /** "📲 Show payment QR" above the bill, while it is Due or a Draft and has an amount */
+  renderPaymentBanner() {
+    const { status, grandTotal } = this.currentInvoice;
+    document.getElementById('btn-payment-qr').hidden = !(status === 'Due' || status === 'Draft') || !(grandTotal > 0);
+    document.getElementById('pay-banner-hint').textContent = this.t('pay.showHint', {
+      amount: formatCurrency(grandTotal, this.settings.currency || '₹')
+    });
+  }
+
+  /**
+   * The payment sheet for a Due or Draft bill: a large QR code for its amount, with the
+   * shop name and UPI ID, and "Payment received". Without a UPI ID it shows the shop's
+   * own QR picture (the customer types the amount) or says how to add one. UPI is rupees only.
+   */
+  openPaymentSheet(invoice, fromBuilder) {
+    if (fromBuilder) this.syncFormToInvoice();
+    this.payTarget = { invoice, fromBuilder };
+    const { upiId, brandName, qrCustomImage } = this.settings;
+    const currency = this.settings.currency || '₹';
+    const amount = formatCurrency(invoice.grandTotal, currency);
+    const rupees = currency === '₹';
+    const link = rupees && isValidUpiId(upiId)
+      ? buildUPIString({ upiId, brandName, amount: invoice.grandTotal, invoiceNumber: invoice.invoiceNumber })
+      : '';
+    const picture = link ? generateQRCodeURL(link) : (rupees ? safeImageSrc(qrCustomImage) : '');
+
+    document.getElementById('pay-shop').textContent = brandName || '';
+    document.getElementById('pay-amount').textContent = amount;
+    document.getElementById('pay-bill').textContent = this.t('pay.bill', { number: invoice.invoiceNumber });
+    const image = document.getElementById('pay-qr');
+    if (picture) image.src = picture;
+    else image.removeAttribute('src');
+    image.alt = this.t('pay.qrAlt', { amount });
+    document.getElementById('pay-qr-box').hidden = !picture;
+    document.getElementById('pay-upi').textContent = link ? this.t('pay.upi', { upi: upiId.trim() }) : '';
+    const note = document.getElementById('pay-note');
+    note.hidden = !picture || Boolean(link);
+    note.textContent = this.t('pay.typeAmount', { amount });
+    document.getElementById('pay-missing').hidden = Boolean(picture);
+    document.getElementById('pay-missing-text').textContent = rupees ? this.t('pay.noUpi') : this.t('pay.rupeesOnly', { currency });
+    document.getElementById('btn-pay-add-upi').hidden = !rupees;
+    this.openModal('modal-pay');
+  }
+
+  /** "Payment received": the bill is saved as Paid, with Undo. A bill not saved yet is saved first. */
+  receivePayment() {
+    const { invoice, fromBuilder } = this.payTarget || {};
+    if (!invoice) return;
+    this.closeModal('modal-pay');
+    if (fromBuilder && !this.saveBill()) return;
+    this.setBillStatus(invoice, 'Paid', true);
+    if (fromBuilder) celebrate(document.querySelector('#status-toggle [data-status="Paid"]'), this.motionLayer);
+  }
+
+  /** "Add UPI ID": Settings, with the cursor in the UPI field */
+  addUpiFromPaySheet() {
+    this.closeModal('modal-pay');
+    this.switchView('settings');
+    document.getElementById('settings-upi').focus();
+  }
+
+  /** 🧹 Clear shows while the bill holds anything to clear */
+  updateClearButton() {
+    const { items, customer, shippingFee, discountValue, notes } = this.currentInvoice;
+    const filled = items.length > 0 || shippingFee > 0 || discountValue > 0 || Boolean(notes.trim())
+      || Object.values(customer).some(value => String(value || '').trim());
+    document.getElementById('btn-clear-bill').hidden = !filled;
+  }
+
+  /** 🧹 Clear: this bill starts again, keeping its number and date. Undo puts everything back. */
+  clearBill() {
+    const before = this.currentInvoice;
+    const { id, invoiceNumber, date, numberAuto, template, createdAt } = before;
+    this.currentInvoice = new Invoice({ id, invoiceNumber, date, numberAuto, template, createdAt });
+    this.customerMode = null;
+    this.renderBuilderForm();
+    this.saveDraft();
+    this.showToast(this.t('toast.billCleared'), 'info', {
+      label: this.t('common.undo'),
+      onClick: () => {
+        this.currentInvoice = before;
+        this.renderBuilderForm();
+        this.saveDraft();
+      }
+    });
   }
 
   /** Product order and recent customers come from saved bills, so they are refreshed after each save */
@@ -1988,10 +2083,11 @@ class BillCraftApp {
     const payBy = inv => (inv.status === 'Due' && inv.dueDate
       ? `<div class="history-due">${this.escape(this.t('history.payBy', { date: formatDate(inv.dueDate, language) }))}</div>`
       : '');
-    const action = (name, inv, label, style) => `<button type="button" class="btn btn-sm ${style}" data-bill-action="${name}" data-id="${id(inv)}">${this.escape(label)}</button>`;
+    const action = (name, inv, label, style, icon = '') => `<button type="button" class="btn btn-sm ${style}" data-bill-action="${name}" data-id="${id(inv)}">${icon ? `<span aria-hidden="true">${icon}</span> ` : ''}${this.escape(label)}</button>`;
     const removeButton = inv => `<button type="button" class="btn btn-ghost btn-sm btn-icon btn-delete" data-bill-action="delete" data-id="${id(inv)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}">${TRASH_ICON}</button>`;
     const dueActions = inv => (inv.status === 'Due'
-      ? action('paid', inv, this.t('history.markPaid'), 'btn-success') + action('remind', inv, this.t('history.remind'), 'btn-secondary')
+      ? action('paid', inv, this.t('history.markPaid'), 'btn-success') + action('qr', inv, this.t('history.payQr'), 'btn-secondary', '📲')
+        + action('remind', inv, this.t('history.remind'), 'btn-secondary')
       : '');
 
     tableBody.innerHTML = list.map(inv => `
@@ -2093,6 +2189,8 @@ class BillCraftApp {
       this.setBillStatus(inv, 'Paid', true);
     } else if (action === 'remind') {
       ExporterService.sendReminder(inv, this.settings, this.bill);
+    } else if (action === 'qr') {
+      this.openPaymentSheet(inv, false);
     }
   }
 
@@ -2415,6 +2513,7 @@ class BillCraftApp {
 
   /** The bill being made is kept as a draft after every change, so nothing is lost if the app closes */
   saveDraft() {
+    this.updateClearButton();
     return this.store(() => StorageService.saveActiveDraft(this.currentInvoice));
   }
 

@@ -153,7 +153,11 @@
                 <!-- Product tiles, most used first, then "+ Other item" (rendered by app.js) -->
                 <div class="product-grid" id="product-grid"></div>
 
-                <h3 class="lines-title" data-i18n="lines.title">In this bill</h3>
+                <div class="lines-head">
+                  <h3 class="lines-title" data-i18n="lines.title">In this bill</h3>
+                  <!-- Empties the bill but keeps its number and date; the notice offers Undo -->
+                  <button type="button" class="btn btn-ghost btn-sm lines-clear" id="btn-clear-bill" hidden><span aria-hidden="true">🧹</span> <span data-i18n="lines.clear">Clear</span></button>
+                </div>
                 <!-- One line per item (rendered by app.js) -->
                 <div class="bill-lines" id="mobile-items-list"></div>
 
@@ -330,6 +334,16 @@
                 </button>
               </div>
             </div>
+
+            <!-- A Due or Draft bill: a QR code for its amount, one tap away -->
+            <button type="button" class="pay-banner no-print" id="btn-payment-qr" hidden>
+              <span class="pay-banner-icon" aria-hidden="true">📲</span>
+              <span class="pay-banner-text">
+                <strong data-i18n="pay.show">Show payment QR</strong>
+                <small id="pay-banner-hint"></small>
+              </span>
+              <span class="pay-banner-go" aria-hidden="true">&rsaquo;</span>
+            </button>
 
             <!-- The bill itself -->
             <div class="invoice-render-wrapper" id="invoice-render-target">
@@ -833,6 +847,35 @@
           <button type="submit" class="btn btn-primary" id="btn-save-modal-product" data-i18n="product.save">Save Product</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- SHEET: PAYMENT QR (a Due or Draft bill, or a Due bill in History): a large QR for the amount -->
+  <div class="modal-overlay" id="modal-pay">
+    <div class="modal-box pay-box" role="dialog" aria-modal="true" aria-labelledby="pay-title" tabindex="-1">
+      <div class="modal-header">
+        <h3 class="modal-title" id="pay-title"><span aria-hidden="true">📲</span> <span data-i18n="pay.title">Scan to pay</span></h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
+      </div>
+      <div class="modal-body pay-body">
+        <p class="pay-shop" id="pay-shop"></p>
+        <p class="pay-amount" id="pay-amount"></p>
+        <p class="pay-bill" id="pay-bill"></p>
+        <div class="pay-qr" id="pay-qr-box">
+          <img id="pay-qr" alt="" width="280" height="280" />
+        </div>
+        <p class="pay-upi" id="pay-upi"></p>
+        <p class="pay-note" id="pay-note" hidden></p>
+        <!-- No QR possible: why, and how to get one -->
+        <div class="pay-missing" id="pay-missing" hidden>
+          <p id="pay-missing-text"></p>
+          <button type="button" class="btn btn-secondary" id="btn-pay-add-upi" data-i18n="pay.addUpi">Add UPI ID</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal" data-i18n="common.close">Close</button>
+        <button type="button" class="btn btn-success" id="btn-payment-received"><span aria-hidden="true">✅</span> <span data-i18n="pay.received">Payment received</span></button>
+      </div>
     </div>
   </div>
 

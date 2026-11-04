@@ -1501,6 +1501,25 @@ textarea.form-control {
 }
 
 /* "In this bill": one line per item */
+/* "In this bill", with Clear at the other end */
+.lines-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.lines-head .lines-title {
+  margin-bottom: 0;
+}
+
+.lines-clear {
+  min-height: 40px;
+  gap: 0.3rem;
+  color: var(--text-muted);
+}
+
 .lines-title {
   margin-bottom: 0.6rem;
   font-size: 0.8rem;
@@ -1843,6 +1862,10 @@ textarea.form-control {
   color: var(--danger-text);
 }
 
+.history-due-actions {
+  flex-wrap: wrap;
+}
+
 .history-due-actions .btn {
   flex: 1;
 }
@@ -2130,6 +2153,121 @@ textarea.form-control {
 .discount-type {
   flex: none;
   width: 7.5rem;
+}
+
+/* ============================================================
+   PAYMENT QR: the bar above a Due or Draft bill, and the sheet
+   ============================================================ */
+.pay-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px dashed var(--theme-accent);
+  border-radius: var(--radius-lg);
+  background: var(--theme-accent-soft);
+  color: var(--text-main);
+  text-align: start;
+  cursor: pointer;
+}
+
+.pay-banner-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.pay-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pay-banner-text strong {
+  font-size: 1rem;
+}
+
+.pay-banner-text small {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pay-banner-go {
+  margin-inline-start: auto;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--theme-accent);
+}
+
+.pay-body {
+  text-align: center;
+}
+
+.pay-shop {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.pay-amount {
+  margin: 0.15rem 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-bill {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* A white box with a quiet margin, so the code scans in a dark room or a dark theme */
+.pay-qr {
+  display: inline-block;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.pay-qr img {
+  display: block;
+  width: min(68vw, 280px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.pay-upi {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.pay-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--warning-text);
+}
+
+.pay-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+}
+
+.pay-missing p {
+  margin: 0;
 }
 
 /* ============================================================
