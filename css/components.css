@@ -1372,6 +1372,23 @@ textarea.form-control {
   color: var(--warning-text);
 }
 
+/* Paid / Due / Draft: the emoji above the word, so a long word ("भुगतान हो गया") has the whole width */
+.segmented [data-status] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-height: 56px;
+  padding: 0.3rem 0.25rem;
+  line-height: 1.2;
+}
+
+.segmented [data-status] > [aria-hidden="true"] {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 /* Two choices: the discount's percent / amount switch */
 .segmented-2 {
   grid-template-columns: repeat(2, 1fr);
@@ -2268,6 +2285,173 @@ textarea.form-control {
 
 .pay-missing p {
   margin: 0;
+}
+
+/* ============================================================
+   PICTURES AND EMOJI (screens only; bills never show them)
+   ============================================================ */
+
+/* A product's picture on its tile, where the coloured initial would be */
+.tile-picture {
+  background: var(--bg-surface-alt);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.line-icon {
+  flex: none;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.qty-icon:not(:empty) {
+  margin-inline-end: 0.4rem;
+}
+
+.product-card-icon {
+  margin-inline-end: 0.35rem;
+  font-size: 1.2rem;
+}
+
+.card-emoji {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.stat-icon-wrap span {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.toast-icon {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* The product form's picture: a large face, tap to choose another */
+.prod-icon-button {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: 64px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--theme-accent);
+  font-weight: 700;
+  text-align: start;
+  cursor: pointer;
+}
+
+.prod-icon-face {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-surface-alt);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.prod-icon-face.is-initial {
+  background: hsl(var(--tile-hue, 160) 70% 90%);
+  color: hsl(var(--tile-hue, 160) 60% 28%);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+/* The picture picker: groups in a row, then the pictures of the group */
+.icon-groups {
+  margin-bottom: 0.85rem;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 0.4rem;
+}
+
+.icon-option {
+  aspect-ratio: 1;
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-option[aria-pressed="true"] {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+}
+
+/* An empty screen's picture: a large emoji in a soft circle, two small ones beside it */
+.empty-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  margin: 0.25rem auto 0.85rem;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+}
+
+.empty-art-main {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.empty-art-a,
+.empty-art-b {
+  position: absolute;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.empty-art-a {
+  top: -4px;
+  right: -8px;
+  transform: rotate(12deg);
+}
+
+.empty-art-b {
+  bottom: -2px;
+  left: -10px;
+  transform: rotate(-10deg);
+}
+
+.grid-empty .empty-art {
+  margin: 0.25rem 0 0.5rem 0.65rem;
+  background: var(--bg-surface);
+}
+
+.history-empty-cell .empty-art {
+  margin-top: 0.5rem;
+}
+
+/* The empty bill: one line with a cart */
+.empty-box-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  text-align: start;
+}
+
+.empty-inline-icon {
+  flex: none;
+  font-size: 1.6rem;
+  line-height: 1;
 }
 
 /* ============================================================

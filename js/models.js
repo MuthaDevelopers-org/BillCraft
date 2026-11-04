@@ -5,6 +5,7 @@
 import english from './i18n/locales/en.js';
 import { spellAmount } from './i18n/numberWords.js';
 import { unitInfo } from './units.js';
+import { cleanIcon } from './icons.js';
 
 /**
  * Rounds an amount to paise (2 decimals), half up. Shifting by exponent avoids
@@ -69,7 +70,8 @@ export class Product {
     unitPrice = 0,
     unit = 'pcs',
     category = 'General',
-    sku = ''
+    sku = '',
+    icon = '' // a picture from js/icons.js, NO_ICON, or '' for the one its name suggests
   } = {}) {
     this.id = id;
     this.name = name;
@@ -78,6 +80,7 @@ export class Product {
     this.unit = unit || 'pcs';
     this.category = category || 'General';
     this.sku = sku;
+    this.icon = cleanIcon(icon);
   }
 }
 

@@ -140,7 +140,8 @@ function readProduct(raw, seen) {
     unitPrice: amount(raw.unitPrice),
     unit: text(raw.unit, 20) || 'pcs',
     category: text(raw.category, 60),
-    sku: text(raw.sku, 40)
+    sku: text(raw.sku, 40),
+    icon: text(raw.icon, 16)
   });
 }
 

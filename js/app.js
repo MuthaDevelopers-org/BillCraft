@@ -15,6 +15,7 @@ import { APP_VERSION } from './config.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
 import { BILL_FORMATS, normalizeShopCode, readBillNumber, shopCode } from './billNumber.js';
 import { UNITS, suggestForProduct, unitInfo, unitLabel } from './units.js';
+import { ICON_GROUPS, NO_ICON, groupOf, pictureFor } from './icons.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService, fileNameFor } from './exporter.js';
@@ -31,6 +32,10 @@ const STEP_COUNT = 2;
 // A steady colour and initial per product, so a tile can be found without reading it
 const tileHue = name => [...String(name)].reduce((hash, char) => (hash * 31 + char.codePointAt(0)) % 360, 7);
 const initialOf = name => (Array.from(String(name).trim())[0] || '?').toUpperCase();
+
+// Decorations on screens only (never on bills): hidden from screen readers, never in translations
+const STATUS_ICONS = { Paid: '✅', Due: '⏳', Draft: '📝' };
+const TOAST_ICONS = { success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️' };
 
 const MIC_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>';
 const SPEAK_ICON = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>';
@@ -74,6 +79,7 @@ class BillCraftApp {
     this.previewFrame = 0;
     this.editingProductId = null;
     this.productUnitPicked = false; // in the product form: a unit was picked, so the name no longer sets it
+    this.productIcon = ''; // in the product form: a picture, NO_ICON, or '' to follow the name
     this.expandedItemIds = new Set();
     this.unitPickedItemIds = new Set(); // lines whose unit was picked by hand, so their name no longer sets it
     this.customerMode = null; // 'new' while a new customer is being typed
@@ -871,7 +877,7 @@ class BillCraftApp {
     const tiles = products.map(product => `
       <div class="product-tile-wrap">
         <button type="button" class="product-tile" data-product-id="${this.escape(product.id)}" style="--tile-hue: ${tileHue(product.name)}">
-          <span class="tile-initial" aria-hidden="true">${this.escape(initialOf(product.name))}</span>
+          ${this.tileFace(product)}
           <span class="tile-name">${this.escape(product.name)}</span>
           <span class="tile-price"><span class="tile-amount">${formatCurrency(product.unitPrice, curr)}</span><small>/${this.escape(this.unitText(product.unit || 'pcs'))}</small></span>
           <span class="tile-badge" hidden></span>
@@ -879,12 +885,15 @@ class BillCraftApp {
         <button type="button" class="tile-qty" data-qty-product="${this.escape(product.id)}" aria-label="${this.escape(this.t('qty.button', { name: product.name }))}" title="${this.escape(this.t('qty.button', { name: product.name }))}"><span aria-hidden="true">🔢</span></button>
       </div>
     `).join('');
-    const noMatch = query && !products.length ? `<p class="tile-none">${this.escape(this.t('grid.noMatch'))}</p>` : '';
+    const noMatch = query && !products.length
+      ? `<p class="tile-none"><span aria-hidden="true">🔍</span> ${this.escape(this.t('grid.noMatch'))}</p>`
+      : '';
     // No products yet: say what the grid is for, with a way to add the first one
     const noProducts = !this.rankedProducts.length;
     document.querySelector('.product-search').hidden = noProducts;
     const intro = noProducts ? `
       <div class="grid-empty">
+        ${this.emptyArt('🛍️', '✨', '🏷️')}
         <p class="grid-empty-title">${this.escape(this.t('grid.emptyTitle'))}</p>
         <p class="grid-empty-text">${this.escape(this.t('grid.emptyText'))}</p>
         <button type="button" class="btn btn-primary" data-add-product>${this.escape(this.t('catalog.addProduct'))}</button>
@@ -1032,7 +1041,9 @@ class BillCraftApp {
 
     const empty = container.querySelector('.empty-box');
     if (!items.length) {
-      if (!empty) container.insertAdjacentHTML('beforeend', `<div class="empty-box">${this.escape(this.t('items.emptyHint'))}</div>`);
+      if (!empty) {
+        container.insertAdjacentHTML('beforeend', `<div class="empty-box empty-box-inline"><span class="empty-inline-icon" aria-hidden="true">🛒</span><span>${this.escape(this.t('items.emptyHint'))}</span></div>`);
+      }
       return;
     }
     empty?.remove();
@@ -1057,6 +1068,7 @@ class BillCraftApp {
     row.dataset.itemId = item.id;
     row.innerHTML = `
       <div class="bill-line-top">
+        <span class="line-icon" aria-hidden="true" hidden></span>
         <span class="line-name"></span>
         <span class="line-total"></span>
       </div>
@@ -1076,9 +1088,9 @@ class BillCraftApp {
             <input type="text" class="form-control" placeholder="${this.escape(this.t('item.namePh'))}" value="${this.escape(item.name)}" data-field="name" data-voice="text" />
           </label>
           <div class="field-stack field-wide">
-            <span class="form-label">${this.escape(this.t('item.unit'))}</span>
+            <label class="form-label" for="line-unit-${this.escape(item.id)}">${this.escape(this.t('item.unit'))}</label>
             <div class="choices choices-strip" role="radiogroup" aria-label="${this.escape(this.t('item.unit'))}">${this.unitChips()}</div>
-            <input type="text" class="form-control choice-other" maxlength="20" placeholder="${this.escape(this.t('product.unitPh'))}" aria-label="${this.escape(this.t('item.unit'))}" value="${this.escape(item.unit)}" data-field="unit" />
+            <input type="text" class="form-control choice-other" id="line-unit-${this.escape(item.id)}" maxlength="20" placeholder="${this.escape(this.t('product.unitPh'))}" value="${this.escape(item.unit)}" data-field="unit" />
           </div>
           <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.rate', { currency: curr }))}</span>
@@ -1108,6 +1120,10 @@ class BillCraftApp {
     const qty = roundQty(item.quantity);
     const qtyChanged = row.dataset.qty !== undefined && row.dataset.qty !== String(qty);
     row.dataset.qty = String(qty);
+    const picture = this.linePicture(item);
+    const icon = row.querySelector('.line-icon');
+    icon.textContent = picture;
+    icon.hidden = !picture;
     const name = row.querySelector('.line-name');
     name.textContent = item.name || this.t('item.namePh');
     name.classList.toggle('is-placeholder', !item.name);
@@ -1206,7 +1222,7 @@ class BillCraftApp {
   showChoice(picker, field, choice, typing = false) {
     const chips = [...picker.querySelectorAll('.choice-chip')];
     const match = choice === null ? null : chips.find(chip => chip.dataset.choice === String(choice));
-    field.hidden = Boolean(match) && !typing;
+    if (field) field.hidden = Boolean(match) && !typing;
     chips.forEach(chip => {
       const checked = match ? chip === match : chip.hasAttribute('data-choice-other');
       chip.setAttribute('aria-checked', String(checked));
@@ -1283,6 +1299,32 @@ class BillCraftApp {
     this.revealChoice(picker);
   }
 
+  /** A tile's face: the product's picture, or its initial on its own colour */
+  tileFace(product) {
+    const picture = pictureFor(product);
+    return picture
+      ? `<span class="tile-initial tile-picture" aria-hidden="true">${this.escape(picture)}</span>`
+      : `<span class="tile-initial" aria-hidden="true">${this.escape(initialOf(product.name))}</span>`;
+  }
+
+  /** A product card's picture before its name, if it has one */
+  cardPicture(product) {
+    const picture = pictureFor(product);
+    return picture ? `<span class="product-card-icon" aria-hidden="true">${this.escape(picture)}</span>` : '';
+  }
+
+  /** A bill line's picture: its product's, or for a typed item the one its name suggests */
+  linePicture(item) {
+    const product = item.productId && this.rankedProducts.find(p => p.id === item.productId);
+    return pictureFor(product || { name: item.name });
+  }
+
+  /** A picture for an empty screen: one large emoji with two small ones beside it */
+  emptyArt(main, first, second) {
+    const part = (name, emoji) => `<span class="empty-art-${name}">${this.escape(emoji)}</span>`;
+    return `<div class="empty-art" aria-hidden="true">${part('main', main)}${part('a', first)}${part('b', second)}</div>`;
+  }
+
   /**
    * How much: presets in one tap, or any amount typed or spoken. For a product not on
    * the bill yet it adds a line; for a line it sets the quantity.
@@ -1291,6 +1333,7 @@ class BillCraftApp {
     const source = line || product;
     this.qtyTarget = { product, lineId: line ? line.id : null, tile };
     document.getElementById('qty-title').textContent = source.name || this.t('item.namePh');
+    document.getElementById('qty-icon').textContent = line ? this.linePicture(line) : pictureFor(product);
     const unit = this.unitText(source.unit);
     document.getElementById('qty-unit').textContent = unit;
     document.getElementById('qty-presets').innerHTML = presetsFor(source.unit).map(qty => `
@@ -1545,12 +1588,12 @@ class BillCraftApp {
   renderCustomerChips() {
     const active = this.activeCustomerChip();
     const chips = [
-      { key: 'walkin', label: this.t('common.walkIn') },
-      ...this.recent.map((customer, index) => ({ key: `recent-${index}`, label: customer.name })),
-      { key: 'new', label: this.t('customer.new') }
+      { key: 'walkin', icon: '🚶', label: this.t('common.walkIn') },
+      ...this.recent.map((customer, index) => ({ key: `recent-${index}`, icon: '👤', label: customer.name })),
+      { key: 'new', icon: '➕', label: this.t('customer.new') }
     ];
     document.getElementById('customer-chips').innerHTML = chips.map(chip => `
-      <button type="button" class="chip${chip.key === active ? ' active' : ''}" data-chip="${chip.key}" aria-pressed="${chip.key === active}">${this.escape(chip.label)}</button>
+      <button type="button" class="chip${chip.key === active ? ' active' : ''}" data-chip="${chip.key}" aria-pressed="${chip.key === active}"><span class="chip-icon" aria-hidden="true">${chip.icon}</span> ${this.escape(chip.label)}</button>
     `).join('');
     document.getElementById('customer-fields').hidden = active !== 'new';
     document.getElementById('customer-suggestions').innerHTML = this.customers
@@ -1848,7 +1891,23 @@ class BillCraftApp {
       document.getElementById('modal-prod-unit-hint').hidden = true;
       this.showUnitChoice(units, unitField, unitField.value, true);
     });
-    document.getElementById('modal-prod-name').addEventListener('input', () => this.suggestProductUnit());
+    document.getElementById('modal-prod-name').addEventListener('input', () => {
+      this.suggestProductUnit();
+      this.renderProductFace();
+    });
+    document.getElementById('btn-prod-icon').addEventListener('click', () => this.openIconPicker());
+    const groups = document.getElementById('icon-groups');
+    groups.addEventListener('click', (event) => {
+      const chip = event.target.closest('.choice-chip');
+      if (chip) this.renderIconGroup(chip.dataset.choice);
+    });
+    groups.addEventListener('keydown', (event) => this.moveChoice(event));
+    groups.addEventListener('scroll', () => this.markStripEnd(groups));
+    document.getElementById('icon-grid').addEventListener('click', (event) => {
+      const option = event.target.closest('[data-icon]');
+      if (option) this.chooseIcon(option.dataset.icon);
+    });
+    document.getElementById('btn-icon-none').addEventListener('click', () => this.chooseIcon(NO_ICON));
   }
 
   /** A chip in the product form: a standard unit, or "Other", which opens the field for typing one */
@@ -1881,6 +1940,46 @@ class BillCraftApp {
     pop(units.querySelector('[aria-checked="true"]'), 1.1);
   }
 
+  /** The product form's picture: the one chosen, the one the name suggests, or the initial */
+  renderProductFace() {
+    const name = document.getElementById('modal-prod-name').value;
+    const picture = pictureFor({ icon: this.productIcon, name });
+    const face = document.getElementById('prod-icon-face');
+    face.textContent = picture || initialOf(name || '?');
+    face.classList.toggle('is-initial', !picture);
+    face.style.setProperty('--tile-hue', tileHue(name));
+    // An initial says nothing; a picture is read out by name ("cooked rice")
+    face.setAttribute('aria-hidden', String(!picture));
+  }
+
+  /** The picture picker, open at the group of the current picture */
+  openIconPicker() {
+    const current = pictureFor({ icon: this.productIcon, name: document.getElementById('modal-prod-name').value });
+    this.renderIconGroup(groupOf(current));
+    this.openModal('modal-icon');
+    this.revealChoice(document.getElementById('icon-groups'));
+  }
+
+  /** One group of pictures; the current picture is marked */
+  renderIconGroup(key) {
+    const current = pictureFor({ icon: this.productIcon, name: document.getElementById('modal-prod-name').value });
+    const groups = document.getElementById('icon-groups');
+    groups.innerHTML = ICON_GROUPS.map(group => this.choiceChip(group.key, group.icons[0], this.t(`iconGroup.${group.key}`))).join('');
+    this.showChoice(groups, null, key);
+    const { icons } = ICON_GROUPS.find(group => group.key === key);
+    document.getElementById('icon-grid').innerHTML = icons.map(icon => `
+      <button type="button" class="icon-option" data-icon="${this.escape(icon)}" aria-pressed="${icon === current}">${this.escape(icon)}</button>
+    `).join('');
+  }
+
+  /** A picture (or NO_ICON) for the product; back to the form */
+  chooseIcon(icon) {
+    this.productIcon = icon;
+    this.renderProductFace();
+    this.closeModal('modal-icon');
+    pop(document.getElementById('prod-icon-face'), 1.2);
+  }
+
   renderCatalogView(searchQuery = '') {
     const container = document.getElementById('products-catalog-grid');
 
@@ -1899,6 +1998,7 @@ class BillCraftApp {
     if (items.length === 0) {
       container.innerHTML = `
         <div class="empty-box empty-box-wide">
+          ${this.emptyArt('📦', '✨', '🏷️')}
           <p>${this.escape(this.t('catalog.empty'))}</p>
           <button class="btn btn-primary" id="btn-empty-add-prod">${this.escape(this.t('catalog.addFirst'))}</button>
         </div>
@@ -1911,7 +2011,7 @@ class BillCraftApp {
       <div class="product-card">
         <div>
           <div class="product-card-top">
-            <div class="product-card-title">${this.escape(p.name)}</div>
+            <div class="product-card-title">${this.cardPicture(p)}${this.escape(p.name)}</div>
             <span class="product-card-tag">${this.escape(this.categoryLabel(p.category))}</span>
           </div>
           <div class="product-card-desc">${this.escape(p.description || this.t('catalog.noDesc'))}</div>
@@ -1997,6 +2097,8 @@ class BillCraftApp {
     // A new product's unit follows its name until one is picked; a saved product keeps its unit
     this.productUnitPicked = Boolean(product);
     document.getElementById('modal-prod-unit-hint').hidden = true;
+    this.productIcon = product ? product.icon : '';
+    this.renderProductFace();
 
     this.openModal('modal-product');
     if (!COARSE_POINTER.matches) document.getElementById('modal-prod-name').focus();
@@ -2016,7 +2118,7 @@ class BillCraftApp {
       return;
     }
 
-    const fields = { name, category, description, unitPrice, unit, sku };
+    const fields = { name, category, description, unitPrice, unit, sku, icon: this.productIcon };
     const saved = this.editingProductId
       ? this.store(() => StorageService.updateProduct(new Product({ id: this.editingProductId, ...fields })))
       : this.store(() => StorageService.addProduct(new Product(fields)));
@@ -2067,7 +2169,10 @@ class BillCraftApp {
     const tableBody = document.getElementById('history-table-body');
     const cards = document.getElementById('mobile-history-list');
     if (!list.length) {
-      const empty = this.escape(this.t('history.empty'));
+      // No bills at all, or none that the search and filter let through
+      const empty = all.length
+        ? `${this.emptyArt('🔍', '🧾', '❔')}<p>${this.escape(this.t('history.empty'))}</p>`
+        : `${this.emptyArt('🧾', '✨', '💰')}<p>${this.escape(this.t('history.emptyFirst'))}</p>`;
       tableBody.innerHTML = `<tr><td colspan="7" class="history-empty-cell">${empty}</td></tr>`;
       cards.innerHTML = `<div class="empty-box">${empty}</div>`;
       return;
@@ -2079,15 +2184,15 @@ class BillCraftApp {
     const date = inv => this.escape(formatDate(inv.date, language));
     const items = inv => this.escape(this.t(inv.items.length === 1 ? 'bar.item' : 'bar.items', { count: inv.items.length }));
     const customer = inv => this.escape(inv.customer.name || this.t('common.walkIn'));
-    const status = inv => `<span class="badge ${statusBadgeClass(inv.status)}">${this.escape(statusLabel(this.ui.t, inv.status))}</span>`;
+    const status = inv => `<span class="badge ${statusBadgeClass(inv.status)}">${STATUS_ICONS[inv.status] ? `<span aria-hidden="true">${STATUS_ICONS[inv.status]}</span> ` : ''}${this.escape(statusLabel(this.ui.t, inv.status))}</span>`;
     const payBy = inv => (inv.status === 'Due' && inv.dueDate
       ? `<div class="history-due">${this.escape(this.t('history.payBy', { date: formatDate(inv.dueDate, language) }))}</div>`
       : '');
     const action = (name, inv, label, style, icon = '') => `<button type="button" class="btn btn-sm ${style}" data-bill-action="${name}" data-id="${id(inv)}">${icon ? `<span aria-hidden="true">${icon}</span> ` : ''}${this.escape(label)}</button>`;
     const removeButton = inv => `<button type="button" class="btn btn-ghost btn-sm btn-icon btn-delete" data-bill-action="delete" data-id="${id(inv)}" title="${this.escape(this.t('history.delete'))}" aria-label="${this.escape(this.t('history.delete'))}">${TRASH_ICON}</button>`;
     const dueActions = inv => (inv.status === 'Due'
-      ? action('paid', inv, this.t('history.markPaid'), 'btn-success') + action('qr', inv, this.t('history.payQr'), 'btn-secondary', '📲')
-        + action('remind', inv, this.t('history.remind'), 'btn-secondary')
+      ? action('paid', inv, this.t('history.markPaid'), 'btn-success', '✅') + action('qr', inv, this.t('history.payQr'), 'btn-secondary', '📲')
+        + action('remind', inv, this.t('history.remind'), 'btn-secondary', '🔔')
       : '');
 
     tableBody.innerHTML = list.map(inv => `
@@ -2103,7 +2208,7 @@ class BillCraftApp {
         <td>${status(inv)}</td>
         <td><div class="history-row-actions">
           ${action('open', inv, this.t('history.open'), 'btn-secondary')}
-          ${action('repeat', inv, this.t('history.repeat'), 'btn-ghost')}
+          ${action('repeat', inv, this.t('history.repeat'), 'btn-ghost', '🔁')}
           ${dueActions(inv)}
           ${removeButton(inv)}
         </div></td>
@@ -2126,7 +2231,7 @@ class BillCraftApp {
         ${inv.status === 'Due' ? `<div class="history-bill-actions history-due-actions">${dueActions(inv)}</div>` : ''}
         <div class="history-bill-actions">
           ${action('open', inv, this.t('history.openBill'), 'btn-primary history-open')}
-          ${action('repeat', inv, this.t('history.repeat'), 'btn-secondary')}
+          ${action('repeat', inv, this.t('history.repeat'), 'btn-secondary', '🔁')}
           ${removeButton(inv)}
         </div>
       </div>
@@ -2629,7 +2734,7 @@ class BillCraftApp {
     this.modalOpeners.delete(modalId);
     const top = [...document.querySelectorAll('.modal-overlay.active')].at(-1);
     if (top) {
-      top.querySelector('.modal-box').focus({ preventScroll: true });
+      (opener?.isConnected && top.contains(opener) ? opener : top.querySelector('.modal-box')).focus({ preventScroll: true });
     } else if (opener && opener.isConnected) {
       opener.focus({ preventScroll: true });
     }
@@ -2659,6 +2764,11 @@ class BillCraftApp {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = TOAST_ICONS[type] || TOAST_ICONS.info;
+    toast.appendChild(icon);
     const text = document.createElement('span');
     text.textContent = message;
     toast.appendChild(text);
