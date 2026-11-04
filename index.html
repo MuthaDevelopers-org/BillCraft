@@ -818,7 +818,7 @@
     </div>
   </div>
 
-  <!-- SHEET: HOW MUCH (items sold by weight or length, or a tap on a line's quantity) -->
+  <!-- SHEET: HOW MUCH (a tile's 🔢 button or a long press, items sold by weight or length, or a line's quantity) -->
   <div class="modal-overlay" id="modal-qty">
     <div class="modal-box qty-box" role="dialog" aria-modal="true" aria-labelledby="qty-title" tabindex="-1">
       <div class="modal-header">
@@ -831,8 +831,23 @@
         <form id="form-qty">
           <label class="form-label" for="qty-input" data-i18n="qty.other">Other amount</label>
           <div class="qty-entry-row">
-            <input type="number" inputmode="decimal" step="any" min="0" id="qty-input" class="form-control" data-voice="number" />
+            <input type="text" inputmode="decimal" autocomplete="off" id="qty-input" class="form-control qty-display" data-voice="number" />
             <span class="qty-unit" id="qty-unit"></span>
+          </div>
+          <!-- An on-screen number pad: on phones the keyboard stays closed and never covers the sheet -->
+          <div class="qty-pad" id="qty-pad">
+            <button type="button" data-key="1">1</button>
+            <button type="button" data-key="2">2</button>
+            <button type="button" data-key="3">3</button>
+            <button type="button" data-key="4">4</button>
+            <button type="button" data-key="5">5</button>
+            <button type="button" data-key="6">6</button>
+            <button type="button" data-key="7">7</button>
+            <button type="button" data-key="8">8</button>
+            <button type="button" data-key="9">9</button>
+            <button type="button" data-key="." data-i18n-aria="qty.point" aria-label="Decimal point">.</button>
+            <button type="button" data-key="0">0</button>
+            <button type="button" data-key="back" data-i18n-aria="qty.backspace" aria-label="Delete last digit">⌫</button>
           </div>
           <p class="qty-line-total" id="qty-line-total"></p>
           <button type="submit" class="btn btn-primary qty-add" data-i18n="common.add">Add</button>

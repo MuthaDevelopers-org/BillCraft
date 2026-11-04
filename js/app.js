@@ -629,15 +629,57 @@ class BillCraftApp {
       if (first) this.tapProduct(first.dataset.productId, first);
     });
 
-    document.getElementById('product-grid').addEventListener('click', (event) => {
+    const grid = document.getElementById('product-grid');
+    grid.addEventListener('click', (event) => {
       if (event.target.closest('[data-add-product]')) {
         this.openProductModal();
+        return;
+      }
+      const askFor = event.target.closest('[data-qty-product]');
+      if (askFor) {
+        this.askQuantity(askFor.dataset.qtyProduct, askFor.closest('.product-tile-wrap').querySelector('.product-tile'));
         return;
       }
       const tile = event.target.closest('.product-tile');
       if (!tile) return;
       if (tile.hasAttribute('data-other-item')) this.addOtherItem();
       else this.tapProduct(tile.dataset.productId, tile);
+    });
+
+    // Holding a tile asks how many, like its 🔢 button; moving the finger (scrolling) cancels
+    let press = null;
+    const endPress = () => {
+      if (press) clearTimeout(press.timer);
+      press = null;
+    };
+    grid.addEventListener('pointerdown', (event) => {
+      const tile = event.target.closest('.product-tile[data-product-id]');
+      if (!tile || event.button > 0) return;
+      endPress();
+      press = {
+        x: event.clientX,
+        y: event.clientY,
+        timer: setTimeout(() => {
+          press = null;
+          // A short buzz where the phone allows it (only after the person has touched the page)
+          if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(15);
+          // The sheet opens under the finger: the click from lifting it must not press what is there now
+          const swallow = (click) => {
+            click.preventDefault();
+            click.stopPropagation();
+          };
+          document.addEventListener('click', swallow, { capture: true, once: true });
+          setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 1000);
+          this.askQuantity(tile.dataset.productId, tile);
+        }, 550)
+      };
+    });
+    grid.addEventListener('pointermove', (event) => {
+      if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) endPress();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(type => grid.addEventListener(type, endPress));
+    grid.addEventListener('contextmenu', (event) => {
+      if (event.target.closest('.product-tile')) event.preventDefault();
     });
 
     const lines = document.getElementById('mobile-items-list');
@@ -663,7 +705,18 @@ class BillCraftApp {
       const preset = event.target.closest('[data-qty]');
       if (preset) this.applyQty(preset.dataset.qty);
     });
-    document.getElementById('qty-input').addEventListener('input', () => this.updateQtyPreview());
+    document.getElementById('qty-pad').addEventListener('click', (event) => {
+      const key = event.target.closest('[data-key]');
+      if (key) this.pressQtyKey(key.dataset.key);
+    });
+    document.getElementById('qty-input').addEventListener('input', (event) => {
+      // Typed, pasted or spoken: digits and one decimal point only
+      const field = event.target;
+      const [whole, ...rest] = field.value.replace(/[^\d.]/g, '').split('.');
+      field.value = rest.length ? `${whole}.${rest.join('')}` : whole;
+      this.setQtyFresh(false);
+      this.updateQtyPreview();
+    });
     document.getElementById('form-qty').addEventListener('submit', (event) => {
       event.preventDefault();
       this.applyQty(document.getElementById('qty-input').value);
@@ -774,12 +827,15 @@ class BillCraftApp {
     const curr = this.settings.currency || '₹';
 
     const tiles = products.map(product => `
-      <button type="button" class="product-tile" data-product-id="${this.escape(product.id)}" style="--tile-hue: ${tileHue(product.name)}">
-        <span class="tile-initial" aria-hidden="true">${this.escape(initialOf(product.name))}</span>
-        <span class="tile-name">${this.escape(product.name)}</span>
-        <span class="tile-price">${formatCurrency(product.unitPrice, curr)}<small>/${this.escape(product.unit || 'pcs')}</small></span>
-        <span class="tile-badge" hidden></span>
-      </button>
+      <div class="product-tile-wrap">
+        <button type="button" class="product-tile" data-product-id="${this.escape(product.id)}" style="--tile-hue: ${tileHue(product.name)}">
+          <span class="tile-initial" aria-hidden="true">${this.escape(initialOf(product.name))}</span>
+          <span class="tile-name">${this.escape(product.name)}</span>
+          <span class="tile-price"><span class="tile-amount">${formatCurrency(product.unitPrice, curr)}</span><small>/${this.escape(product.unit || 'pcs')}</small></span>
+          <span class="tile-badge" hidden></span>
+        </button>
+        <button type="button" class="tile-qty" data-qty-product="${this.escape(product.id)}" aria-label="${this.escape(this.t('qty.button', { name: product.name }))}" title="${this.escape(this.t('qty.button', { name: product.name }))}"><span aria-hidden="true">🔢</span></button>
+      </div>
     `).join('');
     const noMatch = query && !products.length ? `<p class="tile-none">${this.escape(this.t('grid.noMatch'))}</p>` : '';
     // No products yet: say what the grid is for, with a way to add the first one
@@ -830,6 +886,39 @@ class BillCraftApp {
   flyToBill(tile, label) {
     const target = document.getElementById(DESKTOP_QUERY.matches ? 'summary-grand-total' : 'bar-count');
     flyTo(tile, target, label, this.motionLayer, () => pop(target, 1.2));
+  }
+
+  /** The quantity sheet for a product (its 🔢 button or a long press): sets the line if it is on the bill */
+  askQuantity(productId, tile) {
+    const product = this.rankedProducts.find(p => p.id === productId);
+    if (!product) return;
+    const line = this.currentInvoice.items.find(item => item.productId === product.id);
+    this.openQtySheet({ product, line, tile });
+  }
+
+  /**
+   * A key of the on-screen number pad. A quantity shown when the sheet opened is
+   * replaced by the first key, as on a calculator.
+   */
+  pressQtyKey(key) {
+    const input = document.getElementById('qty-input');
+    let value = this.qtyFresh ? '' : input.value;
+    if (key === 'back') {
+      value = value.slice(0, -1);
+    } else if (key === '.') {
+      if (!value.includes('.')) value = `${value || '0'}.`;
+    } else {
+      value = value === '0' ? key : `${value}${key}`;
+    }
+    if (value.replace('.', '').length > 7) return;
+    input.value = value;
+    this.setQtyFresh(false);
+    this.updateQtyPreview();
+  }
+
+  setQtyFresh(fresh) {
+    this.qtyFresh = fresh;
+    document.getElementById('qty-input').classList.toggle('is-fresh', fresh);
   }
 
   /** A tap adds one. Products sold by weight or length ask how much instead. */
@@ -980,7 +1069,7 @@ class BillCraftApp {
     name.classList.toggle('is-placeholder', !item.name);
     row.querySelector('.line-total').textContent = formatCurrency(item.total, curr);
     const qtyButton = row.querySelector('.line-qty');
-    qtyButton.innerHTML = `${qty} <small>${this.escape(item.unit)}</small>`;
+    qtyButton.innerHTML = `${qty} <small>${this.escape(item.unit)}</small> <span class="line-qty-edit" aria-hidden="true">✏️</span>`;
     qtyButton.setAttribute('aria-label', `${this.t('item.qty')}: ${qty} ${item.unit}`);
     row.querySelector('.line-rate').textContent = `× ${formatCurrency(item.unitPrice, curr)}`;
     // Only typed items can be saved as products; catalog items already are
@@ -1048,10 +1137,12 @@ class BillCraftApp {
     `).join('');
     const input = document.getElementById('qty-input');
     input.value = line ? roundQty(line.quantity) : '';
+    this.setQtyFresh(Boolean(line));
+    // Phones type with the on-screen pad, so their keyboard never covers the sheet
+    input.inputMode = COARSE_POINTER.matches ? 'none' : 'decimal';
     this.updateQtyPreview();
     this.openModal('modal-qty');
-    // On touch screens the keypad would cover the presets, so it opens only when the field is tapped
-    if (!COARSE_POINTER.matches) input.focus();
+    if (!COARSE_POINTER.matches) input.select();
   }
 
   updateQtyPreview() {

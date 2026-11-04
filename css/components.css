@@ -1945,6 +1945,99 @@ textarea.form-control {
 }
 
 /* ============================================================
+   QUANTITY: the 🔢 button on each tile and the on-screen number pad
+   ============================================================ */
+.product-tile-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.product-tile-wrap > .product-tile {
+  flex: 1;
+  min-width: 0;
+  /* A long press opens the quantity sheet, not the phone's text menu */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* The price wraps before it reaches the 🔢 button: the unit moves down, the amount stays whole */
+.product-tile-wrap .tile-price {
+  padding-inline-end: 2.4rem;
+}
+
+.tile-amount {
+  white-space: nowrap;
+}
+
+.tile-qty {
+  position: absolute;
+  inset-inline-end: 0.45rem;
+  bottom: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* A larger area to tap than the button shows */
+.tile-qty::after {
+  content: '';
+  position: absolute;
+  inset: -0.4rem;
+}
+
+.tile-qty:active {
+  transform: scale(0.9);
+}
+
+.qty-display {
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* A quantity shown when the sheet opened: the first key replaces it */
+.qty-display.is-fresh {
+  background: var(--theme-accent-soft);
+}
+
+.qty-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.qty-pad button {
+  min-height: 3rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qty-pad button:active {
+  background: var(--theme-accent-soft);
+  transform: scale(0.97);
+}
+
+.line-qty-edit {
+  font-size: 0.75rem;
+}
+
+/* ============================================================
    MOTION (driven by js/motion.js)
    ============================================================ */
 /* Flying "+1" bubbles and the burst of dots float above everything */

@@ -103,7 +103,7 @@ export default {
 
     // Items
     'items.card': 'Products & Items',
-    'items.emptyHint': 'Tap a product above to add it to the bill.',
+    'items.emptyHint': 'Tap a product above to add one. To add many at once, use its number button or hold the product.',
     'grid.other': '+ Other item',
     'grid.noMatch': 'No product found. Use "+ Other item".',
     'grid.emptyTitle': 'Add the things you sell',
@@ -124,6 +124,9 @@ export default {
     'item.default': 'Custom Item',
     'qty.title': 'How much?',
     'qty.other': 'Other amount',
+    'qty.button': 'How many {name}?',
+    'qty.point': 'Decimal point',
+    'qty.backspace': 'Delete the last digit',
 
     // Totals and bill-level fields
     'field.shipping': 'Delivery / Shipping Fee',

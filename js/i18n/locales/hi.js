@@ -91,7 +91,7 @@ export default {
     'status.draft': 'ड्राफ़्ट',
 
     'items.card': 'सामान और आइटम',
-    'items.emptyHint': 'ऊपर किसी सामान को दबाकर बिल में जोड़ें।',
+    'items.emptyHint': 'ऊपर किसी सामान को दबाकर एक जोड़ें। एक साथ ज़्यादा जोड़ने के लिए उसका नंबर बटन दबाएँ या सामान को दबाए रखें।',
     'grid.other': '+ दूसरा सामान',
     'grid.noMatch': 'कोई सामान नहीं मिला। "+ दूसरा सामान" दबाएँ।',
     'grid.emptyTitle': 'जो सामान आप बेचते हैं, उसे जोड़ें',
@@ -112,6 +112,9 @@ export default {
     'item.default': 'नया आइटम',
     'qty.title': 'कितना?',
     'qty.other': 'दूसरी मात्रा',
+    'qty.button': '{name} कितना?',
+    'qty.point': 'दशमलव',
+    'qty.backspace': 'आखिरी अंक मिटाएँ',
 
     'field.shipping': 'डिलीवरी / शिपिंग शुल्क',
     'field.flatDiscount': 'बिल पर कुल छूट',
