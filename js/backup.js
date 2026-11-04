@@ -101,7 +101,8 @@ function readSettings(raw) {
     setupDone: raw.setupDone === true,
     billPrefix: raw.billPrefix === undefined ? 'BILL-' : text(raw.billPrefix, 16),
     lastBackupAt: timestamp(raw.lastBackupAt),
-    persistAsked: raw.persistAsked === true
+    persistAsked: raw.persistAsked === true,
+    installTipShown: raw.installTipShown === true
   });
 }
 

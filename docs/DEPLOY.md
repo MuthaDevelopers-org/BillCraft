@@ -2,8 +2,25 @@
 
 BillCraft is a set of static files. Any static host that serves HTTPS can run it: GitHub Pages, Netlify, Cloudflare Pages, or a plain web server. It has no server code and no database. Each person's data stays in their own browser.
 
+## Netlify Drop: the quickest way onto your phones
+No command line and no Git; your GitHub repository stays private.
+
+1. Run `npm run package`. This creates the `site` folder: only the app's files, plus a `_headers` file with the security headers.
+2. Open https://app.netlify.com/drop and sign in. A free account is enough.
+3. Drag the `site` folder onto the page. After a few seconds Netlify shows the address, for example `https://melodic-tarsier-1a2b3c.netlify.app`.
+4. Optional, but do it now: under **Site configuration → Change site name**, pick a name such as `ashacandles-bills`. The address becomes `https://ashacandles-bills.netlify.app`. Bills are stored per address, so choose the name before people start using the app.
+5. On the phone, open that address:
+   - **Android (Chrome):** tap **Install app** in Settings → App, or **⋮ → Install app** in Chrome.
+   - **iPhone (Safari):** tap **Share**, then **Add to Home Screen**.
+
+The app now opens from the home screen and works without internet.
+
+**To update:** run `npm run stamp` and `npm run package` again. Then, in Netlify, open the site's **Deploys** page and drag the new `site` folder onto it. Phones show "A new version of BillCraft is ready", and **Update now** loads it.
+
+**Quick test on the same Wi-Fi, without uploading:** run `npm run serve -- --lan` and open the printed address on the phone, for example `http://192.168.1.16:8089`. Bills work, but installing, offline use, the share sheet and voice need HTTPS, so they are off this way.
+
 ## What to publish
-Publish these files:
+`npm run package` puts exactly these into `site/`; on another host, publish the same files:
 - `index.html`, `manifest.webmanifest`, `sw.js`
 - the folders `css/`, `js/`, `vendor/`, `fonts/` and `icons/`
 - `THIRD_PARTY_NOTICES.md`
@@ -35,7 +52,7 @@ Permissions-Policy: camera=(), geolocation=(), payment=(), usb=(), microphone=(s
 3. Manual checks on real phones:
    - Scan a bill's QR code with Google Pay, PhonePe or Paytm, and confirm the payee and amount. Paying ₹1 to your own UPI ID is the safest test.
    - Install the app on an Android phone and an iPhone, switch on airplane mode, and make and share a bill.
-4. Commit, tag (for example `v1.0.0`) and publish the files.
+4. Commit and tag (for example `v1.1.0`), run `npm run package`, and upload `site/`.
 
 ## How updates reach people
 - **An open app** notices the new version in the background. It shows "A new version of BillCraft is ready" with **Update now**, and the same offer appears in Settings → App.
@@ -49,4 +66,4 @@ Permissions-Policy: camera=(), geolocation=(), payment=(), usb=(), microphone=(s
 - **Clearing the browser's site data deletes everything.** This is why the app reminds people to save backups.
 
 ## Testing on a phone during development
-`npm run serve -- --lan` opens the dev server to devices on your network, and prints the addresses to use. It is plain HTTP, so offline use and installing are off. Test those on an HTTPS deployment. Use `--lan` only on a network you trust.
+`npm run serve -- --lan` opens the dev server to devices on your network, and prints the addresses to use. It is plain HTTP, so offline use, installing, the share sheet and voice are off; test those on the HTTPS deployment. Use `--lan` only on a network you trust.

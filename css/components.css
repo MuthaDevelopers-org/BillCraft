@@ -366,7 +366,7 @@ textarea.form-control {
   border: none;
   outline: none;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 1rem; /* 16px: iOS zooms in on smaller fields */
   color: var(--text-main);
   cursor: pointer;
 }
@@ -1135,13 +1135,13 @@ textarea.form-control {
 .history-filter-select {
   width: 120px;
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: 1rem; /* 16px: iOS zooms in on smaller fields */
 }
 
 .history-search {
   flex: 1;
   min-width: 0;
-  font-size: 0.9rem;
+  font-size: 1rem; /* 16px: iOS zooms in on smaller fields */
 }
 
 .history-bill-meta {

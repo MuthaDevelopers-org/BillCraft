@@ -252,6 +252,8 @@ export default {
     'install.text': 'BillCraft को इस डिवाइस पर इंस्टॉल करें। यह होम स्क्रीन से खुलेगा और बिना इंटरनेट के चलेगा।',
     'install.button': 'ऐप इंस्टॉल करें',
     'install.ios': 'iPhone या iPad पर: Share दबाएँ, फिर Add to Home Screen।',
+    'install.tip': 'BillCraft को होम स्क्रीन पर जोड़ें: यह ऐप की तरह खुलेगा, बिना इंटरनेट के भी।',
+    'install.how': 'कैसे?',
     'update.ready': 'BillCraft का नया संस्करण तैयार है।',
     'update.now': 'अभी अपडेट करें',
     'settings.exportJson': 'बैकअप फ़ाइल सेव करें',

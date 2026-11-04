@@ -182,7 +182,8 @@ export class BusinessSettings {
     setupDone = false, // set once the shop setup is finished or skipped
     billPrefix = 'BILL-', // bill numbers are this followed by 001, 002, ...
     lastBackupAt = '', // ISO time of the last backup file saved
-    persistAsked = false // set once the browser was asked to keep this data
+    persistAsked = false, // set once the browser was asked to keep this data
+    installTipShown = false // set once the phone was shown the add-to-home-screen tip
   } = {}) {
     this.sellerName = sellerName;
     this.brandName = brandName;
@@ -204,6 +205,7 @@ export class BusinessSettings {
     this.billPrefix = String(billPrefix ?? 'BILL-');
     this.lastBackupAt = lastBackupAt;
     this.persistAsked = Boolean(persistAsked);
+    this.installTipShown = Boolean(installTipShown);
   }
 }
 

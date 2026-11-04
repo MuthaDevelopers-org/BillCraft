@@ -21,6 +21,8 @@ import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, s
 import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
 
 const DESKTOP_QUERY = window.matchMedia('(min-width: 1024px)');
+const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isAppleMobile = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const COARSE_POINTER = window.matchMedia('(pointer: coarse)');
 const STEP_COUNT = 2;
 
@@ -194,23 +196,48 @@ class BillCraftApp {
       this.installPrompt = null;
       this.renderAppCard();
     });
-    document.getElementById('btn-install-app').addEventListener('click', async () => {
-      const prompt = this.installPrompt;
-      if (!prompt) return;
-      this.installPrompt = null;
-      prompt.prompt();
-      await prompt.userChoice.catch(() => {});
-      this.renderAppCard();
-    });
+    document.getElementById('btn-install-app').addEventListener('click', () => this.promptInstall());
     document.getElementById('btn-update-app').addEventListener('click', () => this.applyUpdate());
+  }
+
+  /** The browser's own "Install app" prompt, where it offers one */
+  async promptInstall() {
+    const prompt = this.installPrompt;
+    if (!prompt) return;
+    try {
+      await prompt.prompt();
+    } catch {
+      return; // the browser wants a real tap; the offer stays for the next one
+    }
+    this.installPrompt = null;
+    await prompt.userChoice.catch(() => {});
+    this.renderAppCard();
+  }
+
+  /**
+   * Once, a little after the first saved bill on a phone: suggest adding the app to the
+   * home screen (the install prompt on Android, the Share steps in Settings on iPhone)
+   */
+  suggestInstall() {
+    if (this.settings.installTipShown || !COARSE_POINTER.matches || isInstalledApp()) return;
+    if (!this.installPrompt && !isAppleMobile()) return;
+    this.settings.installTipShown = true;
+    this.saveSettings();
+    const help = () => {
+      this.switchView('settings');
+      document.querySelector('.app-card').scrollIntoView({ block: 'center' });
+    };
+    this.showToast(this.t('install.tip'), 'info', {
+      label: this.t(this.installPrompt ? 'install.button' : 'install.how'),
+      onClick: () => (this.installPrompt ? this.promptInstall() : help())
+    }, 12000);
   }
 
   /** Settings → App: install (or how to, on iPhone), a waiting update, and the version */
   renderAppCard() {
-    const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-    const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const installed = isInstalledApp();
     document.getElementById('install-row').hidden = installed || !this.installPrompt;
-    document.getElementById('install-ios').hidden = installed || !apple;
+    document.getElementById('install-ios').hidden = installed || !isAppleMobile();
     document.getElementById('update-row').hidden = !this.updateWorker;
     document.getElementById('app-version').textContent = this.t('settings.version', { version: APP_VERSION });
   }
@@ -1184,6 +1211,7 @@ class BillCraftApp {
   /** The saved notice, with the next bill one tap away */
   afterSave(message = this.t('toast.billSaved', { number: this.currentInvoice.invoiceNumber })) {
     this.showToast(message, 'success', { label: this.t('nav.newBill'), onClick: () => this.startNewBill() });
+    if (!this.settings.installTipShown) setTimeout(() => this.suggestInstall(), 2500);
   }
 
   /** The button that sent or saved the bill shows a tick for a moment, with a burst of dots */

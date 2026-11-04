@@ -64,6 +64,18 @@ html.app-failed .boot-error,
   to { visibility: visible; }
 }
 
+/* Phones: a tap acts at once (no wait for a double-tap zoom), with a light tap highlight */
+button,
+a,
+label,
+summary,
+select,
+input,
+textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(4, 120, 87, 0.15);
+}
+
 /* For screen readers only */
 .sr-only {
   position: absolute;
