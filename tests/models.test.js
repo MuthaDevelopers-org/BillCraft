@@ -70,6 +70,10 @@ test('a total quantity is offered only when every line has the same unit', () =>
   const same = new Invoice({ items: [new InvoiceItem({ quantity: 0.1, unit: 'kg' }), new InvoiceItem({ quantity: 0.2, unit: 'KG ' })] });
   assert.equal(same.hasSingleUnit, true);
   assert.equal(same.totalItemsCount, 0.3);
+  const spelt = new Invoice({ items: [new InvoiceItem({ unit: 'kg' }), new InvoiceItem({ unit: 'Kilo' }), new InvoiceItem({ unit: 'किलो' })] });
+  assert.equal(spelt.hasSingleUnit, true, 'one unit, spelt three ways');
   const mixed = new Invoice({ items: [new InvoiceItem({ unit: 'pcs' }), new InvoiceItem({ unit: 'kg' })] });
   assert.equal(mixed.hasSingleUnit, false);
+  const typed = new Invoice({ items: [new InvoiceItem({ unit: 'Tray' }), new InvoiceItem({ unit: 'tray ' })] });
+  assert.equal(typed.hasSingleUnit, true);
 });

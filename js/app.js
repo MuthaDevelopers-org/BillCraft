@@ -14,6 +14,7 @@ import { BackupError, MAX_BACKUP_BYTES, invoicesToCSV, parseBackup } from './bac
 import { APP_VERSION } from './config.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
 import { BILL_FORMATS, normalizeShopCode, readBillNumber, shopCode } from './billNumber.js';
+import { UNITS, suggestForProduct, unitInfo, unitLabel } from './units.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService, fileNameFor } from './exporter.js';
@@ -72,7 +73,9 @@ class BillCraftApp {
     this.qrKey = '';
     this.previewFrame = 0;
     this.editingProductId = null;
+    this.productUnitPicked = false; // in the product form: a unit was picked, so the name no longer sets it
     this.expandedItemIds = new Set();
+    this.unitPickedItemIds = new Set(); // lines whose unit was picked by hand, so their name no longer sets it
     this.customerMode = null; // 'new' while a new customer is being typed
     this.searchQuery = '';
     this.qtyTarget = null; // what the quantity sheet is for
@@ -684,18 +687,29 @@ class BillCraftApp {
 
     const lines = document.getElementById('mobile-items-list');
     lines.addEventListener('click', (event) => {
+      const chip = event.target.closest('.unit-chip');
+      if (chip) {
+        this.pickLineUnit(chip);
+        return;
+      }
       const button = event.target.closest('[data-action]');
       if (button) this.onLineAction(button.closest('.bill-line'), button.dataset.action);
     });
     lines.addEventListener('input', (event) => {
       if (event.target.dataset.field) this.onLineInput(event.target);
     });
+    lines.addEventListener('keydown', (event) => this.moveUnitChoice(event));
+    // "scroll" does not bubble either: a strip of unit chips fades at its far edge until scrolled to the end
+    lines.addEventListener('scroll', (event) => {
+      if (event.target.classList?.contains('unit-picker-strip')) this.markStripEnd(event.target);
+    }, true);
     // "toggle" does not bubble, so it is caught on the way down
     lines.addEventListener('toggle', (event) => {
       const row = event.target.closest('.bill-line');
       if (!row) return;
       if (event.target.open) {
         this.expandedItemIds.add(row.dataset.itemId);
+        this.revealCheckedUnit(row.querySelector('.unit-picker'));
       } else {
         this.expandedItemIds.delete(row.dataset.itemId);
       }
@@ -831,7 +845,7 @@ class BillCraftApp {
         <button type="button" class="product-tile" data-product-id="${this.escape(product.id)}" style="--tile-hue: ${tileHue(product.name)}">
           <span class="tile-initial" aria-hidden="true">${this.escape(initialOf(product.name))}</span>
           <span class="tile-name">${this.escape(product.name)}</span>
-          <span class="tile-price"><span class="tile-amount">${formatCurrency(product.unitPrice, curr)}</span><small>/${this.escape(product.unit || 'pcs')}</small></span>
+          <span class="tile-price"><span class="tile-amount">${formatCurrency(product.unitPrice, curr)}</span><small>/${this.escape(this.unitText(product.unit || 'pcs'))}</small></span>
           <span class="tile-badge" hidden></span>
         </button>
         <button type="button" class="tile-qty" data-qty-product="${this.escape(product.id)}" aria-label="${this.escape(this.t('qty.button', { name: product.name }))}" title="${this.escape(this.t('qty.button', { name: product.name }))}"><span aria-hidden="true">🔢</span></button>
@@ -1033,13 +1047,14 @@ class BillCraftApp {
             <span class="form-label">${this.escape(this.t('item.namePh'))}</span>
             <input type="text" class="form-control" placeholder="${this.escape(this.t('item.namePh'))}" value="${this.escape(item.name)}" data-field="name" data-voice="text" />
           </label>
+          <div class="field-stack field-wide">
+            <span class="form-label">${this.escape(this.t('item.unit'))}</span>
+            <div class="unit-picker unit-picker-strip" role="radiogroup" aria-label="${this.escape(this.t('item.unit'))}">${this.unitChips()}</div>
+            <input type="text" class="form-control unit-other" maxlength="20" placeholder="${this.escape(this.t('product.unitPh'))}" aria-label="${this.escape(this.t('item.unit'))}" value="${this.escape(item.unit)}" data-field="unit" />
+          </div>
           <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.rate', { currency: curr }))}</span>
             <input type="number" inputmode="decimal" step="any" min="0" class="form-control" value="${item.unitPrice}" data-field="unitPrice" data-voice="number" />
-          </label>
-          <label class="field-stack">
-            <span class="form-label">${this.escape(this.t('item.unit'))}</span>
-            <input type="text" class="form-control" placeholder="${this.escape(this.t('item.unitPh'))}" value="${this.escape(item.unit)}" data-field="unit" />
           </label>
           <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.discPct'))}</span>
@@ -1056,6 +1071,7 @@ class BillCraftApp {
         </div>
       </details>
     `;
+    this.showUnitChoice(row.querySelector('.unit-picker'), row.querySelector('[data-field="unit"]'), item.unit);
     return row;
   }
 
@@ -1069,8 +1085,9 @@ class BillCraftApp {
     name.classList.toggle('is-placeholder', !item.name);
     row.querySelector('.line-total').textContent = formatCurrency(item.total, curr);
     const qtyButton = row.querySelector('.line-qty');
-    qtyButton.innerHTML = `${qty} <small>${this.escape(item.unit)}</small> <span class="line-qty-edit" aria-hidden="true">✏️</span>`;
-    qtyButton.setAttribute('aria-label', `${this.t('item.qty')}: ${qty} ${item.unit}`);
+    const unit = this.unitText(item.unit);
+    qtyButton.innerHTML = `${qty} <small>${this.escape(unit)}</small> <span class="line-qty-edit" aria-hidden="true">✏️</span>`;
+    qtyButton.setAttribute('aria-label', `${this.t('item.qty')}: ${qty} ${unit}`);
     row.querySelector('.line-rate').textContent = `× ${formatCurrency(item.unitPrice, curr)}`;
     // Only typed items can be saved as products; catalog items already are
     row.querySelector('[data-action="save-product"]').hidden = Boolean(item.productId);
@@ -1100,7 +1117,19 @@ class BillCraftApp {
     const item = row && this.currentInvoice.items.find(line => line.id === row.dataset.itemId);
     if (!item) return;
     const field = input.dataset.field;
-    item[field] = field === 'unitPrice' || field === 'discount' ? parseFloat(input.value) || 0 : input.value;
+    const oldName = item.name;
+    if (field === 'unit') {
+      // A standard unit is kept as its code, however it is spelt ('Kilo' → kg)
+      const typed = input.value.trim();
+      item.unit = unitInfo(typed)?.code || typed;
+      this.unitPickedItemIds.add(item.id);
+      const picker = row.querySelector('.unit-picker');
+      this.showUnitChoice(picker, input, typed, true);
+      this.revealCheckedUnit(picker);
+    } else {
+      item[field] = field === 'unitPrice' || field === 'discount' ? parseFloat(input.value) || 0 : input.value;
+    }
+    if (field === 'name') this.followNameUnit(row, item, oldName);
     this.updateBillLine(row, item);
     this.updateTotalsCard();
     this.schedulePreview();
@@ -1123,6 +1152,98 @@ class BillCraftApp {
     this.showToast(this.t('toast.catalogAdded'), 'success');
   }
 
+  /** A unit for screens: a standard one in the app language (kg → किलो), anything else as typed */
+  unitText(unit) {
+    return unitLabel(unit, key => this.t(key));
+  }
+
+  /** The chips of a unit picker: every standard unit with its icon, then "✏️ Other" for typing one */
+  unitChips() {
+    const chip = (attribute, icon, label) => `<button type="button" class="unit-chip" role="radio" aria-checked="false" ${attribute}>`
+      + `<span class="unit-chip-icon" aria-hidden="true">${this.escape(icon)}</span><span>${this.escape(label)}</span></button>`;
+    return UNITS.map(unit => chip(`data-unit="${this.escape(unit.code)}"`, unit.icon, this.t(`unit.${unit.code}`))).join('')
+      + chip('data-unit-other', '✏️', this.t('unitPick.other'));
+  }
+
+  /**
+   * Checks the chip of `unit`, or "Other" for a unit not in the list, whose text field
+   * then shows. `typing` keeps the field open while the person types in it. Only the
+   * checked chip is a Tab stop; the arrow keys move between chips.
+   */
+  showUnitChoice(picker, field, unit, typing = false) {
+    const code = unitInfo(unit)?.code;
+    field.hidden = Boolean(code) && !typing;
+    picker.querySelectorAll('.unit-chip').forEach(chip => {
+      const checked = chip.hasAttribute('data-unit-other') ? !code : chip.dataset.unit === code;
+      chip.setAttribute('aria-checked', String(checked));
+      chip.tabIndex = checked ? 0 : -1;
+    });
+  }
+
+  /** Scrolls a strip of unit chips so the checked one is in view */
+  revealCheckedUnit(picker) {
+    const chip = picker?.querySelector('[aria-checked="true"]');
+    if (!chip) return;
+    picker.scrollLeft = chip.offsetLeft - (picker.clientWidth - chip.offsetWidth) / 2;
+    this.markStripEnd(picker);
+  }
+
+  markStripEnd(strip) {
+    strip.classList.toggle('at-end', strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 4);
+  }
+
+  /** Arrow keys in a unit picker move to the next or previous chip and pick it */
+  moveUnitChoice(event) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    const chip = step && event.target.closest('.unit-chip');
+    if (!chip) return;
+    event.preventDefault();
+    const chips = [...chip.parentElement.querySelectorAll('.unit-chip')];
+    const next = chips[(chips.indexOf(chip) + step + chips.length) % chips.length];
+    next.focus();
+    next.click();
+  }
+
+  /** A unit chip in a line's Edit panel: the line changes at once; "Other" opens the field for typing one */
+  pickLineUnit(chip) {
+    const row = chip.closest('.bill-line');
+    const item = row && this.currentInvoice.items.find(line => line.id === row.dataset.itemId);
+    if (!item) return;
+    const picker = chip.closest('.unit-picker');
+    const field = row.querySelector('[data-field="unit"]');
+    this.unitPickedItemIds.add(item.id);
+    if (chip.hasAttribute('data-unit-other')) {
+      // A standard unit has its chip: the field starts empty, for a new one
+      if (unitInfo(field.value)) field.value = '';
+      this.showUnitChoice(picker, field, field.value, true);
+      field.focus();
+      return;
+    }
+    item.unit = chip.dataset.unit;
+    field.value = item.unit;
+    this.showUnitChoice(picker, field, item.unit);
+    this.updateBillLine(row, item);
+    this.schedulePreview();
+    this.saveDraft();
+  }
+
+  /**
+   * A typed item's unit follows its name, as in the product form ("Rice" → kg), while
+   * it is still the unit the old name suggested and none was picked by hand.
+   */
+  followNameUnit(row, item, oldName) {
+    if (item.productId || this.unitPickedItemIds.has(item.id)) return;
+    const suggested = name => suggestForProduct(name)?.unit || 'pcs';
+    const unit = suggested(item.name);
+    if (item.unit !== suggested(oldName) || unit === item.unit) return;
+    item.unit = unit;
+    const picker = row.querySelector('.unit-picker');
+    const field = row.querySelector('[data-field="unit"]');
+    field.value = unit;
+    this.showUnitChoice(picker, field, unit);
+    this.revealCheckedUnit(picker);
+  }
+
   /**
    * How much: presets in one tap, or any amount typed or spoken. For a product not on
    * the bill yet it adds a line; for a line it sets the quantity.
@@ -1131,9 +1252,10 @@ class BillCraftApp {
     const source = line || product;
     this.qtyTarget = { product, lineId: line ? line.id : null, tile };
     document.getElementById('qty-title').textContent = source.name || this.t('item.namePh');
-    document.getElementById('qty-unit').textContent = source.unit || '';
+    const unit = this.unitText(source.unit);
+    document.getElementById('qty-unit').textContent = unit;
     document.getElementById('qty-presets').innerHTML = presetsFor(source.unit).map(qty => `
-      <button type="button" class="qty-preset" data-qty="${qty}">${qty} <small>${this.escape(source.unit || '')}</small></button>
+      <button type="button" class="qty-preset" data-qty="${qty}">${qty} <small>${this.escape(unit)}</small></button>
     `).join('');
     const input = document.getElementById('qty-input');
     input.value = line ? roundQty(line.quantity) : '';
@@ -1156,7 +1278,7 @@ class BillCraftApp {
     }
     const curr = this.settings.currency || '₹';
     const total = new InvoiceItem({ ...source, quantity: qty }).total;
-    output.textContent = `${qty} ${source.unit || ''} × ${formatCurrency(source.unitPrice, curr)} = ${formatCurrency(total, curr)}`;
+    output.textContent = `${qty} ${this.unitText(source.unit)} × ${formatCurrency(source.unitPrice, curr)} = ${formatCurrency(total, curr)}`;
   }
 
   applyQty(value) {
@@ -1171,7 +1293,7 @@ class BillCraftApp {
       addProductLine(this.currentInvoice.items, product, qty);
     }
     this.afterItemsChange(!lineId && qty > 0 ? product.name : '');
-    if (tile && qty > 0) this.flyToBill(tile, `${lineId ? '' : '+'}${qty} ${product.unit || ''}`.trim());
+    if (tile && qty > 0) this.flyToBill(tile, `${lineId ? '' : '+'}${qty} ${this.unitText(product.unit)}`.trim());
   }
 
   /** Collapsed "More options" sections are always open on desktop. */
@@ -1527,6 +1649,50 @@ class BillCraftApp {
       e.preventDefault();
       this.saveProductFromModal();
     });
+
+    const units = document.getElementById('modal-prod-units');
+    const unitField = document.getElementById('modal-prod-unit');
+    units.addEventListener('click', (event) => {
+      const chip = event.target.closest('.unit-chip');
+      if (chip) this.pickProductUnit(chip);
+    });
+    units.addEventListener('keydown', (event) => this.moveUnitChoice(event));
+    unitField.addEventListener('input', () => {
+      this.productUnitPicked = true;
+      document.getElementById('modal-prod-unit-hint').hidden = true;
+      this.showUnitChoice(units, unitField, unitField.value, true);
+    });
+    document.getElementById('modal-prod-name').addEventListener('input', () => this.suggestProductUnit());
+  }
+
+  /** A chip in the product form: a standard unit, or "Other", which opens the field for typing one */
+  pickProductUnit(chip) {
+    const units = document.getElementById('modal-prod-units');
+    const field = document.getElementById('modal-prod-unit');
+    this.productUnitPicked = true;
+    document.getElementById('modal-prod-unit-hint').hidden = true;
+    if (chip.hasAttribute('data-unit-other')) {
+      if (unitInfo(field.value)) field.value = '';
+      this.showUnitChoice(units, field, field.value, true);
+      field.focus();
+      return;
+    }
+    field.value = chip.dataset.unit;
+    this.showUnitChoice(units, field, field.value);
+  }
+
+  /** Until a unit is picked, a new product's unit follows its name: "Toor dal" → kg */
+  suggestProductUnit() {
+    if (this.productUnitPicked) return;
+    const suggestion = suggestForProduct(document.getElementById('modal-prod-name').value);
+    const unit = suggestion ? suggestion.unit : 'pcs';
+    const field = document.getElementById('modal-prod-unit');
+    document.getElementById('modal-prod-unit-hint').hidden = !suggestion;
+    if (unit === field.value) return;
+    const units = document.getElementById('modal-prod-units');
+    field.value = unit;
+    this.showUnitChoice(units, field, unit);
+    pop(units.querySelector('[aria-checked="true"]'), 1.1);
   }
 
   renderCatalogView(searchQuery = '') {
@@ -1567,7 +1733,7 @@ class BillCraftApp {
         <div class="product-card-bottom">
           <div>
             <span class="product-card-price">${formatCurrency(p.unitPrice, curr)}</span>
-            <span class="product-card-unit">/${this.escape(p.unit || 'pcs')}</span>
+            <span class="product-card-unit">/${this.escape(this.unitText(p.unit || 'pcs'))}</span>
           </div>
           <div class="product-card-actions">
             <button class="btn btn-secondary btn-sm btn-add-prod-to-bill" data-id="${this.escape(p.id)}" title="${this.escape(this.t('catalog.addToBill'))}">
@@ -1636,8 +1802,15 @@ class BillCraftApp {
     document.getElementById('modal-prod-category').value = product && product.category !== 'General' ? product.category : '';
     document.getElementById('modal-prod-desc').value = product ? (product.description || '') : '';
     document.getElementById('modal-prod-price').value = product ? product.unitPrice : '';
-    document.getElementById('modal-prod-unit').value = product ? (product.unit || 'pcs') : 'pcs';
     document.getElementById('modal-prod-sku').value = product ? (product.sku || '') : '';
+    const units = document.getElementById('modal-prod-units');
+    const unitField = document.getElementById('modal-prod-unit');
+    units.innerHTML = this.unitChips();
+    unitField.value = product ? (product.unit || 'pcs') : 'pcs';
+    this.showUnitChoice(units, unitField, unitField.value);
+    // A new product's unit follows its name until one is picked; a saved product keeps its unit
+    this.productUnitPicked = Boolean(product);
+    document.getElementById('modal-prod-unit-hint').hidden = true;
 
     this.openModal('modal-product');
     if (!COARSE_POINTER.matches) document.getElementById('modal-prod-name').focus();
@@ -1648,7 +1821,8 @@ class BillCraftApp {
     const category = document.getElementById('modal-prod-category').value.trim();
     const description = document.getElementById('modal-prod-desc').value.trim();
     const unitPrice = parseFloat(document.getElementById('modal-prod-price').value) || 0;
-    const unit = document.getElementById('modal-prod-unit').value.trim() || 'pcs';
+    const typedUnit = document.getElementById('modal-prod-unit').value.trim();
+    const unit = unitInfo(typedUnit)?.code || typedUnit || 'pcs';
     const sku = document.getElementById('modal-prod-sku').value.trim();
 
     if (!name) {

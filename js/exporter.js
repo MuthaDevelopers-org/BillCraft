@@ -10,6 +10,7 @@
 
 import { formatCurrency, formatDate } from './models.js';
 import { createTranslator, statusLabel } from './i18n/i18n.js';
+import { unitLabel } from './units.js';
 
 // Served with the app (vendor/, byte-identical to the npm releases; see
 // THIRD_PARTY_NOTICES.md). They load on first use, so starting never waits for them.
@@ -318,7 +319,7 @@ export const ExporterService = {
       lines.push(t('wa.item', {
         name: it.name || t('item.default'),
         qty: it.quantity,
-        unit: it.unit,
+        unit: unitLabel(it.unit || 'pcs', t),
         rate: formatCurrency(it.unitPrice, curr),
         total: formatCurrency(it.total, curr)
       }));

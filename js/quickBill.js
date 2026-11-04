@@ -5,27 +5,8 @@
 
 import { InvoiceItem } from './models.js';
 
-// Units sold by weight, volume or length. Tapping such a product asks how much.
-const MEASURED_UNITS = new Set([
-  'kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms',
-  'g', 'gm', 'gms', 'gram', 'grams',
-  'l', 'lt', 'ltr', 'litre', 'litres', 'liter', 'liters', 'ml',
-  'm', 'mtr', 'metre', 'metres', 'meter', 'meters', 'cm',
-  'ft', 'feet', 'inch', 'inches', 'yard', 'yards',
-  'किलो', 'किग्रा', 'ग्राम', 'लीटर', 'मीटर'
-]);
-
-const MEASURED_PRESETS = [0.25, 0.5, 1, 1.5, 2, 5];
-const COUNT_PRESETS = [1, 2, 3, 5, 10, 12];
-
-export function isMeasuredUnit(unit) {
-  return MEASURED_UNITS.has(String(unit || '').trim().toLowerCase().replace(/\.$/, ''));
-}
-
-/** Quick choices for the quantity sheet */
-export function presetsFor(unit) {
-  return isMeasuredUnit(unit) ? MEASURED_PRESETS : COUNT_PRESETS;
-}
+// Which units ask how much, and their one-tap amounts, come from the unit list (js/units.js)
+export { isMeasuredUnit, presetsFor } from './units.js';
 
 /** Rounds to 3 decimals, so 0.1 + 0.2 is 0.3 */
 export function roundQty(qty) {

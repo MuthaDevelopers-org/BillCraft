@@ -19,8 +19,8 @@ const MARKUP_FILES = ['index.html'];
 const messageKeys = new Set(Object.keys(english.messages));
 const knownPrefixes = new Set([...messageKeys].map(key => key.split('.')[0]));
 
-// Keys built at runtime, such as t(`title.${viewName}`)
-const DYNAMIC_PREFIXES = ['title.'];
+// Keys built at runtime, such as t(`title.${viewName}`) and t(`unit.${code}`)
+const DYNAMIC_PREFIXES = ['title.', 'unit.'];
 
 function keysReferencedIn(text) {
   const found = new Set();

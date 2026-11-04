@@ -2038,6 +2038,67 @@ textarea.form-control {
 }
 
 /* ============================================================
+   UNITS: standard units as chips with icons, then "Other" (js/units.js)
+   ============================================================ */
+.unit-picker {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* In a bill line's Edit panel the chips are one row that scrolls sideways. The far
+   edge fades while there are more chips to see (.at-end is set by js/app.js). */
+.unit-picker-strip {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+}
+
+.unit-picker-strip.at-end {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.unit-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0.35rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.unit-chip[aria-checked="true"] {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+  font-weight: 700;
+}
+
+.unit-chip-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.unit-other {
+  margin-top: 0.5rem;
+}
+
+/* ============================================================
    MOTION (driven by js/motion.js)
    ============================================================ */
 /* Flying "+1" bubbles and the burst of dots float above everything */

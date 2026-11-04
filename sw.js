@@ -7,7 +7,7 @@
 
 // The app files and their version, written by scripts/stamp-sw.mjs (npm run stamp).
 // Do not edit by hand: tests/sw.test.js checks them against the files.
-const VERSION = '1.0.0-61aba9330357';
+const VERSION = '1.0.0-62b0aa53959d';
 const FILES = [
   'css/base.css',
   'css/components.css',
@@ -40,6 +40,7 @@ const FILES = [
   'js/safe.js',
   'js/storage.js',
   'js/templates.js',
+  'js/units.js',
   'js/voice.js',
   'manifest.webmanifest',
   'vendor/html2canvas-1.4.1.min.js',

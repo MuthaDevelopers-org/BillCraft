@@ -7,12 +7,14 @@
  * 4. 'thermal': Compact POS Receipt (Monospace, Mobile-friendly)
  *
  * Every label comes from `tb`, the translator for the bill language
- * (see createTranslator in i18n/i18n.js). Only that language is used here.
+ * (see createTranslator in i18n/i18n.js), standard units too (kg → किलो on a
+ * Hindi bill). Only that language is used here.
  */
 
 import { formatCurrency, formatDate } from './models.js';
 import { createTranslator, statusBadgeClass, statusLabel } from './i18n/i18n.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
+import { unitLabel } from './units.js';
 
 /** The "Pay by" line of a Due bill that has a due date, built by `line(date)`; '' for any other bill */
 function payBy(invoice, language, line) {
@@ -56,7 +58,7 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
         ${item.description ? `<div class="item-sub">${escapeHTML(item.description)}</div>` : ''}
       </td>
       <td class="num">${formatCurrency(item.unitPrice, curr)}</td>
-      <td class="num" style="font-weight: 600;">${item.quantity} ${escapeHTML(item.unit || 'pcs')}</td>
+      <td class="num" style="font-weight: 600;">${item.quantity} ${escapeHTML(unitLabel(item.unit || 'pcs', t))}</td>
       ${hasDiscount ? `<td class="num" style="color: #64748b;">${item.discount > 0 ? `${item.discount}%` : '-'}</td>` : ''}
       <td class="num" style="font-weight: 700; color: #0f172a;">${formatCurrency(item.total, curr)}</td>
     </tr>
@@ -198,7 +200,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
         ${item.description ? `<br/><small style="color: #64748b;">${escapeHTML(item.description)}</small>` : ''}
       </td>
       <td class="num">${formatCurrency(item.unitPrice, curr)}</td>
-      <td class="num">${item.quantity} ${escapeHTML(item.unit || 'pcs')}</td>
+      <td class="num">${item.quantity} ${escapeHTML(unitLabel(item.unit || 'pcs', t))}</td>
       ${hasDiscount ? `<td class="num">${item.discount > 0 ? `${item.discount}%` : '-'}</td>` : ''}
       <td class="num"><strong>${formatCurrency(item.total, curr)}</strong></td>
     </tr>
@@ -321,7 +323,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
         ${item.discount > 0 ? `<div style="font-size: 0.78rem; color: #64748b;">${escapeHTML(t('bill.disc'))} ${item.discount}%</div>` : ''}
       </td>
       <td class="num" style="color: #475569;">${formatCurrency(item.unitPrice, curr)}</td>
-      <td class="num" style="font-weight: 600;">${item.quantity} ${escapeHTML(item.unit || 'pcs')}</td>
+      <td class="num" style="font-weight: 600;">${item.quantity} ${escapeHTML(unitLabel(item.unit || 'pcs', t))}</td>
       <td class="num" style="font-weight: 800; color: #0f172a;">${formatCurrency(item.total, curr)}</td>
     </tr>
   `).join('');
@@ -432,7 +434,7 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
       <span>${formatCurrency(item.total, curr)}</span>
     </div>
     <div class="pos-item-math">
-      ${item.quantity} ${escapeHTML(item.unit || 'pcs')} x ${formatCurrency(item.unitPrice, curr)} ${item.discount > 0 ? `(-${item.discount}%)` : ''}
+      ${item.quantity} ${escapeHTML(unitLabel(item.unit || 'pcs', t))} x ${formatCurrency(item.unitPrice, curr)} ${item.discount > 0 ? `(-${item.discount}%)` : ''}
     </div>
   `).join('<div style="height: 6px;"></div>');
 

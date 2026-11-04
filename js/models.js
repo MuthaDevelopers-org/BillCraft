@@ -4,6 +4,7 @@
 
 import english from './i18n/locales/en.js';
 import { spellAmount } from './i18n/numberWords.js';
+import { unitInfo } from './units.js';
 
 /**
  * Rounds an amount to paise (2 decimals), half up. Shifting by exponent avoids
@@ -153,9 +154,9 @@ export class Invoice {
     return Math.round(this.items.reduce((count, item) => count + item.quantity, 0) * 1000) / 1000;
   }
 
-  /** True when every line uses the same unit, so a total quantity means something */
+  /** True when every line uses the same unit ("Kilo" and "kg" are one), so a total quantity means something */
   get hasSingleUnit() {
-    return new Set(this.items.map(item => String(item.unit || 'pcs').trim().toLowerCase())).size <= 1;
+    return new Set(this.items.map(item => unitInfo(item.unit || 'pcs')?.code || String(item.unit).trim().toLowerCase())).size <= 1;
   }
 }
 

@@ -783,6 +783,19 @@
             <input type="text" id="modal-prod-name" class="form-control" required data-voice="text" data-i18n-placeholder="product.namePh" placeholder="e.g. Handmade Soy Candle" />
           </div>
 
+          <!-- The unit follows the name until one is picked (js/units.js) -->
+          <div class="form-group">
+            <span class="form-label" id="modal-prod-unit-label" data-i18n="product.unit">Unit Type</span>
+            <div class="unit-picker" id="modal-prod-units" role="radiogroup" aria-labelledby="modal-prod-unit-label"></div>
+            <input type="text" id="modal-prod-unit" class="form-control unit-other" maxlength="20" aria-labelledby="modal-prod-unit-label" data-i18n-placeholder="product.unitPh" placeholder="Type the unit, e.g. tray, roll" value="pcs" hidden />
+            <small class="field-help" id="modal-prod-unit-hint" data-i18n="unitPick.suggested" hidden>Picked from the name. Tap another to change.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-prod-price" data-i18n="product.price">Price *</label>
+            <input type="number" inputmode="decimal" step="any" min="0" id="modal-prod-price" class="form-control" required data-voice="number" placeholder="450" />
+          </div>
+
           <div class="form-grid-2">
             <div class="form-group">
               <label class="form-label" for="modal-prod-category" data-i18n="product.category">Category</label>
@@ -791,17 +804,6 @@
             <div class="form-group">
               <label class="form-label" for="modal-prod-sku" data-i18n="product.sku">Item Code (SKU)</label>
               <input type="text" id="modal-prod-sku" class="form-control" data-i18n-placeholder="product.skuPh" placeholder="e.g. CAN-01" />
-            </div>
-          </div>
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label" for="modal-prod-price" data-i18n="product.price">Price *</label>
-              <input type="number" inputmode="decimal" step="any" min="0" id="modal-prod-price" class="form-control" required data-voice="number" placeholder="450" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="modal-prod-unit" data-i18n="product.unit">Unit Type</label>
-              <input type="text" id="modal-prod-unit" class="form-control" data-i18n-placeholder="product.unitPh" placeholder="pcs, jar, kg, box" value="pcs" />
             </div>
           </div>
 
