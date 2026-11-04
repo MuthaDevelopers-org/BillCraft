@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -9,7 +9,11 @@ import english from '../js/i18n/locales/en.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = file => readFileSync(path.join(root, file), 'utf8');
 
-const SOURCE_FILES = ['js/app.js', 'js/templates.js', 'js/exporter.js', 'js/i18n/i18n.js', 'js/voice.js', 'js/models.js'];
+// Every app script except the locale files themselves
+const SOURCE_FILES = [
+  ...readdirSync(path.join(root, 'js')).filter(file => file.endsWith('.js')).map(file => `js/${file}`),
+  ...readdirSync(path.join(root, 'js/i18n')).filter(file => file.endsWith('.js')).map(file => `js/i18n/${file}`)
+];
 const MARKUP_FILES = ['index.html'];
 
 const messageKeys = new Set(Object.keys(english.messages));

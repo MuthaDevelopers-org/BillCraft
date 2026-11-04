@@ -291,6 +291,11 @@ export const ExporterService = {
     return deliver(await billPDF(element), filename);
   },
 
+  /** Any finished file: the share sheet on phones, a download elsewhere (see deliver) */
+  deliverFile(blob, filename) {
+    return deliver(blob, filename);
+  },
+
   triggerPrint() {
     window.print();
   },

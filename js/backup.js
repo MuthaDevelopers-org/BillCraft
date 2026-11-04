@@ -199,3 +199,42 @@ export function buildBackup({ settings, catalog, invoices, counter, appVersion }
     counter
   }, null, 2);
 }
+
+// --- Spreadsheet export ---
+
+/**
+ * One CSV cell. Text that a spreadsheet would run as a formula (starting with
+ * = + - @, tab or return) gets a leading apostrophe; quotes, commas and line
+ * breaks are quoted. Numbers are written as plain numbers.
+ */
+export function csvCell(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+  let text = String(value ?? '');
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/**
+ * The bills as a CSV file for Excel or an accountant: a byte-order mark (so Hindi
+ * names open correctly), column headings in the app language, one row per bill,
+ * amounts as plain numbers with two decimals, and dates as YYYY-MM-DD.
+ */
+export function invoicesToCSV(invoices, { t, statusLabel }) {
+  const headings = ['csv.number', 'csv.date', 'csv.customer', 'csv.phone', 'csv.items', 'csv.subtotal',
+    'csv.discount', 'csv.delivery', 'csv.total', 'csv.status', 'csv.payBy'].map(key => t(key));
+  const money = amount => Number(Number(amount || 0).toFixed(2));
+  const rows = invoices.map(inv => [
+    inv.invoiceNumber,
+    inv.date,
+    inv.customer.name,
+    inv.customer.phone,
+    inv.items.length,
+    money(inv.subtotal),
+    money(inv.billDiscount),
+    money(inv.shippingFee),
+    money(inv.grandTotal),
+    statusLabel(t, inv.status),
+    inv.status === 'Due' ? inv.dueDate : ''
+  ]);
+  return `﻿${[headings, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+}

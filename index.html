@@ -195,7 +195,9 @@
                 <div class="form-grid-2 customer-fields" id="customer-fields" hidden>
                   <div class="form-group">
                     <label class="form-label" for="cust-name" data-i18n="field.customerName">Customer Name</label>
-                    <input type="text" id="cust-name" class="form-control" data-voice="text" data-i18n-placeholder="ph.customerName" placeholder="e.g. Priya Sharma" autocomplete="off" />
+                    <input type="text" id="cust-name" class="form-control" data-voice="text" data-i18n-placeholder="ph.customerName" placeholder="e.g. Priya Sharma" autocomplete="off" list="customer-suggestions" />
+                    <!-- Every past customer; picking one fills in their phone and address -->
+                    <datalist id="customer-suggestions"></datalist>
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="cust-phone" data-i18n="field.customerPhone">Phone / WhatsApp</label>
@@ -391,6 +393,10 @@
                 <option value="draft" data-i18n="status.draft">Draft</option>
               </select>
               <input type="text" id="history-search-input" class="form-control history-search" data-i18n-placeholder="history.search" placeholder="Search by name or bill no." />
+              <button type="button" class="btn btn-secondary btn-sm history-csv" id="btn-export-csv" data-i18n-title="history.exportCsvTitle" title="Download these bills as a spreadsheet">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span data-i18n="history.exportCsv">Excel (CSV)</span>
+              </button>
             </div>
           </div>
           <div class="card-body card-body-flush">

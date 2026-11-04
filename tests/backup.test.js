@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { BackupError, buildBackup, parseBackup } from '../js/backup.js';
+import { BackupError, buildBackup, csvCell, invoicesToCSV, parseBackup } from '../js/backup.js';
 import { escapeHTML, safeImageSrc } from '../js/safe.js';
 
 const refused = (json, reason) => assert.throws(() => parseBackup(json), error => error instanceof BackupError && error.reason === reason);
@@ -160,4 +160,33 @@ test('only inline pictures and the app QR code are accepted as images', () => {
     assert.equal(safeImageSrc(bad), '', String(bad));
   }
   assert.equal(safeImageSrc(`data:image/png;base64,${'A'.repeat(3_000_000)}`), '', 'too large');
+});
+
+test('CSV cells are quoted when needed, and formulas are disarmed', () => {
+  assert.equal(csvCell('Meera'), 'Meera');
+  assert.equal(csvCell('Deshmukh, Meera'), '"Deshmukh, Meera"');
+  assert.equal(csvCell('5" candle'), '"5"" candle"');
+  assert.equal(csvCell('line one\nline two'), '"line one\nline two"');
+  assert.equal(csvCell('=HYPERLINK("http://x","click")'), `"'=HYPERLINK(""http://x"",""click"")"`);
+  assert.equal(csvCell('+91 98765 43210'), "'+91 98765 43210");
+  assert.equal(csvCell('-5'), "'-5");
+  assert.equal(csvCell('@SUM(A1)'), "'@SUM(A1)");
+  assert.equal(csvCell(1280.5), '1280.5');
+  assert.equal(csvCell(0), '0');
+  assert.equal(csvCell(null), '');
+});
+
+test('the bills spreadsheet has headings, plain numbers and a BOM for Hindi names', async () => {
+  const { Invoice } = await import('../js/models.js');
+  const { createTranslator, statusLabel } = await import('../js/i18n/i18n.js');
+  const english = (await import('../js/i18n/locales/en.js')).default;
+  const csv = invoicesToCSV([
+    new Invoice({ invoiceNumber: 'BILL-002', date: '2026-11-03', status: 'Due', dueDate: '2026-11-10', customer: { name: 'मीरा', phone: '99123 45678' }, items: [{ name: 'Candle', quantity: 2, unitPrice: 450 }], shippingFee: 50, billDiscount: 30 }),
+    new Invoice({ invoiceNumber: '=cmd', date: '2026-11-02', status: 'Paid', customer: {}, items: [] })
+  ], { t: createTranslator(english).t, statusLabel });
+  assert.ok(csv.startsWith('﻿'));
+  const lines = csv.slice(1).trimEnd().split('\r\n');
+  assert.equal(lines[0], 'Bill number,Date,Customer,Phone,Items,Subtotal,Bill discount,Delivery,Total,Status,Pay by');
+  assert.equal(lines[1], 'BILL-002,2026-11-03,मीरा,99123 45678,1,900,30,50,920,Due,2026-11-10');
+  assert.equal(lines[2], "'=cmd,2026-11-02,,,0,0,0,0,0,Paid,");
 });

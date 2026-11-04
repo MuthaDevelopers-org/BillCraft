@@ -10,7 +10,7 @@ import {
 } from './quickBill.js';
 import { celebrate, countTo, enter, exit, flyTo, nudge, pop, shrink, slideIn } from './motion.js';
 import { StorageService, StorageFullError } from './storage.js';
-import { BackupError, MAX_BACKUP_BYTES, parseBackup } from './backup.js';
+import { BackupError, MAX_BACKUP_BYTES, invoicesToCSV, parseBackup } from './backup.js';
 import { APP_VERSION } from './config.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
 import { renderInvoice } from './templates.js';
@@ -500,6 +500,7 @@ class BillCraftApp {
     inputs.forEach(id => {
       document.getElementById(id).addEventListener('input', () => this.syncFormToInvoice());
     });
+    document.getElementById('cust-name').addEventListener('change', () => this.fillKnownCustomer());
 
     const search = document.getElementById('product-search');
     search.addEventListener('input', () => {
@@ -1009,6 +1010,7 @@ class BillCraftApp {
   refreshHistoryData() {
     const invoices = StorageService.getInvoices();
     this.recent = recentCustomers(invoices);
+    this.customers = recentCustomers(invoices, Infinity);
     this.rankedProducts = rankProducts(StorageService.getCatalog(), invoices);
   }
 
@@ -1033,6 +1035,19 @@ class BillCraftApp {
       <button type="button" class="chip${chip.key === active ? ' active' : ''}" data-chip="${chip.key}" aria-pressed="${chip.key === active}">${this.escape(chip.label)}</button>
     `).join('');
     document.getElementById('customer-fields').hidden = active !== 'new';
+    document.getElementById('customer-suggestions').innerHTML = this.customers
+      .map(customer => `<option value="${this.escape(customer.name)}">${this.escape(customer.phone)}</option>`).join('');
+  }
+
+  /** A name typed or picked that matches a past customer fills in their phone and address, if empty */
+  fillKnownCustomer() {
+    const name = document.getElementById('cust-name').value.trim().toLowerCase();
+    const phone = document.getElementById('cust-phone');
+    const match = name && this.customers.find(customer => customer.name.trim().toLowerCase() === name);
+    if (!match || phone.value.trim()) return;
+    phone.value = match.phone || '';
+    document.getElementById('cust-address').value = match.address || '';
+    this.syncFormToInvoice();
   }
 
   chooseCustomer(key) {
@@ -1441,6 +1456,7 @@ class BillCraftApp {
   bindHistoryEvents() {
     document.getElementById('history-search-input').addEventListener('input', () => this.renderHistoryView());
     document.getElementById('history-filter-status').addEventListener('change', () => this.renderHistoryView());
+    document.getElementById('btn-export-csv').addEventListener('click', () => this.exportBillsCSV());
     // One listener for the buttons of every bill, since the list is redrawn often
     document.getElementById('view-history').addEventListener('click', (event) => {
       const button = event.target.closest('[data-bill-action]');
@@ -1469,10 +1485,7 @@ class BillCraftApp {
     const all = StorageService.getInvoices();
     this.renderHistoryStats(all);
 
-    const filter = document.getElementById('history-filter-status').value;
-    const query = document.getElementById('history-search-input').value.trim().toLowerCase();
-    const list = all.filter(inv => (filter === 'all' || inv.status.toLowerCase() === filter)
-      && (!query || [inv.invoiceNumber, inv.customer.name, inv.customer.phone].some(text => String(text || '').toLowerCase().includes(query))));
+    const list = this.shownBills(all);
 
     const tableBody = document.getElementById('history-table-body');
     const cards = document.getElementById('mobile-history-list');
@@ -1540,6 +1553,30 @@ class BillCraftApp {
         </div>
       </div>
     `).join('');
+  }
+
+  /** The bills that History's status filter and search let through */
+  shownBills(all = StorageService.getInvoices()) {
+    const filter = document.getElementById('history-filter-status').value;
+    const query = document.getElementById('history-search-input').value.trim().toLowerCase();
+    return all.filter(inv => (filter === 'all' || inv.status.toLowerCase() === filter)
+      && (!query || [inv.invoiceNumber, inv.customer.name, inv.customer.phone].some(text => String(text || '').toLowerCase().includes(query))));
+  }
+
+  /** The bills shown in History as a spreadsheet file (CSV), for Excel or an accountant */
+  async exportBillsCSV() {
+    const bills = this.shownBills();
+    if (!bills.length) {
+      this.showToast(this.t('toast.csvEmpty'), 'info');
+      return;
+    }
+    const csv = invoicesToCSV(bills, { t: this.t.bind(this), statusLabel });
+    const result = await ExporterService.deliverFile(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `billcraft-bills-${todayISO()}.csv`);
+    if (result.status === 'needs-tap') {
+      this.showToast(this.t('toast.fileReady'), 'success', { label: this.t('action.share'), onClick: () => result.share().catch(() => {}) }, 15000);
+    } else if (result.status !== 'cancelled') {
+      this.showToast(this.t('toast.csvReady'), 'success');
+    }
   }
 
   /** The buttons on a saved bill: open, repeat, delete, mark paid, remind */
@@ -1666,17 +1703,14 @@ class BillCraftApp {
   }
 
   /** Saves every product, bill and setting to a file, and remembers when */
-  exportBackup() {
+  async exportBackup() {
     const json = StorageService.exportBackupJSON(APP_VERSION);
-    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `billcraft-backup-${todayISO()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Some browsers cancel the download if the address is revoked at once
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    const result = await ExporterService.deliverFile(new Blob([json], { type: 'application/json' }), `billcraft-backup-${todayISO()}.json`);
+    if (result.status === 'cancelled') return;
+    if (result.status === 'needs-tap') {
+      this.showToast(this.t('toast.fileReady'), 'success', { label: this.t('action.share'), onClick: () => result.share().catch(() => {}) }, 15000);
+      return;
+    }
     this.settings.lastBackupAt = new Date().toISOString();
     this.saveSettings();
     this.renderBackupStatus();
