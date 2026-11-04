@@ -36,6 +36,32 @@ test('bill totals apply item discount, flat discount and delivery', () => {
   assert.equal(invoice.totalItemsCount, 3);
 });
 
+test('a discount is a percent of the subtotal or an amount, and never more than the subtotal', () => {
+  const items = () => [new InvoiceItem({ quantity: 3, unitPrice: 111.11 })]; // 333.33
+  const percent = new Invoice({ items: items(), discountType: 'percent', discountValue: 10, shippingFee: 50 });
+  assert.equal(percent.discountAmount, 33.33);
+  assert.equal(percent.grandTotal, 350);
+  const amount = new Invoice({ items: items(), discountType: 'amount', discountValue: 20 });
+  assert.equal(amount.discountAmount, 20);
+  assert.equal(amount.grandTotal, 313.33);
+  assert.equal(new Invoice({ items: items(), discountType: 'percent', discountValue: 250 }).discountValue, 100, 'at most 100%');
+  assert.equal(new Invoice({ items: items(), discountType: 'amount', discountValue: 500 }).discountAmount, 333.33);
+  assert.equal(new Invoice({ items: items(), discountType: 'sideways', discountValue: 5 }).discountType, 'percent');
+  assert.equal(new Invoice({ items: [], discountType: 'amount', discountValue: 50, shippingFee: 30 }).grandTotal, 30, 'no items: delivery only');
+});
+
+test('a bill from before 1.1 keeps its flat discount as an amount', () => {
+  const old = new Invoice({ items: [new InvoiceItem({ quantity: 1, unitPrice: 500 })], billDiscount: 30 });
+  assert.equal(old.discountType, 'amount');
+  assert.equal(old.discountValue, 30);
+  assert.equal(old.grandTotal, 470);
+  const stored = JSON.parse(JSON.stringify(old));
+  assert.equal('billDiscount' in stored, false, 'new bills are stored with a type and a value');
+  assert.equal(new Invoice(stored).grandTotal, 470);
+  const none = new Invoice({ items: [], billDiscount: 0 });
+  assert.equal(none.discountType, 'percent', 'a new bill starts with percent');
+});
+
 test('amounts round to paise, half up, without binary errors', () => {
   assert.equal(roundMoney(10.075), 10.08);
   assert.equal(roundMoney(1.005), 1.01);

@@ -44,6 +44,8 @@ export default {
     'common.valuedCustomer': 'Valued Customer',
     'common.localSale': 'Local Sale',
     'common.notAvailable': 'N/A',
+    'common.none': 'None',
+    'common.other': 'Other',
 
     // Language picker
     'lang.title': 'Choose your language',
@@ -145,15 +147,18 @@ export default {
     'unit.plate': 'plate',
     'unit.cup': 'cup',
     'unit.hr': 'hr',
-    'unitPick.other': 'Other',
     'unitPick.suggested': 'Picked from the name. Tap another to change.',
 
     // Totals and bill-level fields
     'field.shipping': 'Delivery / Shipping Fee',
-    'field.flatDiscount': 'Flat Bill Discount',
+    'field.discount': 'Discount',
+    'discount.type': 'Percent or amount',
+    'discount.percent': 'Percent',
+    'discount.amount': 'Amount',
     'field.terms': 'Terms / Notes for Customer',
     'ph.terms': 'Thank you for supporting small business!',
     'sum.subtotal': 'Subtotal:',
+    'sum.delivery': 'Delivery:',
     'sum.grandTotal': 'Grand Total:',
     'sum.readAloud': 'Read total aloud',
     'btn.saveHistory': 'Save to History',

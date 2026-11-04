@@ -18,6 +18,9 @@ export function roundMoney(value) {
 
 const nonNegative = value => Math.max(0, Number(value) || 0);
 
+/** A bill's discount is a percent of the subtotal or an amount of money */
+export const DISCOUNT_TYPES = ['percent', 'amount'];
+
 /** The currencies a bill can use (Settings). Amounts are placed into markup, so no other value is kept. */
 export const CURRENCIES = ['₹', '$', '€', '£', 'AED', 'SAR', 'SGD'];
 
@@ -120,7 +123,9 @@ export class Invoice {
     },
     items = [],
     shippingFee = 0,
-    billDiscount = 0, // flat discount
+    discountType = 'percent', // a 'percent' of the subtotal, or an 'amount' of money
+    discountValue = 0,
+    billDiscount = 0, // bills from before 1.1: a flat amount, read as discountType 'amount'
     notes = '', // empty prints the bill language's thank-you line
     template = 'modern',
     status = 'Paid', // Paid, Due, Draft
@@ -134,7 +139,10 @@ export class Invoice {
     this.customer = { ...customer };
     this.items = items.map(item => item instanceof InvoiceItem ? item : new InvoiceItem(item));
     this.shippingFee = nonNegative(shippingFee);
-    this.billDiscount = nonNegative(billDiscount);
+    const legacy = !nonNegative(discountValue) && nonNegative(billDiscount) > 0;
+    this.discountType = legacy || discountType === 'amount' ? 'amount' : 'percent';
+    this.discountValue = legacy ? nonNegative(billDiscount) : nonNegative(discountValue);
+    if (this.discountType === 'percent') this.discountValue = Math.min(100, this.discountValue);
     this.notes = notes;
     this.template = template;
     this.status = status;
@@ -146,8 +154,14 @@ export class Invoice {
     return roundMoney(this.items.reduce((sum, item) => sum + item.total, 0));
   }
 
+  /** The discount in money: a percent of the subtotal, or an amount, never more than the subtotal */
+  get discountAmount() {
+    const value = this.discountType === 'percent' ? (this.subtotal * this.discountValue) / 100 : this.discountValue;
+    return roundMoney(Math.min(this.subtotal, value));
+  }
+
   get grandTotal() {
-    return roundMoney(Math.max(0, this.subtotal - this.billDiscount) + this.shippingFee);
+    return roundMoney(this.subtotal - this.discountAmount + this.shippingFee);
   }
 
   get totalItemsCount() {

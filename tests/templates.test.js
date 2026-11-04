@@ -35,6 +35,26 @@ const hostileSettings = () => new BusinessSettings({
 // Every tag the hostile values could create; none may appear as real markup
 const FORBIDDEN = /<(script|img src=x|svg onload|iframe|marquee|b>|i>|u>|kg>|x>|phone>|addr>|upi>|pay>)/i;
 
+test('every bill design shows a percent discount with its amount, and a delivery charge', () => {
+  const invoice = new Invoice({
+    invoiceNumber: 'AC-2611-001', date: '2026-11-04',
+    items: [new InvoiceItem({ name: 'Candle', quantity: 2, unitPrice: 450 })],
+    discountType: 'percent', discountValue: 10, shippingFee: 50
+  });
+  const settings = new BusinessSettings({ brandName: 'Asha Candles' });
+  for (const template of TEMPLATES) {
+    const html = renderInvoice(template, invoice, settings, '', createTranslator(english, 'en'));
+    assert.match(html, /\(10%\)/, `${template} names the percent`);
+    assert.match(html, /90\.00/, `${template} shows the discount amount`);
+    assert.match(html, /50\.00/, `${template} shows the delivery charge`);
+    assert.match(html, /860\.00/, `${template} shows the total`);
+  }
+  const none = new Invoice({ invoiceNumber: 'AC-2611-002', date: '2026-11-04', items: [new InvoiceItem({ name: 'Candle', quantity: 1, unitPrice: 450 })] });
+  for (const template of TEMPLATES) {
+    assert.doesNotMatch(renderInvoice(template, none, settings, '', createTranslator(english, 'en')), /\(0%\)/, `${template} has no empty discount`);
+  }
+});
+
 test('every bill design escapes what the user typed', () => {
   for (const template of TEMPLATES) {
     const html = renderInvoice(template, hostileInvoice(), hostileSettings(), '', createTranslator(english));

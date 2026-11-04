@@ -5,7 +5,7 @@
 
 import { Product, Invoice, InvoiceItem, formatCurrency, formatDate, newId, todayISO } from './models.js';
 import {
-  addProductLine, customerKey, isMeasuredUnit, presetsFor, rankProducts,
+  addProductLine, customerKey, deliveryPresets, discountPresets, isMeasuredUnit, presetsFor, rankProducts,
   recentCustomers, roundQty, setLineQuantity, stepQuantity
 } from './quickBill.js';
 import { celebrate, countTo, enter, exit, flyTo, nudge, pop, shrink, slideIn } from './motion.js';
@@ -19,7 +19,7 @@ import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
 import { ExporterService, fileNameFor } from './exporter.js';
 import { DEFAULT_LANGUAGE, availableLanguages, getLanguage } from './i18n/languages.js';
-import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, statusBadgeClass, statusLabel } from './i18n/i18n.js';
+import { applyTranslations, createTranslator, discountLabel, loadLocale, setDocumentLanguage, statusBadgeClass, statusLabel } from './i18n/i18n.js';
 import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
 
 const DESKTOP_QUERY = window.matchMedia('(min-width: 1024px)');
@@ -614,6 +614,26 @@ class BillCraftApp {
       document.getElementById(id).addEventListener('input', () => this.syncFormToInvoice());
     });
     document.getElementById('cust-name').addEventListener('change', () => this.fillKnownCustomer());
+
+    // Delivery and discount: a chip sets the amount, "Other" opens its field
+    [['delivery-chips', 'inv-shipping'], ['discount-chips', 'inv-discount']].forEach(([chipsId, fieldId]) => {
+      const chips = document.getElementById(chipsId);
+      const field = document.getElementById(fieldId);
+      chips.addEventListener('click', (event) => {
+        const chip = event.target.closest('.choice-chip');
+        if (chip) this.pickCharge(chips, field, chip);
+      });
+      chips.addEventListener('keydown', (event) => this.moveChoice(event));
+      field.addEventListener('input', () => this.showChoice(chips, field, String(parseFloat(field.value) || 0), true));
+    });
+    // A percent typed over 100 counts as 100; the field says so once the person moves on
+    document.getElementById('inv-discount').addEventListener('change', (event) => {
+      if (this.currentInvoice.discountType === 'percent' && parseFloat(event.target.value) > 100) event.target.value = '100';
+    });
+    document.getElementById('discount-type').addEventListener('click', (event) => {
+      const option = event.target.closest('[data-discount-type]');
+      if (option) this.setDiscountType(option.dataset.discountType);
+    });
     // A number typed by hand is kept as typed, even when the date changes
     document.getElementById('inv-number').addEventListener('input', () => {
       this.currentInvoice.numberAuto = false;
@@ -687,7 +707,7 @@ class BillCraftApp {
 
     const lines = document.getElementById('mobile-items-list');
     lines.addEventListener('click', (event) => {
-      const chip = event.target.closest('.unit-chip');
+      const chip = event.target.closest('.choice-chip');
       if (chip) {
         this.pickLineUnit(chip);
         return;
@@ -698,10 +718,10 @@ class BillCraftApp {
     lines.addEventListener('input', (event) => {
       if (event.target.dataset.field) this.onLineInput(event.target);
     });
-    lines.addEventListener('keydown', (event) => this.moveUnitChoice(event));
+    lines.addEventListener('keydown', (event) => this.moveChoice(event));
     // "scroll" does not bubble either: a strip of unit chips fades at its far edge until scrolled to the end
     lines.addEventListener('scroll', (event) => {
-      if (event.target.classList?.contains('unit-picker-strip')) this.markStripEnd(event.target);
+      if (event.target.classList?.contains('choices-strip')) this.markStripEnd(event.target);
     }, true);
     // "toggle" does not bubble, so it is caught on the way down
     lines.addEventListener('toggle', (event) => {
@@ -709,7 +729,7 @@ class BillCraftApp {
       if (!row) return;
       if (event.target.open) {
         this.expandedItemIds.add(row.dataset.itemId);
-        this.revealCheckedUnit(row.querySelector('.unit-picker'));
+        this.revealChoice(row.querySelector('.choices'));
       } else {
         this.expandedItemIds.delete(row.dataset.itemId);
       }
@@ -792,8 +812,9 @@ class BillCraftApp {
       note: document.getElementById('cust-notes').value || ''
     };
 
-    this.currentInvoice.shippingFee = parseFloat(document.getElementById('inv-shipping').value) || 0;
-    this.currentInvoice.billDiscount = parseFloat(document.getElementById('inv-discount').value) || 0;
+    this.currentInvoice.shippingFee = Math.max(0, parseFloat(document.getElementById('inv-shipping').value) || 0);
+    const discount = Math.max(0, parseFloat(document.getElementById('inv-discount').value) || 0);
+    this.currentInvoice.discountValue = this.currentInvoice.discountType === 'percent' ? Math.min(100, discount) : discount;
     this.currentInvoice.notes = document.getElementById('inv-footer-notes').value || '';
 
     this.updateTotalsCard();
@@ -814,7 +835,8 @@ class BillCraftApp {
     document.getElementById('cust-notes').value = this.currentInvoice.customer.note || '';
 
     document.getElementById('inv-shipping').value = this.currentInvoice.shippingFee || '';
-    document.getElementById('inv-discount').value = this.currentInvoice.billDiscount || '';
+    document.getElementById('inv-discount').value = this.currentInvoice.discountValue || '';
+    this.renderChargeChips();
     document.getElementById('inv-footer-notes').value = this.currentInvoice.notes || '';
 
     const templateSelect = document.getElementById('preview-template-select');
@@ -1049,8 +1071,8 @@ class BillCraftApp {
           </label>
           <div class="field-stack field-wide">
             <span class="form-label">${this.escape(this.t('item.unit'))}</span>
-            <div class="unit-picker unit-picker-strip" role="radiogroup" aria-label="${this.escape(this.t('item.unit'))}">${this.unitChips()}</div>
-            <input type="text" class="form-control unit-other" maxlength="20" placeholder="${this.escape(this.t('product.unitPh'))}" aria-label="${this.escape(this.t('item.unit'))}" value="${this.escape(item.unit)}" data-field="unit" />
+            <div class="choices choices-strip" role="radiogroup" aria-label="${this.escape(this.t('item.unit'))}">${this.unitChips()}</div>
+            <input type="text" class="form-control choice-other" maxlength="20" placeholder="${this.escape(this.t('product.unitPh'))}" aria-label="${this.escape(this.t('item.unit'))}" value="${this.escape(item.unit)}" data-field="unit" />
           </div>
           <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.rate', { currency: curr }))}</span>
@@ -1071,7 +1093,7 @@ class BillCraftApp {
         </div>
       </details>
     `;
-    this.showUnitChoice(row.querySelector('.unit-picker'), row.querySelector('[data-field="unit"]'), item.unit);
+    this.showUnitChoice(row.querySelector('.choices'), row.querySelector('[data-field="unit"]'), item.unit);
     return row;
   }
 
@@ -1123,9 +1145,9 @@ class BillCraftApp {
       const typed = input.value.trim();
       item.unit = unitInfo(typed)?.code || typed;
       this.unitPickedItemIds.add(item.id);
-      const picker = row.querySelector('.unit-picker');
+      const picker = row.querySelector('.choices');
       this.showUnitChoice(picker, input, typed, true);
-      this.revealCheckedUnit(picker);
+      this.revealChoice(picker);
     } else {
       item[field] = field === 'unitPrice' || field === 'discount' ? parseFloat(input.value) || 0 : input.value;
     }
@@ -1154,34 +1176,45 @@ class BillCraftApp {
 
   /** A unit for screens: a standard one in the app language (kg → किलो), anything else as typed */
   unitText(unit) {
-    return unitLabel(unit, key => this.t(key));
+    return unitLabel(unit, this.ui.t);
   }
 
-  /** The chips of a unit picker: every standard unit with its icon, then "✏️ Other" for typing one */
+  /** One chip of a choice row (units, delivery, discount); a `choice` of null makes it "Other" */
+  choiceChip(choice, icon, label) {
+    const attribute = choice === null ? 'data-choice-other' : `data-choice="${this.escape(String(choice))}"`;
+    const iconHTML = icon ? `<span class="choice-icon" aria-hidden="true">${this.escape(icon)}</span>` : '';
+    return `<button type="button" class="choice-chip" role="radio" aria-checked="false" ${attribute}>${iconHTML}<span>${this.escape(label)}</span></button>`;
+  }
+
+  /** The unit picker's chips: every standard unit with its icon, then "✏️ Other" for typing one */
   unitChips() {
-    const chip = (attribute, icon, label) => `<button type="button" class="unit-chip" role="radio" aria-checked="false" ${attribute}>`
-      + `<span class="unit-chip-icon" aria-hidden="true">${this.escape(icon)}</span><span>${this.escape(label)}</span></button>`;
-    return UNITS.map(unit => chip(`data-unit="${this.escape(unit.code)}"`, unit.icon, this.t(`unit.${unit.code}`))).join('')
-      + chip('data-unit-other', '✏️', this.t('unitPick.other'));
+    return UNITS.map(unit => this.choiceChip(unit.code, unit.icon, this.t(`unit.${unit.code}`))).join('')
+      + this.choiceChip(null, '✏️', this.t('common.other'));
   }
 
   /**
-   * Checks the chip of `unit`, or "Other" for a unit not in the list, whose text field
-   * then shows. `typing` keeps the field open while the person types in it. Only the
-   * checked chip is a Tab stop; the arrow keys move between chips.
+   * Checks the chip whose data-choice is `choice`, or "Other" when no chip has it, and
+   * then shows the field for typing. `typing` keeps the field open while the person
+   * types in it. Only the checked chip is a Tab stop; the arrow keys move between chips.
    */
-  showUnitChoice(picker, field, unit, typing = false) {
-    const code = unitInfo(unit)?.code;
-    field.hidden = Boolean(code) && !typing;
-    picker.querySelectorAll('.unit-chip').forEach(chip => {
-      const checked = chip.hasAttribute('data-unit-other') ? !code : chip.dataset.unit === code;
+  showChoice(picker, field, choice, typing = false) {
+    const chips = [...picker.querySelectorAll('.choice-chip')];
+    const match = choice === null ? null : chips.find(chip => chip.dataset.choice === String(choice));
+    field.hidden = Boolean(match) && !typing;
+    chips.forEach(chip => {
+      const checked = match ? chip === match : chip.hasAttribute('data-choice-other');
       chip.setAttribute('aria-checked', String(checked));
       chip.tabIndex = checked ? 0 : -1;
     });
   }
 
-  /** Scrolls a strip of unit chips so the checked one is in view */
-  revealCheckedUnit(picker) {
+  /** A standard unit checks its chip, whatever the spelling; any other unit checks "Other" */
+  showUnitChoice(picker, field, unit, typing = false) {
+    this.showChoice(picker, field, unitInfo(unit)?.code ?? null, typing);
+  }
+
+  /** Scrolls a strip of chips so the checked one is in view */
+  revealChoice(picker) {
     const chip = picker?.querySelector('[aria-checked="true"]');
     if (!chip) return;
     picker.scrollLeft = chip.offsetLeft - (picker.clientWidth - chip.offsetWidth) / 2;
@@ -1192,13 +1225,13 @@ class BillCraftApp {
     strip.classList.toggle('at-end', strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 4);
   }
 
-  /** Arrow keys in a unit picker move to the next or previous chip and pick it */
-  moveUnitChoice(event) {
+  /** Arrow keys in a row of chips move to the next or previous chip and pick it */
+  moveChoice(event) {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-    const chip = step && event.target.closest('.unit-chip');
+    const chip = step && event.target.closest('.choice-chip');
     if (!chip) return;
     event.preventDefault();
-    const chips = [...chip.parentElement.querySelectorAll('.unit-chip')];
+    const chips = [...chip.parentElement.querySelectorAll('.choice-chip')];
     const next = chips[(chips.indexOf(chip) + step + chips.length) % chips.length];
     next.focus();
     next.click();
@@ -1209,17 +1242,17 @@ class BillCraftApp {
     const row = chip.closest('.bill-line');
     const item = row && this.currentInvoice.items.find(line => line.id === row.dataset.itemId);
     if (!item) return;
-    const picker = chip.closest('.unit-picker');
+    const picker = chip.closest('.choices');
     const field = row.querySelector('[data-field="unit"]');
     this.unitPickedItemIds.add(item.id);
-    if (chip.hasAttribute('data-unit-other')) {
+    if (chip.hasAttribute('data-choice-other')) {
       // A standard unit has its chip: the field starts empty, for a new one
       if (unitInfo(field.value)) field.value = '';
       this.showUnitChoice(picker, field, field.value, true);
       field.focus();
       return;
     }
-    item.unit = chip.dataset.unit;
+    item.unit = chip.dataset.choice;
     field.value = item.unit;
     this.showUnitChoice(picker, field, item.unit);
     this.updateBillLine(row, item);
@@ -1237,11 +1270,11 @@ class BillCraftApp {
     const unit = suggested(item.name);
     if (item.unit !== suggested(oldName) || unit === item.unit) return;
     item.unit = unit;
-    const picker = row.querySelector('.unit-picker');
+    const picker = row.querySelector('.choices');
     const field = row.querySelector('[data-field="unit"]');
     field.value = unit;
     this.showUnitChoice(picker, field, unit);
-    this.revealCheckedUnit(picker);
+    this.revealChoice(picker);
   }
 
   /**
@@ -1311,7 +1344,13 @@ class BillCraftApp {
   /** Totals count up (or down) to the new amount */
   updateTotalsCard() {
     const money = value => formatCurrency(value, this.settings.currency || '₹');
+    const { discountAmount, shippingFee } = this.currentInvoice;
     countTo(document.getElementById('summary-subtotal'), this.currentInvoice.subtotal, money);
+    document.getElementById('summary-discount-row').hidden = !(discountAmount > 0);
+    document.getElementById('summary-discount-label').textContent = `${discountLabel(this.t('bill.discount'), this.currentInvoice)}:`;
+    document.getElementById('summary-discount').textContent = `- ${money(discountAmount)}`;
+    document.getElementById('summary-delivery-row').hidden = !(shippingFee > 0);
+    document.getElementById('summary-delivery').textContent = `+ ${money(shippingFee)}`;
     countTo(document.getElementById('summary-grand-total'), this.currentInvoice.grandTotal, money);
     document.getElementById('summary-words').textContent = this.ui.words(this.currentInvoice.grandTotal);
     this.updateBar();
@@ -1329,6 +1368,58 @@ class BillCraftApp {
   }
 
   /** Paid, Due or Draft, with the pill behind the chosen one */
+  /** Delivery and discount chips: None, the usual amounts in the bill's currency, and "✏️ Other" */
+  renderChargeChips() {
+    const curr = this.settings.currency || '₹';
+    const money = value => formatCurrency(value, curr, 0);
+    const { shippingFee, discountType, discountValue } = this.currentInvoice;
+    const chips = (presets, label) => [
+      this.choiceChip(0, '', this.t('common.none')),
+      ...presets.map(value => this.choiceChip(value, '', label(value))),
+      this.choiceChip(null, '✏️', this.t('common.other'))
+    ].join('');
+
+    const delivery = document.getElementById('delivery-chips');
+    delivery.innerHTML = chips(deliveryPresets(curr), money);
+    this.showChoice(delivery, document.getElementById('inv-shipping'), String(shippingFee));
+
+    const discount = document.getElementById('discount-chips');
+    const field = document.getElementById('inv-discount');
+    discount.innerHTML = chips(discountPresets(discountType, curr), discountType === 'percent' ? value => `${value}%` : money);
+    field.max = discountType === 'percent' ? '100' : '';
+    this.showChoice(discount, field, String(discountValue));
+
+    const toggle = document.getElementById('discount-type');
+    toggle.querySelectorAll('[data-discount-type]').forEach(option => {
+      option.setAttribute('aria-checked', String(option.dataset.discountType === discountType));
+    });
+    toggle.style.setProperty('--active', discountType === 'amount' ? 1 : 0);
+    document.getElementById('discount-currency').textContent = curr;
+  }
+
+  /** A delivery or discount chip: the amount changes at once. "Other" opens the field with the amount, ready to type over. */
+  pickCharge(chips, field, chip) {
+    if (chip.hasAttribute('data-choice-other')) {
+      this.showChoice(chips, field, null, true);
+      field.focus();
+      field.select();
+      return;
+    }
+    field.value = chip.dataset.choice === '0' ? '' : chip.dataset.choice;
+    this.showChoice(chips, field, chip.dataset.choice);
+    this.syncFormToInvoice();
+    pop(chip, 1.08);
+  }
+
+  /** Percent or amount. The discount starts again at None, since 10% and ₹10 are different discounts. */
+  setDiscountType(type) {
+    if (type === this.currentInvoice.discountType) return;
+    this.currentInvoice.discountType = type;
+    document.getElementById('inv-discount').value = '';
+    this.syncFormToInvoice();
+    this.renderChargeChips();
+  }
+
   renderStatusToggle() {
     const toggle = document.getElementById('status-toggle');
     const options = [...toggle.querySelectorAll('[data-status]')];
@@ -1653,10 +1744,10 @@ class BillCraftApp {
     const units = document.getElementById('modal-prod-units');
     const unitField = document.getElementById('modal-prod-unit');
     units.addEventListener('click', (event) => {
-      const chip = event.target.closest('.unit-chip');
+      const chip = event.target.closest('.choice-chip');
       if (chip) this.pickProductUnit(chip);
     });
-    units.addEventListener('keydown', (event) => this.moveUnitChoice(event));
+    units.addEventListener('keydown', (event) => this.moveChoice(event));
     unitField.addEventListener('input', () => {
       this.productUnitPicked = true;
       document.getElementById('modal-prod-unit-hint').hidden = true;
@@ -1671,13 +1762,13 @@ class BillCraftApp {
     const field = document.getElementById('modal-prod-unit');
     this.productUnitPicked = true;
     document.getElementById('modal-prod-unit-hint').hidden = true;
-    if (chip.hasAttribute('data-unit-other')) {
+    if (chip.hasAttribute('data-choice-other')) {
       if (unitInfo(field.value)) field.value = '';
       this.showUnitChoice(units, field, field.value, true);
       field.focus();
       return;
     }
-    field.value = chip.dataset.unit;
+    field.value = chip.dataset.choice;
     this.showUnitChoice(units, field, field.value);
   }
 

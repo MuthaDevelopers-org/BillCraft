@@ -243,7 +243,7 @@
   }
 
   /* With a mouse a sideways strip is awkward: a line's unit chips wrap instead */
-  .unit-picker-strip {
+  .choices-strip {
     flex-wrap: wrap;
     overflow-x: visible;
     -webkit-mask-image: none;

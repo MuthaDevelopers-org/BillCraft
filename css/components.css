@@ -1372,6 +1372,15 @@ textarea.form-control {
   color: var(--warning-text);
 }
 
+/* Two choices: the discount's percent / amount switch */
+.segmented-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.segmented-2 .segmented-pill {
+  width: calc((100% - 8px) / 2);
+}
+
 /* ============================================================
    FAST BILL: product tiles, bill lines and the quantity sheet
    ============================================================ */
@@ -2038,18 +2047,19 @@ textarea.form-control {
 }
 
 /* ============================================================
-   UNITS: standard units as chips with icons, then "Other" (js/units.js)
+   CHOICES: a row of chips with "Other" for typing (units, delivery,
+   discount). Units come from js/units.js.
    ============================================================ */
-.unit-picker {
+.choices {
   position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
-/* In a bill line's Edit panel the chips are one row that scrolls sideways. The far
+/* In a bill line's Edit panel the unit chips are one row that scrolls sideways. The far
    edge fades while there are more chips to see (.at-end is set by js/app.js). */
-.unit-picker-strip {
+.choices-strip {
   flex-wrap: nowrap;
   overflow-x: auto;
   padding-bottom: 0.3rem;
@@ -2059,12 +2069,12 @@ textarea.form-control {
   mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
 }
 
-.unit-picker-strip.at-end {
+.choices-strip.at-end {
   -webkit-mask-image: none;
   mask-image: none;
 }
 
-.unit-chip {
+.choice-chip {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -2083,19 +2093,43 @@ textarea.form-control {
   transition: background-color 150ms, border-color 150ms;
 }
 
-.unit-chip[aria-checked="true"] {
+.choice-chip[aria-checked="true"] {
   border-color: var(--theme-accent);
   background: var(--theme-accent-soft);
   font-weight: 700;
 }
 
-.unit-chip-icon {
+.choice-icon {
   font-size: 1.1rem;
   line-height: 1;
 }
 
-.unit-other {
+.choice-other {
   margin-top: 0.5rem;
+}
+
+/* An emoji before a small label, at a size where it can be made out */
+.label-icon {
+  font-size: 1.05rem;
+  vertical-align: -0.1em;
+}
+
+/* The discount's heading, with its percent / amount switch beside it */
+.discount-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.discount-head .form-label {
+  margin-bottom: 0;
+}
+
+.discount-type {
+  flex: none;
+  width: 7.5rem;
 }
 
 /* ============================================================

@@ -65,6 +65,18 @@ test('the bill message shows dates in the bill language, the due date, and a tid
   assert.match(hindiText, /3 नव॰ 2026/);
 });
 
+test('the bill message names a percent discount and shows its amount', () => {
+  const settings = new BusinessSettings({ brandName: 'Asha Candles' });
+  const percent = Object.assign(bill(), { discountType: 'percent', discountValue: 10, shippingFee: 50 });
+  const text = ExporterService.formatInvoiceText(percent, settings, createTranslator(english, 'en'));
+  assert.match(text, /^Discount \(10%\): -₹ 90\.00$/m);
+  assert.match(text, /^Delivery: \+₹ 50\.00$/m);
+  const amount = Object.assign(bill(), { discountType: 'amount', discountValue: 25 });
+  assert.match(ExporterService.formatInvoiceText(amount, settings, createTranslator(english, 'en')), /^Discount: -₹ 25\.00$/m);
+  const hindiText = ExporterService.formatInvoiceText(percent, settings, createTranslator(hindi, 'hi'));
+  assert.match(hindiText, /^छूट \(10%\): -₹ 90\.00$/m);
+});
+
 test('a reminder names the bill, the amount due, the date and how to pay', () => {
   const settings = new BusinessSettings({ brandName: 'Asha Candles', sellerName: 'Asha', phone: '98765 43210', upiId: 'asha@okaxis' });
   const text = ExporterService.formatReminderText(bill(), settings, createTranslator(english, 'en'));

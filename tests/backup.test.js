@@ -65,6 +65,7 @@ test('a hostile backup is rebuilt from safe values', () => {
     invoices: [{
       id: 'inv_1', invoiceNumber: 'B'.repeat(500), date: '2026-13-45', dueDate: 'tomorrow',
       status: 'Hacked', template: 'nope', shippingFee: 'NaN', billDiscount: Infinity,
+      discountType: '<b>', discountValue: -10,
       customer: 'not an object',
       items: [
         { id: 'inv_1', name: 'Dup id', quantity: -5, unitPrice: 1e300, discount: 500, productId: '"><svg>' },
@@ -101,7 +102,9 @@ test('a hostile backup is rebuilt from safe values', () => {
   assert.equal(bill.status, 'Paid');
   assert.equal(bill.template, 'modern');
   assert.equal(bill.shippingFee, 0);
-  assert.equal(bill.billDiscount, 0);
+  assert.equal(bill.discountType, 'percent');
+  assert.equal(bill.discountValue, 0);
+  assert.equal(bill.discountAmount, 0);
   assert.deepEqual(bill.customer, { name: '', phone: '', address: '', note: '' });
   assert.equal(bill.items.length, 1);
   const [item] = bill.items;
@@ -184,13 +187,30 @@ test('the bills spreadsheet has headings, plain numbers and a BOM for Hindi name
   const english = (await import('../js/i18n/locales/en.js')).default;
   const csv = invoicesToCSV([
     new Invoice({ invoiceNumber: 'BILL-002', date: '2026-11-03', status: 'Due', dueDate: '2026-11-10', customer: { name: 'मीरा', phone: '99123 45678' }, items: [{ name: 'Candle', quantity: 2, unitPrice: 450 }], shippingFee: 50, billDiscount: 30 }),
-    new Invoice({ invoiceNumber: '=cmd', date: '2026-11-02', status: 'Paid', customer: {}, items: [] })
+    new Invoice({ invoiceNumber: '=cmd', date: '2026-11-02', status: 'Paid', customer: {}, items: [] }),
+    new Invoice({ invoiceNumber: 'AC-2611-003', date: '2026-11-04', status: 'Paid', customer: {}, items: [{ name: 'Soap', quantity: 3, unitPrice: 40 }], discountType: 'percent', discountValue: 10 })
   ], { t: createTranslator(english).t, statusLabel });
   assert.ok(csv.startsWith('﻿'));
   const lines = csv.slice(1).trimEnd().split('\r\n');
   assert.equal(lines[0], 'Bill number,Date,Customer,Phone,Items,Subtotal,Bill discount,Delivery,Total,Status,Pay by');
   assert.equal(lines[1], 'BILL-002,2026-11-03,मीरा,99123 45678,1,900,30,50,920,Due,2026-11-10');
   assert.equal(lines[2], "'=cmd,2026-11-02,,,0,0,0,0,0,Paid,");
+  assert.equal(lines[3], 'AC-2611-003,2026-11-04,,,1,120,12,0,108,Paid,', 'a percent discount is written as its amount');
+});
+
+test('a bill keeps its discount through a backup, and an old flat discount reads as an amount', () => {
+  const items = [{ name: 'Candle', quantity: 2, unitPrice: 450 }];
+  const json = JSON.stringify({ app: 'BillCraft', format: 3, invoices: [
+    { id: 'inv_1', invoiceNumber: 'AC-2611-001', date: '2026-11-04', items, discountType: 'percent', discountValue: 10 },
+    { id: 'inv_2', invoiceNumber: 'AC-2611-002', date: '2026-11-04', items, discountType: 'amount', discountValue: 75 },
+    { id: 'inv_3', invoiceNumber: 'BILL-003', date: '2026-10-30', items, billDiscount: 30 },
+    { id: 'inv_4', invoiceNumber: 'AC-2611-004', date: '2026-11-04', items, discountType: 'percent', discountValue: 1e9 }
+  ] });
+  const [percent, amount, old, huge] = parseBackup(json).invoices;
+  assert.deepEqual([percent.discountType, percent.discountValue, percent.discountAmount], ['percent', 10, 90]);
+  assert.deepEqual([amount.discountType, amount.discountValue, amount.discountAmount], ['amount', 75, 75]);
+  assert.deepEqual([old.discountType, old.discountValue, old.grandTotal], ['amount', 30, 870]);
+  assert.equal(huge.discountValue, 100);
 });
 
 test('a backup from before 1.1 keeps its counter with its prefix', () => {

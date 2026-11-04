@@ -6,7 +6,7 @@
  * changes nothing; unknown fields are dropped and odd values get safe defaults.
  */
 
-import { BusinessSettings, CURRENCIES, Invoice, InvoiceItem, Product, newId } from './models.js';
+import { BusinessSettings, CURRENCIES, DISCOUNT_TYPES, Invoice, InvoiceItem, Product, newId } from './models.js';
 import { getLanguage } from './i18n/languages.js';
 import { safeImageSrc } from './safe.js';
 import { BILL_FORMATS, DEFAULT_BILL_FORMAT, normalizeShopCode } from './billNumber.js';
@@ -176,6 +176,8 @@ function readInvoice(raw, seen) {
     },
     items: items.map(item => readItem(item, seen)).filter(Boolean),
     shippingFee: amount(raw.shippingFee),
+    discountType: oneOf(raw.discountType, DISCOUNT_TYPES, 'percent'),
+    discountValue: amount(raw.discountValue),
     billDiscount: amount(raw.billDiscount),
     notes: text(raw.notes, MAX_LONG_TEXT),
     template: oneOf(raw.template, TEMPLATES, 'modern'),
@@ -257,7 +259,7 @@ export function invoicesToCSV(invoices, { t, statusLabel }) {
     inv.customer.phone,
     inv.items.length,
     money(inv.subtotal),
-    money(inv.billDiscount),
+    money(inv.discountAmount),
     money(inv.shippingFee),
     money(inv.grandTotal),
     statusLabel(t, inv.status),

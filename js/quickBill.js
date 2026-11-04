@@ -8,6 +8,20 @@ import { InvoiceItem } from './models.js';
 // Which units ask how much, and their one-tap amounts, come from the unit list (js/units.js)
 export { isMeasuredUnit, presetsFor } from './units.js';
 
+/** One-tap discounts in percent */
+export const PERCENT_PRESETS = [5, 10, 15, 20];
+
+/** One-tap delivery charges: rupee amounts for shops in India, smaller steps in other currencies */
+export function deliveryPresets(currency) {
+  return currency === '₹' ? [30, 50, 100] : [5, 10, 20];
+}
+
+/** One-tap discounts, in percent or in money */
+export function discountPresets(type, currency) {
+  if (type === 'percent') return PERCENT_PRESETS;
+  return currency === '₹' ? [20, 50, 100] : [2, 5, 10];
+}
+
 /** Rounds to 3 decimals, so 0.1 + 0.2 is 0.3 */
 export function roundQty(qty) {
   return Math.round((Number(qty) || 0) * 1000) / 1000;

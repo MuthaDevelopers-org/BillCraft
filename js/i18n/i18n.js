@@ -91,6 +91,11 @@ export function statusLabel(t, status) {
   return key ? t(key) : String(status || '');
 }
 
+/** A discount's `name` with its percent, "Discount (10%)", or the name alone for an amount */
+export function discountLabel(name, invoice) {
+  return invoice.discountType === 'percent' ? `${name} (${Number(invoice.discountValue.toFixed(2))}%)` : name;
+}
+
 /** The badge colour for a status: green for Paid, red for Due, grey for Draft */
 export function statusBadgeClass(status) {
   return { paid: 'badge-paid', due: 'badge-due', draft: 'badge-draft' }[String(status || '').toLowerCase()] || 'badge-draft';

@@ -160,15 +160,23 @@
                 <details class="more-options">
                   <summary class="more-summary" data-i18n="step.more">More options</summary>
                   <div class="more-body">
-                    <div class="form-grid-2">
-                      <div class="form-group">
-                        <label class="form-label" for="inv-shipping" data-i18n="field.shipping">Delivery / Shipping Fee</label>
-                        <input type="number" inputmode="decimal" step="any" min="0" id="inv-shipping" class="form-control" placeholder="0" />
+                    <!-- Delivery and discount: None, the usual amounts, or "Other" to type one (chips by app.js) -->
+                    <div class="form-group">
+                      <span class="form-label" id="delivery-label"><span class="label-icon" aria-hidden="true">🚚</span> <span data-i18n="field.shipping">Delivery / Shipping Fee</span></span>
+                      <div class="choices" id="delivery-chips" role="radiogroup" aria-labelledby="delivery-label"></div>
+                      <input type="number" inputmode="decimal" step="any" min="0" id="inv-shipping" class="form-control choice-other" placeholder="0" aria-labelledby="delivery-label" hidden />
+                    </div>
+                    <div class="form-group">
+                      <div class="discount-head">
+                        <span class="form-label" id="discount-label"><span class="label-icon" aria-hidden="true">🏷️</span> <span data-i18n="field.discount">Discount</span></span>
+                        <div class="segmented segmented-2 discount-type" id="discount-type" role="radiogroup" data-i18n-aria="discount.type" aria-label="Percent or amount">
+                          <span class="segmented-pill" aria-hidden="true"></span>
+                          <button type="button" role="radio" aria-checked="true" data-discount-type="percent" data-i18n-aria="discount.percent" aria-label="Percent">%</button>
+                          <button type="button" role="radio" aria-checked="false" data-discount-type="amount" data-i18n-aria="discount.amount" aria-label="Amount" id="discount-currency">₹</button>
+                        </div>
                       </div>
-                      <div class="form-group">
-                        <label class="form-label" for="inv-discount" data-i18n="field.flatDiscount">Flat Bill Discount</label>
-                        <input type="number" inputmode="decimal" step="any" min="0" id="inv-discount" class="form-control" placeholder="0" />
-                      </div>
+                      <div class="choices" id="discount-chips" role="radiogroup" aria-labelledby="discount-label"></div>
+                      <input type="number" inputmode="decimal" step="any" min="0" id="inv-discount" class="form-control choice-other" placeholder="0" aria-labelledby="discount-label" hidden />
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="inv-footer-notes" data-i18n="field.terms">Terms / Notes for Customer</label>
@@ -181,6 +189,14 @@
                   <div class="summary-row">
                     <span data-i18n="sum.subtotal">Subtotal:</span>
                     <span id="summary-subtotal">₹ 0.00</span>
+                  </div>
+                  <div class="summary-row summary-discount" id="summary-discount-row" hidden>
+                    <span id="summary-discount-label"></span>
+                    <span id="summary-discount"></span>
+                  </div>
+                  <div class="summary-row" id="summary-delivery-row" hidden>
+                    <span data-i18n="sum.delivery">Delivery:</span>
+                    <span id="summary-delivery"></span>
                   </div>
                   <div class="summary-row grand-total">
                     <span data-i18n="sum.grandTotal">Grand Total:</span>
@@ -786,8 +802,8 @@
           <!-- The unit follows the name until one is picked (js/units.js) -->
           <div class="form-group">
             <span class="form-label" id="modal-prod-unit-label" data-i18n="product.unit">Unit Type</span>
-            <div class="unit-picker" id="modal-prod-units" role="radiogroup" aria-labelledby="modal-prod-unit-label"></div>
-            <input type="text" id="modal-prod-unit" class="form-control unit-other" maxlength="20" aria-labelledby="modal-prod-unit-label" data-i18n-placeholder="product.unitPh" placeholder="Type the unit, e.g. tray, roll" value="pcs" hidden />
+            <div class="choices" id="modal-prod-units" role="radiogroup" aria-labelledby="modal-prod-unit-label"></div>
+            <input type="text" id="modal-prod-unit" class="form-control choice-other" maxlength="20" aria-labelledby="modal-prod-unit-label" data-i18n-placeholder="product.unitPh" placeholder="Type the unit, e.g. tray, roll" value="pcs" hidden />
             <small class="field-help" id="modal-prod-unit-hint" data-i18n="unitPick.suggested" hidden>Picked from the name. Tap another to change.</small>
           </div>
 

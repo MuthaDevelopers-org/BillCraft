@@ -9,7 +9,7 @@
  */
 
 import { formatCurrency, formatDate } from './models.js';
-import { createTranslator, statusLabel } from './i18n/i18n.js';
+import { createTranslator, discountLabel, statusLabel } from './i18n/i18n.js';
 import { unitLabel } from './units.js';
 
 // Served with the app (vendor/, byte-identical to the npm releases; see
@@ -327,7 +327,9 @@ export const ExporterService = {
 
     lines.push('--------------------------------');
     lines.push(`${t('wa.subtotal')}: ${formatCurrency(invoice.subtotal, curr)}`);
-    if (invoice.billDiscount > 0) lines.push(`${t('wa.discount')}: -${formatCurrency(invoice.billDiscount, curr)}`);
+    if (invoice.discountAmount > 0) {
+      lines.push(`${discountLabel(t('wa.discount'), invoice)}: -${formatCurrency(invoice.discountAmount, curr)}`);
+    }
     if (invoice.shippingFee > 0) lines.push(`${t('wa.delivery')}: +${formatCurrency(invoice.shippingFee, curr)}`);
     lines.push(`*${t('wa.grandTotal')}: ${formatCurrency(invoice.grandTotal, curr)}*`);
     lines.push(`${t('wa.status')}: ${statusLabel(t, invoice.status)}`);

@@ -12,7 +12,7 @@
  */
 
 import { formatCurrency, formatDate } from './models.js';
-import { createTranslator, statusBadgeClass, statusLabel } from './i18n/i18n.js';
+import { createTranslator, discountLabel, statusBadgeClass, statusLabel } from './i18n/i18n.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
 import { unitLabel } from './units.js';
 
@@ -146,10 +146,10 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
             <span>${escapeHTML(t('bill.subtotal'))}:</span>
             <span>${formatCurrency(invoice.subtotal, curr)}</span>
           </div>
-          ${invoice.billDiscount > 0 ? `
+          ${invoice.discountAmount > 0 ? `
             <div class="tot-row" style="color: var(--danger);">
-              <span>${escapeHTML(t('bill.discount'))}:</span>
-              <span>- ${formatCurrency(invoice.billDiscount, curr)}</span>
+              <span>${escapeHTML(discountLabel(t('bill.discount'), invoice))}:</span>
+              <span>- ${formatCurrency(invoice.discountAmount, curr)}</span>
             </div>
           ` : ''}
           ${invoice.shippingFee > 0 ? `
@@ -278,10 +278,10 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
               <td>${escapeHTML(t('bill.subtotal'))}</td>
               <td class="num">${formatCurrency(invoice.subtotal, curr)}</td>
             </tr>
-            ${invoice.billDiscount > 0 ? `
+            ${invoice.discountAmount > 0 ? `
               <tr>
-                <td>${escapeHTML(t('bill.specialDiscount'))}</td>
-                <td class="num" style="color: #b91c1c;">-${formatCurrency(invoice.billDiscount, curr)}</td>
+                <td>${escapeHTML(discountLabel(t('bill.specialDiscount'), invoice))}</td>
+                <td class="num" style="color: #b91c1c;">-${formatCurrency(invoice.discountAmount, curr)}</td>
               </tr>
             ` : ''}
             ${invoice.shippingFee > 0 ? `
@@ -389,10 +389,10 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
               <span>${escapeHTML(t('bill.itemsTotal'))}:</span>
               <span>${formatCurrency(invoice.subtotal, curr)}</span>
             </div>
-            ${invoice.billDiscount > 0 ? `
+            ${invoice.discountAmount > 0 ? `
               <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: var(--danger); margin-bottom: 0.4rem;">
-                <span>${escapeHTML(t('bill.discount'))}:</span>
-                <span>-${formatCurrency(invoice.billDiscount, curr)}</span>
+                <span>${escapeHTML(discountLabel(t('bill.discount'), invoice))}:</span>
+                <span>-${formatCurrency(invoice.discountAmount, curr)}</span>
               </div>
             ` : ''}
             ${invoice.shippingFee > 0 ? `
@@ -476,10 +476,10 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
         <span>${escapeHTML(t('bill.thermalSubtotal'))}:</span>
         <span>${formatCurrency(invoice.subtotal, curr)}</span>
       </div>
-      ${invoice.billDiscount > 0 ? `
+      ${invoice.discountAmount > 0 ? `
         <div class="pos-total-row" style="color: #b91c1c;">
-          <span>${escapeHTML(t('bill.thermalDiscount'))}:</span>
-          <span>-${formatCurrency(invoice.billDiscount, curr)}</span>
+          <span>${escapeHTML(discountLabel(t('bill.thermalDiscount'), invoice))}:</span>
+          <span>-${formatCurrency(invoice.discountAmount, curr)}</span>
         </div>
       ` : ''}
       ${invoice.shippingFee > 0 ? `

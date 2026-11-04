@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { InvoiceItem } from '../js/models.js';
 import {
-  addProductLine, customerKey, isMeasuredUnit, presetsFor, rankProducts,
+  addProductLine, customerKey, deliveryPresets, discountPresets, isMeasuredUnit, presetsFor, rankProducts,
   recentCustomers, roundQty, setLineQuantity, stepQuantity
 } from '../js/quickBill.js';
 
@@ -80,4 +80,13 @@ test('recent customers are newest first, listed once, and skip bills without a n
     customerKey({ name: 'X', phone: '+91 99123 45678' }),
     customerKey({ name: 'Y', phone: '9912345678' })
   );
+});
+
+test('one-tap delivery charges and discounts suit the currency', () => {
+  assert.deepEqual(deliveryPresets('₹'), [30, 50, 100]);
+  assert.deepEqual(deliveryPresets('$'), [5, 10, 20]);
+  assert.deepEqual(discountPresets('percent', '₹'), [5, 10, 15, 20]);
+  assert.deepEqual(discountPresets('percent', '€'), [5, 10, 15, 20]);
+  assert.deepEqual(discountPresets('amount', '₹'), [20, 50, 100]);
+  assert.deepEqual(discountPresets('amount', 'AED'), [2, 5, 10]);
 });
