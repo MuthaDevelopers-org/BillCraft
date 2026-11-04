@@ -75,6 +75,7 @@ class BillCraftApp {
     this.customerMode = null; // 'new' while a new customer is being typed
     this.searchQuery = '';
     this.qtyTarget = null; // what the quantity sheet is for
+    this.modalOpeners = new Map(); // dialog id -> the element focus returns to
     this.refreshHistoryData();
 
     // Replaced by loadTranslators() before anything is rendered
@@ -280,6 +281,7 @@ class BillCraftApp {
     document.getElementById('setup-upi').value = this.settings.upiId || '';
     this.showFieldError('setup-upi', false);
     this.openModal('modal-setup');
+    if (!COARSE_POINTER.matches) document.getElementById('setup-shop').focus();
   }
 
   /** Saves the shop details, or only that the setup was skipped, so it is not asked again */
@@ -343,7 +345,13 @@ class BillCraftApp {
     this.currentView = viewName;
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === viewName);
+      const current = btn.dataset.view === viewName;
+      btn.classList.toggle('active', current);
+      if (current) {
+        btn.setAttribute('aria-current', 'page');
+      } else {
+        btn.removeAttribute('aria-current');
+      }
     });
 
     document.querySelectorAll('.view-section').forEach(section => {
@@ -711,7 +719,7 @@ class BillCraftApp {
       return;
     }
     addProductLine(this.currentInvoice.items, product, 1);
-    this.afterItemsChange();
+    this.afterItemsChange(product.name);
     this.flyToBill(tile, '+1');
   }
 
@@ -725,12 +733,28 @@ class BillCraftApp {
   }
 
   /** After any change to the items: lines, tile counts, totals, bar, preview and draft */
-  afterItemsChange() {
+  afterItemsChange(addedName = '') {
     this.renderBillLines();
     this.updateTileBadges();
     this.updateTotalsCard();
     this.schedulePreview();
     this.saveDraft();
+    this.announceBill(addedName);
+  }
+
+  /**
+   * Tells screen readers what the bill holds now, once things settle (the totals
+   * count up visually, which must not be read out frame by frame).
+   */
+  announceBill(addedName = '') {
+    const count = this.currentInvoice.items.length;
+    const items = this.t(count === 1 ? 'bar.item' : 'bar.items', { count });
+    const total = formatCurrency(this.currentInvoice.grandTotal, this.settings.currency || '₹');
+    const text = `${addedName ? `${this.t('a11y.added', { name: addedName })} ` : ''}${this.t('a11y.billNow', { items, total })}`;
+    clearTimeout(this.announceTimer);
+    this.announceTimer = setTimeout(() => {
+      document.getElementById('sr-status').textContent = text;
+    }, 500);
   }
 
   lineRow(itemId) {
@@ -793,26 +817,26 @@ class BillCraftApp {
       <details class="item-more"${this.expandedItemIds.has(item.id) ? ' open' : ''}>
         <summary>${this.escape(this.t('item.edit'))}</summary>
         <div class="item-more-body">
-          <div class="field-stack field-wide">
+          <label class="field-stack field-wide">
             <span class="form-label">${this.escape(this.t('item.namePh'))}</span>
             <input type="text" class="form-control" placeholder="${this.escape(this.t('item.namePh'))}" value="${this.escape(item.name)}" data-field="name" data-voice="text" />
-          </div>
-          <div class="field-stack">
+          </label>
+          <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.rate', { currency: curr }))}</span>
             <input type="number" inputmode="decimal" step="any" min="0" class="form-control" value="${item.unitPrice}" data-field="unitPrice" data-voice="number" />
-          </div>
-          <div class="field-stack">
+          </label>
+          <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.unit'))}</span>
             <input type="text" class="form-control" placeholder="${this.escape(this.t('item.unitPh'))}" value="${this.escape(item.unit)}" data-field="unit" />
-          </div>
-          <div class="field-stack">
+          </label>
+          <label class="field-stack">
             <span class="form-label">${this.escape(this.t('item.discPct'))}</span>
             <input type="number" inputmode="decimal" min="0" max="100" class="form-control" placeholder="0" value="${item.discount || ''}" data-field="discount" />
-          </div>
-          <div class="field-stack field-wide">
+          </label>
+          <label class="field-stack field-wide">
             <span class="form-label">${this.escape(this.t('product.desc'))}</span>
             <input type="text" class="form-control" placeholder="${this.escape(this.t('item.descPh'))}" value="${this.escape(item.description)}" data-field="description" />
-          </div>
+          </label>
           <div class="line-actions field-wide">
             <button type="button" class="btn btn-secondary btn-sm" data-action="save-product">${this.escape(this.t('item.saveProduct'))}</button>
             <button type="button" class="btn btn-ghost btn-sm line-remove" data-action="remove">${TRASH_ICON}<span>${this.escape(this.t('item.remove'))}</span></button>
@@ -932,7 +956,7 @@ class BillCraftApp {
     } else if (qty > 0) {
       addProductLine(this.currentInvoice.items, product, qty);
     }
-    this.afterItemsChange();
+    this.afterItemsChange(!lineId && qty > 0 ? product.name : '');
     if (tile && qty > 0) this.flyToBill(tile, `${lineId ? '' : '+'}${qty} ${product.unit || ''}`.trim());
   }
 
@@ -1385,6 +1409,7 @@ class BillCraftApp {
     document.getElementById('modal-prod-sku').value = product ? (product.sku || '') : '';
 
     this.openModal('modal-product');
+    if (!COARSE_POINTER.matches) document.getElementById('modal-prod-name').focus();
   }
 
   saveProductFromModal() {
@@ -1877,35 +1902,105 @@ class BillCraftApp {
     resolve(answer);
   }
 
-  // --- Modals ---
+  // --- Dialogs ---
   bindModalEvents() {
     document.getElementById('btn-confirm-ok').addEventListener('click', () => this.settleConfirm(true));
     document.getElementById('btn-confirm-cancel').addEventListener('click', () => this.settleConfirm(false));
-    document.getElementById('modal-confirm').addEventListener('click', (event) => {
-      if (event.target.id === 'modal-confirm') this.settleConfirm(false);
-    });
 
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const modal = btn.closest('.modal-overlay');
-        if (modal) modal.classList.remove('active');
+      btn.addEventListener('click', () => this.dismissModal(btn.closest('.modal-overlay').id));
+    });
+
+    // A tap outside dismisses a dialog, except the shop setup, which has its own Skip
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay && overlay.id !== 'modal-setup') this.dismissModal(overlay.id);
       });
     });
 
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-      overlay.addEventListener('click', (e) => {
-        // The first-run sheets and the question close only through their own buttons
-        if (e.target === overlay && !['modal-language', 'modal-setup', 'modal-confirm'].includes(overlay.id)) overlay.classList.remove('active');
-      });
+    document.addEventListener('keydown', (event) => {
+      const top = [...document.querySelectorAll('.modal-overlay.active')].at(-1);
+      if (!top) return;
+      if (event.key === 'Tab') {
+        this.keepFocusIn(top, event);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        this.dismissModal(top.id);
+      }
     });
   }
 
+  /** Tab and Shift+Tab go round inside the open dialog, as in the browser's own dialogs */
+  keepFocusIn(overlay, event) {
+    const box = overlay.querySelector('.modal-box');
+    const stops = [...box.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => el.getClientRects().length > 0);
+    if (!stops.length) {
+      event.preventDefault();
+      return;
+    }
+    const current = document.activeElement;
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    const outside = !box.contains(current) || current === box;
+    if (event.shiftKey && (current === first || outside)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (current === last || (outside && current !== box))) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  /** What Escape, a tap outside and the close button do */
+  dismissModal(modalId) {
+    if (modalId === 'modal-confirm') {
+      this.settleConfirm(false);
+    } else if (modalId === 'modal-setup') {
+      this.finishSetup(false);
+    } else if (modalId !== 'modal-language' || this.settings.appLanguage) {
+      // On the first run a language must be chosen
+      this.closeModal(modalId);
+    }
+  }
+
+  /**
+   * Shows a dialog: it takes focus (not its first field, so the phone keypad stays
+   * closed), the app behind it is inert, and focus returns when it closes.
+   */
   openModal(modalId) {
-    document.getElementById(modalId).classList.add('active');
+    const overlay = document.getElementById(modalId);
+    if (!overlay.classList.contains('active')) {
+      this.modalOpeners.set(modalId, document.activeElement);
+      overlay.classList.add('active');
+    }
+    this.syncInert();
+    overlay.querySelector('.modal-box').focus({ preventScroll: true });
   }
 
   closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
+    const overlay = document.getElementById(modalId);
+    if (!overlay.classList.contains('active')) return;
+    overlay.classList.remove('active');
+    this.syncInert();
+    const opener = this.modalOpeners.get(modalId);
+    this.modalOpeners.delete(modalId);
+    const top = [...document.querySelectorAll('.modal-overlay.active')].at(-1);
+    if (top) {
+      top.querySelector('.modal-box').focus({ preventScroll: true });
+    } else if (opener && opener.isConnected) {
+      opener.focus({ preventScroll: true });
+    }
+  }
+
+  /** Only the top dialog can be reached; the app and any dialog under it are inert */
+  syncInert() {
+    const open = [...document.querySelectorAll('.modal-overlay.active')];
+    document.querySelector('.app-container').inert = open.length > 0;
+    document.querySelector('.skip-link').inert = open.length > 0;
+    open.forEach((overlay, index) => {
+      overlay.inert = index < open.length - 1;
+    });
   }
 
   updateBadges() {

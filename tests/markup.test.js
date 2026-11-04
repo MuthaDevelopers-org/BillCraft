@@ -22,7 +22,7 @@ function keysReferencedIn(text) {
   const found = new Set();
 
   // Quoted dotted names whose first part is a known prefix, e.g. 'toast.billSaved'
-  for (const match of text.matchAll(/['"`]([a-z][A-Za-z]*\.[A-Za-z.]+)['"`]/g)) {
+  for (const match of text.matchAll(/['"`]([a-z][A-Za-z0-9]*\.[A-Za-z0-9.]+)['"`]/g)) {
     if (knownPrefixes.has(match[1].split('.')[0])) found.add(match[1]);
   }
 

@@ -21,15 +21,16 @@
   --bg-glass: rgba(255, 255, 255, 0.85);
 
   --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-subtle: #94a3b8;
+  /* Text colours meet WCAG AA (4.5:1) on the surfaces they sit on; tests/contrast.test.js checks */
+  --text-muted: #475569;
+  --text-subtle: #64748b;
   --text-inverse: #ffffff;
 
   --border-light: #e2e8f0;
   --border-focus: #818cf8;
 
   /* Status Colors */
-  --success: #10b981;
+  --success: #047857;
   --success-light: #ecfdf5;
   --success-text: #065f46;
 
@@ -37,7 +38,7 @@
   --warning-light: #fffbeb;
   --warning-text: #92400e;
 
-  --danger: #ef4444;
+  --danger: #b91c1c;
   --danger-light: #fef2f2;
   --danger-text: #991b1b;
 
@@ -73,7 +74,7 @@
 
 /* Color Accent Variations */
 [data-accent="emerald"] {
-  --theme-accent: #059669;
+  --theme-accent: #047857;
   --theme-accent-soft: #ecfdf5;
   --theme-border: #a7f3d0;
 }
@@ -91,13 +92,13 @@
 }
 
 [data-accent="rose"] {
-  --theme-accent: #e11d48;
+  --theme-accent: #be123c;
   --theme-accent-soft: #fff1f2;
   --theme-border: #fecdd3;
 }
 
 [data-accent="amber"] {
-  --theme-accent: #d97706;
+  --theme-accent: #b45309;
   --theme-accent-soft: #fffbeb;
   --theme-border: #fde68a;
 }

@@ -27,6 +27,7 @@
   <!-- html2canvas and jsPDF are loaded by js/exporter.js on first export -->
 </head>
 <body>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <div class="app-container">
     <!-- Navigation: bottom bar on phones, left sidebar on larger screens -->
     <aside class="app-sidebar">
@@ -88,7 +89,7 @@
     </aside>
 
     <!-- Main Workspace -->
-    <main class="app-main">
+    <main class="app-main" id="main-content" tabindex="-1">
       <header class="app-topbar">
         <div class="topbar-left">
           <h1 class="page-title" id="topbar-page-title" data-i18n="title.builder">New Sales Bill</h1>
@@ -377,7 +378,7 @@
           <div class="card-header history-header">
             <div class="card-title" data-i18n="history.card">Saved Bills</div>
             <div class="history-filters">
-              <select id="history-filter-status" class="form-control history-filter-select" aria-label="Status">
+              <select id="history-filter-status" class="form-control history-filter-select" data-i18n-aria="field.status" aria-label="Payment Status">
                 <option value="all" data-i18n="history.filterAll">All</option>
                 <option value="paid" data-i18n="status.paid">Paid</option>
                 <option value="due" data-i18n="status.due">Due</option>
@@ -536,11 +537,11 @@
                 <div class="form-group">
                   <span class="form-label" data-i18n="settings.accent">Theme Colour</span>
                   <div class="color-swatches">
-                    <button type="button" class="color-swatch active" data-color="emerald" style="background: #059669;" data-i18n-title="settings.color.emerald" data-i18n-aria="settings.color.emerald"></button>
+                    <button type="button" class="color-swatch active" data-color="emerald" style="background: #047857;" data-i18n-title="settings.color.emerald" data-i18n-aria="settings.color.emerald"></button>
                     <button type="button" class="color-swatch" data-color="sapphire" style="background: #2563eb;" data-i18n-title="settings.color.sapphire" data-i18n-aria="settings.color.sapphire"></button>
                     <button type="button" class="color-swatch" data-color="purple" style="background: #7c3aed;" data-i18n-title="settings.color.purple" data-i18n-aria="settings.color.purple"></button>
-                    <button type="button" class="color-swatch" data-color="rose" style="background: #e11d48;" data-i18n-title="settings.color.rose" data-i18n-aria="settings.color.rose"></button>
-                    <button type="button" class="color-swatch" data-color="amber" style="background: #d97706;" data-i18n-title="settings.color.amber" data-i18n-aria="settings.color.amber"></button>
+                    <button type="button" class="color-swatch" data-color="rose" style="background: #be123c;" data-i18n-title="settings.color.rose" data-i18n-aria="settings.color.rose"></button>
+                    <button type="button" class="color-swatch" data-color="amber" style="background: #b45309;" data-i18n-title="settings.color.amber" data-i18n-aria="settings.color.amber"></button>
                     <button type="button" class="color-swatch" data-color="charcoal" style="background: #1e293b;" data-i18n-title="settings.color.charcoal" data-i18n-aria="settings.color.charcoal"></button>
                   </div>
                 </div>
@@ -670,9 +671,9 @@
 
   <!-- MODAL: LANGUAGE (first visit, and from the top bar) -->
   <div class="modal-overlay" id="modal-language">
-    <div class="modal-box lang-box">
+    <div class="modal-box lang-box" role="dialog" aria-modal="true" aria-labelledby="lang-title" tabindex="-1">
       <div class="modal-header">
-        <h3 class="modal-title" data-i18n="lang.title">Choose your language</h3>
+        <h3 class="modal-title" id="lang-title" data-i18n="lang.title">Choose your language</h3>
         <button type="button" class="btn btn-ghost btn-icon btn-close-modal" id="btn-close-language" data-i18n-title="common.close" data-i18n-aria="common.close" hidden>&times;</button>
       </div>
       <div class="modal-body">
@@ -686,7 +687,7 @@
 
   <!-- SHEET: SHOP SETUP (first run, after the language; and from the bill when the shop has no name) -->
   <div class="modal-overlay" id="modal-setup">
-    <div class="modal-box setup-box">
+    <div class="modal-box setup-box" role="dialog" aria-modal="true" aria-labelledby="setup-title" tabindex="-1">
       <div class="modal-header">
         <h3 class="modal-title" id="setup-title" data-i18n="setup.title">Your shop</h3>
       </div>
@@ -718,7 +719,7 @@
 
   <!-- MODAL: ADD / EDIT PRODUCT -->
   <div class="modal-overlay" id="modal-product">
-    <div class="modal-box">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-product-title" tabindex="-1">
       <div class="modal-header">
         <h3 class="modal-title" id="modal-product-title" data-i18n="product.addTitle">Add New Product</h3>
         <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
@@ -767,7 +768,7 @@
 
   <!-- SHEET: HOW MUCH (items sold by weight or length, or a tap on a line's quantity) -->
   <div class="modal-overlay" id="modal-qty">
-    <div class="modal-box qty-box">
+    <div class="modal-box qty-box" role="dialog" aria-modal="true" aria-labelledby="qty-title" tabindex="-1">
       <div class="modal-header">
         <h3 class="modal-title" id="qty-title">Item</h3>
         <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
@@ -790,7 +791,7 @@
 
   <!-- DIALOG: a yes/no question in the app language (replaces the browser's confirm()) -->
   <div class="modal-overlay" id="modal-confirm">
-    <div class="modal-box confirm-box">
+    <div class="modal-box confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" tabindex="-1">
       <div class="modal-body">
         <h3 class="modal-title" id="confirm-title">Are you sure?</h3>
         <p class="confirm-message" id="confirm-message"></p>
@@ -807,6 +808,9 @@
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- Read out by screen readers after the bill changes (js/app.js announceBill) -->
+  <div class="sr-only" id="sr-status" role="status" aria-live="polite"></div>
 
   <!-- Main ES Module Script -->
   <script type="module" src="js/app.js"></script>

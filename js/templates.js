@@ -113,7 +113,7 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
           </tr>
         </thead>
         <tbody>
-          ${itemsRows.length ? itemsRows : `<tr><td colspan="${hasDiscount ? 6 : 5}" style="text-align:center; padding: 2rem; color: #94a3b8;">${escapeHTML(t('bill.noItems'))}</td></tr>`}
+          ${itemsRows.length ? itemsRows : `<tr><td colspan="${hasDiscount ? 6 : 5}" style="text-align:center; padding: 2rem; color: #64748b;">${escapeHTML(t('bill.noItems'))}</td></tr>`}
         </tbody>
       </table>
 
@@ -165,11 +165,11 @@ export function renderModernTemplate(invoice, settings, qrDataUrl, tb = createTr
       <div class="inv-footer-notes">
         <div>
           <strong>${escapeHTML(t('bill.note'))}:</strong> ${escapeHTML(invoice.notes || settings.defaultNotes || t('bill.thanks'))}
-          <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px;">${escapeHTML(t('bill.noteNonGst'))}</div>
+          <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">${escapeHTML(t('bill.noteNonGst'))}</div>
         </div>
         <div style="text-align: right;">
           <div style="font-weight: 700; color: #1e293b;">${escapeHTML(settings.brandName || t('bill.authorised'))}</div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">${escapeHTML(t('bill.issuedThanks'))}</div>
+          <div style="font-size: 0.72rem; color: #64748b;">${escapeHTML(t('bill.issuedThanks'))}</div>
         </div>
       </div>
     </div>
@@ -261,7 +261,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
             </div>
           </div>
           <p><strong>${escapeHTML(t('bill.terms'))}:</strong> ${escapeHTML(invoice.notes || settings.defaultNotes || t('bill.thanksPatronage'))}</p>
-          <p style="font-style: italic; color: #94a3b8; margin-top: 4px;">${escapeHTML(t('bill.noteBillOfSupply'))}</p>
+          <p style="font-style: italic; color: #64748b; margin-top: 4px;">${escapeHTML(t('bill.noteBillOfSupply'))}</p>
         </div>
 
         <div class="classic-summary-wrap">
@@ -273,7 +273,7 @@ export function renderClassicTemplate(invoice, settings, qrDataUrl, tb = createT
             ${invoice.billDiscount > 0 ? `
               <tr>
                 <td>${escapeHTML(t('bill.specialDiscount'))}</td>
-                <td class="num" style="color: red;">-${formatCurrency(invoice.billDiscount, curr)}</td>
+                <td class="num" style="color: #b91c1c;">-${formatCurrency(invoice.billDiscount, curr)}</td>
               </tr>
             ` : ''}
             ${invoice.shippingFee > 0 ? `
@@ -339,13 +339,13 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
       <div class="boutique-body">
         <div class="boutique-parties">
           <div>
-            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 4px;">${escapeHTML(t('bill.preparedFor'))}</div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b; margin-bottom: 4px;">${escapeHTML(t('bill.preparedFor'))}</div>
             <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">${escapeHTML(invoice.customer.name || t('common.valuedCustomer'))}</div>
             ${invoice.customer.phone ? `<div style="font-size: 0.85rem; color: #475569;">${escapeHTML(t('bill.phone'))}: ${escapeHTML(invoice.customer.phone)}</div>` : ''}
             ${invoice.customer.address ? `<div style="font-size: 0.85rem; color: #64748b;">${escapeHTML(invoice.customer.address)}</div>` : ''}
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 4px;">${escapeHTML(t('bill.billStatus'))}</div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #64748b; margin-bottom: 4px;">${escapeHTML(t('bill.billStatus'))}</div>
             <span class="badge ${invoice.status === 'Paid' ? 'badge-paid' : 'badge-unpaid'}" style="font-size: 0.85rem; padding: 0.35rem 0.8rem;">${escapeHTML(statusLabel(t, invoice.status))}</span>
           </div>
         </div>
@@ -376,7 +376,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
           </div>
 
           <div class="boutique-total-card">
-            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: #64748b; margin-bottom: 0.4rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: #475569; margin-bottom: 0.4rem;">
               <span>${escapeHTML(t('bill.itemsTotal'))}:</span>
               <span>${formatCurrency(invoice.subtotal, curr)}</span>
             </div>
@@ -387,7 +387,7 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
               </div>
             ` : ''}
             ${invoice.shippingFee > 0 ? `
-              <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: #64748b; margin-bottom: 0.4rem;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: #475569; margin-bottom: 0.4rem;">
                 <span>${escapeHTML(t('bill.delivery'))}:</span>
                 <span>+${formatCurrency(invoice.shippingFee, curr)}</span>
               </div>
@@ -396,13 +396,13 @@ export function renderBoutiqueTemplate(invoice, settings, qrDataUrl, tb = create
               <span>${escapeHTML(t('bill.grandTotal'))}:</span>
               <span style="color: var(--theme-accent, #4f46e5);">${formatCurrency(invoice.grandTotal, curr)}</span>
             </div>
-            <div style="font-size: 0.72rem; color: #64748b; text-align: right; margin-top: 4px;">
+            <div style="font-size: 0.72rem; color: #475569; text-align: right; margin-top: 4px;">
               ${escapeHTML(words(invoice.grandTotal))}
             </div>
           </div>
         </div>
 
-        <div style="margin-top: 2.5rem; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 1rem; font-size: 0.82rem; color: #94a3b8;">
+        <div style="margin-top: 2.5rem; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 1rem; font-size: 0.82rem; color: #64748b;">
           ${escapeHTML(invoice.notes || settings.defaultNotes || t('bill.thanksSupport'))}
           <div style="font-size: 0.72rem; margin-top: 4px;">${escapeHTML(t('bill.noteMemo'))}</div>
         </div>
@@ -457,7 +457,7 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
       <div class="pos-divider"></div>
 
       <div style="margin: 0.6rem 0;">
-        ${itemRows || `<div style="text-align: center; color: #94a3b8;">${escapeHTML(t('bill.noItemsShort'))}</div>`}
+        ${itemRows || `<div style="text-align: center; color: #64748b;">${escapeHTML(t('bill.noItemsShort'))}</div>`}
       </div>
 
       <div class="pos-divider"></div>
@@ -467,7 +467,7 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
         <span>${formatCurrency(invoice.subtotal, curr)}</span>
       </div>
       ${invoice.billDiscount > 0 ? `
-        <div class="pos-total-row" style="color: #ef4444;">
+        <div class="pos-total-row" style="color: #b91c1c;">
           <span>${escapeHTML(t('bill.thermalDiscount'))}:</span>
           <span>-${formatCurrency(invoice.billDiscount, curr)}</span>
         </div>
@@ -500,7 +500,7 @@ export function renderThermalTemplate(invoice, settings, qrDataUrl, tb = createT
       <div class="pos-footer">
         <div>*** ${escapeHTML(t('bill.thanksVisit'))} ***</div>
         <div style="margin-top: 4px;">${escapeHTML(invoice.notes || settings.defaultNotes || t('bill.thanksRetain'))}</div>
-        <div style="font-size: 0.65rem; margin-top: 6px; color: #94a3b8;">${escapeHTML(t('bill.noteRetail'))}</div>
+        <div style="font-size: 0.65rem; margin-top: 6px; color: #64748b;">${escapeHTML(t('bill.noteRetail'))}</div>
       </div>
     </div>
   `;

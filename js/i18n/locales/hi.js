@@ -10,6 +10,9 @@ export default {
   messages: {
     'app.name': 'BillCraft',
     'app.subtitle': 'घरेलू बिक्री उपकरण',
+    'a11y.skip': 'सीधे सामग्री पर जाएँ',
+    'a11y.added': '{name} जोड़ा गया।',
+    'a11y.billNow': 'बिल में अब: {items}, {total}।',
     'nav.createBill': 'बिल बनाएँ',
     'nav.products': 'सामान',
     'nav.history': 'पुराने बिल',

@@ -16,6 +16,9 @@ export default {
     // App shell and navigation
     'app.name': 'BillCraft',
     'app.subtitle': 'Domestic Sales Utility',
+    'a11y.skip': 'Skip to content',
+    'a11y.added': '{name} added.',
+    'a11y.billNow': 'Bill now: {items}, {total}.',
     'nav.createBill': 'Create Bill',
     'nav.products': 'Products',
     'nav.history': 'History',
