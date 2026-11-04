@@ -27,6 +27,22 @@
   <!-- html2canvas and jsPDF are loaded by js/exporter.js on first export -->
 </head>
 <body>
+  <!-- Shown only if the app has not started after 8 seconds (or failed, or scripts are off).
+       Plain HTML and CSS in English and Hindi, because no script may have run. -->
+  <div class="boot-error" role="alert">
+    <p class="boot-error-title">BillCraft could not start.</p>
+    <p>Reload the page. The first time, the phone needs internet to download the app.</p>
+    <p lang="hi">BillCraft शुरू नहीं हो सका। पेज फिर से खोलें। पहली बार ऐप डाउनलोड करने के लिए इंटरनेट चाहिए।</p>
+    <a class="btn btn-primary" href="">Reload / फिर से खोलें</a>
+  </div>
+  <noscript>
+    <div class="boot-error boot-error-now">
+      <p class="boot-error-title">BillCraft needs JavaScript.</p>
+      <p>Turn on JavaScript in your browser settings, then reload the page.</p>
+      <p lang="hi">ब्राउज़र की सेटिंग्स में JavaScript चालू करें, फिर पेज दोबारा खोलें।</p>
+    </div>
+  </noscript>
+
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <div class="app-container">
     <!-- Navigation: bottom bar on phones, left sidebar on larger screens -->

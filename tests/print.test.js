@@ -40,6 +40,7 @@ const shown = rules
 // Print runs on a page narrower than the desktop breakpoints, so phone-only
 // controls must be removed for print as well as on screen.
 const CHROME = [
+  '.boot-error',                      // the start-up failure message
   '.app-sidebar',                     // bottom bar on phones, sidebar on wide screens
   '.app-topbar',
   '.view-section:not(#view-builder)', // catalog, history and settings

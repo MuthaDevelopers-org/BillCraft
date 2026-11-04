@@ -307,6 +307,7 @@ export default {
     'toast.markedPaid': 'Bill {number} marked paid',
     'toast.csvReady': 'Spreadsheet ready',
     'toast.csvEmpty': 'No bills to download',
+    'toast.unexpected': 'Something went wrong. Please try again; your bill so far is kept.',
     'toast.settingsSaved': 'Settings saved',
     'toast.qrReset': 'Automatic UPI QR will be used',
     'toast.backupDone': 'Backup file saved',

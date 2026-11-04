@@ -588,6 +588,7 @@
     overflow: visible !important;
   }
 
+  .boot-error,
   .app-sidebar,
   .app-topbar,
   .bill-form-panel,

@@ -110,6 +110,26 @@ class BillCraftApp {
     // Wide screens show the export buttons from the start, so load their libraries once idle
     if (DESKTOP_QUERY.matches) setTimeout(() => ExporterService.preload(), 1500);
     this.registerServiceWorker();
+    this.watchForErrors();
+    document.documentElement.classList.add('app-ready');
+  }
+
+  /**
+   * Anything that goes wrong unexpectedly is logged to the console (nothing is sent
+   * anywhere) and the person sees a short notice, at most every 10 seconds.
+   */
+  watchForErrors() {
+    const report = (error) => {
+      console.error('BillCraft:', error);
+      if (Date.now() - (this.errorShownAt || 0) < 10000) return;
+      this.errorShownAt = Date.now();
+      this.showToast(this.t('toast.unexpected'), 'danger');
+    };
+    window.addEventListener('error', (event) => {
+      // Only the app's own scripts, not browser extensions
+      if (!event.filename || event.filename.startsWith(location.origin)) report(event.error || event.message);
+    });
+    window.addEventListener('unhandledrejection', event => report(event.reason));
   }
 
   // --- The app itself: offline use, install and updates ---
@@ -2114,6 +2134,15 @@ class BillCraftApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  window.app = new BillCraftApp();
-  window.app.start().catch(error => console.error('BillCraft failed to start', error));
+  // A failure here (for example a browser that blocks site storage) shows the start-up message
+  const failed = (error) => {
+    console.error('BillCraft failed to start', error);
+    document.documentElement.classList.add('app-failed');
+  };
+  try {
+    window.app = new BillCraftApp();
+    window.app.start().catch(failed);
+  } catch (error) {
+    failed(error);
+  }
 });

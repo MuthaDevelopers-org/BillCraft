@@ -286,6 +286,7 @@ export default {
     'toast.markedPaid': 'बिल {number} का भुगतान दर्ज हुआ',
     'toast.csvReady': 'स्प्रेडशीट तैयार है',
     'toast.csvEmpty': 'डाउनलोड करने के लिए कोई बिल नहीं',
+    'toast.unexpected': 'कुछ गड़बड़ हुई। फिर से कोशिश करें; आपका अब तक का बिल सुरक्षित है।',
     'toast.settingsSaved': 'सेटिंग्स सेव हो गईं',
     'toast.qrReset': 'अपने-आप बनने वाला UPI QR इस्तेमाल होगा',
     'toast.backupDone': 'बैकअप फ़ाइल सेव हो गई',
