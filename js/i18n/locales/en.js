@@ -35,6 +35,7 @@ export default {
     'common.add': 'Add',
     'common.undo': 'Undo',
     'common.delete': 'Delete',
+    'common.retry': 'Try again',
     'common.walkIn': 'Walk-in Customer',
     'common.valuedCustomer': 'Valued Customer',
     'common.localSale': 'Local Sale',
@@ -136,6 +137,7 @@ export default {
     'action.whatsapp': 'WhatsApp',
     'action.whatsappTitle': 'Share via WhatsApp',
     'action.speak': 'Read aloud',
+    'action.share': 'Share',
     'action.save': 'Save',
 
     // Voice
@@ -276,6 +278,8 @@ export default {
     'toast.storageFull': 'Storage is full. Save a backup, then delete old bills to make room.',
     'toast.numberUsed': 'Bill number {number} is already used. Change it under More options.',
     'toast.imageInvalid': 'Choose a picture file, such as PNG or JPG.',
+    'toast.exportFailed': 'Could not make the file. Try again.',
+    'toast.fileReady': 'Your file is ready.',
     'restore.title': 'Restore this backup?',
     'restore.message': 'Everything on this phone will be replaced by the file. Bills: {currentBills} now, {bills} after. Products: {currentProducts} now, {products} after.',
     'restore.confirm': 'Restore',
@@ -382,6 +386,10 @@ export default {
     'wa.payUpi': 'Pay via UPI',
     'wa.contact': 'Contact',
     'wa.thanks': 'Thank you for your business!',
+    'wa.payBy': 'Please pay by {date}.',
+    'wa.reminderTitle': 'Payment reminder from {name}',
+    'wa.reminderBill': 'Bill {number}, {date}',
+    'wa.amountDue': 'Amount due',
     'wa.defaultCustomer': 'Valued Customer',
     'wa.defaultShop': 'Our Shop'
   },

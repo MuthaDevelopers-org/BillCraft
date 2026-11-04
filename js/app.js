@@ -15,7 +15,7 @@ import { APP_VERSION } from './config.js';
 import { escapeHTML, safeImageSrc } from './safe.js';
 import { renderInvoice } from './templates.js';
 import { generateQRCodeURL, buildUPIString, isValidUpiId } from './qrHelper.js';
-import { ExporterService } from './exporter.js';
+import { ExporterService, fileNameFor } from './exporter.js';
 import { DEFAULT_LANGUAGE, availableLanguages, getLanguage } from './i18n/languages.js';
 import { applyTranslations, createTranslator, loadLocale, setDocumentLanguage, statusLabel } from './i18n/i18n.js';
 import { canListen, canSpeak, listenOnce, normalizeSpokenNumber, speak } from './voice.js';
@@ -553,21 +553,8 @@ class BillCraftApp {
     });
 
     // Every way out of the app saves the bill to history first
-    document.getElementById('btn-export-pdf').addEventListener('click', async () => {
-      if (!this.saveBill()) return;
-      this.flushPreview();
-      this.showToast(this.t('toast.pdfPreparing'), 'info');
-      await ExporterService.exportPDF('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.pdf`);
-      this.afterSave(this.t('toast.pdfReady'));
-    });
-
-    document.getElementById('btn-export-image').addEventListener('click', async () => {
-      if (!this.saveBill()) return;
-      this.flushPreview();
-      this.showToast(this.t('toast.imagePreparing'), 'info');
-      await ExporterService.exportImage('active-invoice-doc', `${this.currentInvoice.invoiceNumber || 'bill'}.png`);
-      this.afterSave(this.t('toast.imageReady'));
-    });
+    document.getElementById('btn-export-pdf').addEventListener('click', () => this.exportBill('pdf'));
+    document.getElementById('btn-export-image').addEventListener('click', () => this.exportBill('png'));
 
     document.getElementById('btn-share-whatsapp').addEventListener('click', (event) => this.sendWhatsApp(event.currentTarget));
     document.getElementById('btn-send-whatsapp').addEventListener('click', (event) => this.sendWhatsApp(event.currentTarget));
@@ -1145,10 +1132,43 @@ class BillCraftApp {
     button.dataset.doneTimer = setTimeout(() => button.classList.remove('is-done'), 1400);
   }
 
+  /**
+   * Saves the bill and makes it a PDF or PNG: shared on phones (into WhatsApp, Drive...),
+   * downloaded elsewhere. A failure says so and offers to try again.
+   */
+  async exportBill(kind) {
+    if (!this.saveBill()) return;
+    this.flushPreview();
+    const pdf = kind === 'pdf';
+    this.showToast(this.t(pdf ? 'toast.pdfPreparing' : 'toast.imagePreparing'), 'info');
+    const filename = fileNameFor(this.currentInvoice.invoiceNumber, kind);
+    let result;
+    try {
+      result = pdf
+        ? await ExporterService.exportPDF('active-invoice-doc', filename)
+        : await ExporterService.exportImage('active-invoice-doc', filename);
+    } catch (error) {
+      console.error('Export failed', error);
+      this.showToast(this.t('toast.exportFailed'), 'danger', { label: this.t('common.retry'), onClick: () => this.exportBill(kind) });
+      return;
+    }
+    if (result.status === 'needs-tap') {
+      // The browser wants a fresh tap before it opens the share sheet
+      this.showToast(this.t('toast.fileReady'), 'success', { label: this.t('action.share'), onClick: () => result.share().catch(() => {}) }, 15000);
+    } else if (result.status !== 'cancelled') {
+      this.afterSave(this.t(pdf ? 'toast.pdfReady' : 'toast.imageReady'));
+    }
+  }
+
+  /** The language bills are written in: the bill language, else the app language */
+  billLanguage() {
+    return this.settings.billLanguage || this.settings.appLanguage || 'en';
+  }
+
   /** Saves the bill, then opens WhatsApp with it: straight to the customer's chat when the phone is known */
   sendWhatsApp(button) {
     if (!this.saveBill()) return;
-    ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill);
+    ExporterService.shareWhatsApp(this.currentInvoice, this.settings, this.bill, this.billLanguage());
     this.celebrateButton(button);
     this.afterSave();
   }
