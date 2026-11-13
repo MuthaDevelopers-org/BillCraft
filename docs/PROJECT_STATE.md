@@ -1,13 +1,27 @@
 # Project state
 
-**Version 1.0.0.** Complete, and waiting for testing on real phones and a native Hindi review.
+**Version 1.1.0.** Complete, and waiting for testing on real phones and a native Hindi review.
 
-Branches, local and not pushed:
+Branches, each built on the one before:
 - `feature/mobile-first-i18n`: phone-first layout, languages, voice, and the print fix.
-- `feature/fast-bill`, built on the branch above: the fast bill journey and motion.
-- `feature/production-ready`, built on `feature/fast-bill`: everything for 1.0 below.
+- `feature/fast-bill`: the fast bill journey and motion.
+- `feature/production-ready`: everything for 1.0.
+- `feature/phone-ready`: everything for 1.1 (below). This branch carries all the work, for the pull request into `main`.
+
+GitHub's `main` had only the initial commit until this pull request. Netlify's GitHub app is installed on the organisation; once `main` has this work, `netlify.toml` makes Netlify build and publish it.
 
 ## Status
+### New in 1.1
+- **On phones.** `npm run package` builds `site/` (the served files, licences and `_headers`); `netlify.toml` runs it for Netlify builds from GitHub. A one-time "add to home screen" tip after the first saved bill. Taps never zoom; every field is at least 16 px.
+- **Bill numbers** (`js/billNumber.js`): shop code + month + count (`AC-2611-042`) by default; day (`AC-261104-03`) and financial year (`AC/26-27/0412`) in Settings. Counters per period (`billcraft_counters`), the highest of the counter and saved bills plus one. An automatic number follows the bill date; a typed one is kept. Schema 3 moves the old prefix and counter over.
+- **Quantity.** A 🔢 button on every tile, or a long press, opens the quantity sheet, which has an on-screen number pad.
+- **Units** (`js/units.js`): 18 standard units with icons, stored as codes, shown in the app language on screens and the bill language on bills. A picker of chips plus "Other" in the product form and a line's Edit panel. A product name suggests its unit.
+- **Delivery and discount presets.** Delivery None/₹30/₹50/₹100/Other; discount as a percent (5–20%) or an amount (₹20–₹100), or Other. Bills say "Discount (10%)".
+- **🧹 Clear** with Undo; the number and date stay.
+- **📲 Payment QR** for Due and Draft bills, above the bill and in History: a large QR for the exact amount, and "Payment received" with Undo.
+- **Pictures and emoji, on screens only** (`js/icons.js`): 101 product pictures in eight groups, chosen or suggested by name; emoji on steps, statuses, customers, summary cards, notices and Settings; illustrated empty screens.
+
+### From 1.0
 - **Making a bill.**
   - On phones: Items, then Send. Product tiles, most used first; a quantity sheet for items sold by weight or length; "+ Other item"; recent customers and suggestions from every past customer.
   - Paid / Due / Draft, with a "Pay by" date for Due bills.
@@ -41,7 +55,7 @@ Branches, local and not pushed:
     - Persistent storage is requested once.
   - Schema 2 clears the made-up shop that versions before 1.0 saved, including the UPI ID `craftisan@upi`.
 - **Offline and installing.**
-  - The service worker keeps all 34 app files on the device. A new version is fetched as one set and applied on "Update now".
+  - The service worker keeps all 37 app files on the device. A new version is fetched as one set and applied on "Update now".
   - `npm run stamp` writes the file list and content hash into `sw.js`, and a test enforces it.
   - Settings → App offers Install, or Add to Home Screen on iPhone, and shows the version and the privacy note.
 - **Accessibility.**
@@ -54,7 +68,19 @@ Branches, local and not pushed:
   - Every value is escaped, uploaded images are checked, spreadsheet formulas are disarmed, and nothing is sent anywhere.
 - **Errors.** A short notice for unexpected errors, at most every 10 seconds. If the app cannot start, a message in English and Hindi says so; another covers browsers with scripts turned off.
 
-## Verification (2026-11-04, macOS, Node 26.12.0, Google Chrome headless)
+## Verification of 1.1 (2026-11-13, macOS, Node 26.12.0, Google Chrome 156 headless)
+- **`npm test`: 128 of 128 pass.** New for 1.1: bill numbers, units (spellings, names in every language reading back, suggestions), pictures, discount maths and old flat discounts, presets, backups with counters, discounts and pictures, the Netlify settings.
+- **`npm run check`:** every script parses.
+- **`npm run e2e`: 61 of 61 checks pass** in fresh browsers, with no console errors and no CSP violations. New journeys:
+  - the number pad; a product name picking its unit and picture; a unit picked by hand staying; a typed item following its name; a Hindi bill with Hindi units and no emoji
+  - ₹50 delivery and 10% off, an amount typed under Other, Clear and Undo
+  - the payment QR decoding to the exact UPI link and amount, Payment received and its Undo
+  - the Netlify folder: only app files and `_headers`, the app running from it, and working offline once opened
+- **The payment QR** decodes to the exact UPI link with both Chrome's `BarcodeDetector` and macOS Core Image, from screenshots of the sheet in English at 390 px and in Hindi at 360 px.
+- **Scratch checks (outside the repo), all passing at the step they were written for:** number pad and long press 13, bill numbers 13, phones 11, units 30, delivery and discount 23, Clear and payment QR 29, pictures and emoji 39, accessibility with real key presses 14. Phone widths 360 and 390 px, touch on: no horizontal overflow, fields at least 16 px.
+- **Not verified:** the Netlify build from GitHub (no deploy seen yet); the payment QR scanned by a UPI app; emoji on older phones (Emoji 12 needs Android 10 or iOS 13); plus everything listed under 1.0 below.
+
+## Verification of 1.0 (2026-11-04, macOS, Node 26.12.0, Google Chrome headless)
 - **`npm test`: 95 of 95 pass.** The tests cover:
   - QR codes
   - bill maths
@@ -107,6 +133,16 @@ Branches, local and not pushed:
   - right-to-left layout
 
 ## Decisions
+### 1.1 (2026-11-04 to 2026-11-13)
+- **Hosting: Netlify.** First by dragging `site/` onto Netlify Drop; the site is linked to GitHub, so `netlify.toml` builds `site/` on every push to `main`.
+- **Bill numbers: shop + month + count** by default; day and financial-year formats in Settings. Old bills keep their numbers.
+- **Emoji on screens only.** Bills stay formal.
+- **Units are stored as codes;** a unit typed by hand is kept as typed.
+- **Discount: percent or amount.** Switching between them starts the discount again at None, because 10% and ₹10 differ. A percent is at most 100. Old flat discounts read as an amount.
+- **A product's picture follows its name** until one is chosen; "No picture" is stored, so the initial stays. Only pictures from the list are kept.
+- **Backup format 3** carries the counters. Version 1.0 refuses it as newer.
+
+### 1.0
 - **English and Hindi for 1.0** (decided 2026-11-03). The other ten languages stay registered and hidden until a translator provides them.
 - **Non-GST bills** (bill of supply), as before. GST tax invoices are not part of 1.0.
 - **Hosting is decided later.** CI runs only the unit tests and the syntax check; `docs/DEPLOY.md` covers any HTTPS static host.
@@ -119,7 +155,9 @@ Branches, local and not pushed:
 - **Stored values stay in English:** statuses and the default category "General".
 
 ## Risks
-- The Hindi text is a draft.
+- The Hindi text is a draft, including the 1.1 screens (units, pictures, payment QR).
+- **The GitHub repository is public,** so everything pushed is public. Netlify deploy previews of pull requests have public addresses too.
+- Emoji look different on each phone, and phones older than Android 10 or iOS 13 may show empty boxes for some pictures.
 - Phones may differ from headless Chrome: the share sheet, the tap that sharing needs, installing, and iOS storage. Safari can clear the data of sites that are not installed and not used for 7 days; installing the app and the backup reminder reduce this.
 - Browser storage holds about 5 MB. A bill takes 1 to 2 KB, so thousands fit, and the uploaded QR image is shrunk. A full storage is reported.
 - The CSP allows inline styles, because the bill designs use them; scripts are limited to the app's own files.
@@ -128,8 +166,8 @@ Branches, local and not pushed:
 - The repository has no LICENSE file. Choosing one is the owner's decision.
 
 ## Next steps
-1. On real phones, scan a bill's QR code with a UPI app and check the payee and amount (pay ₹1 to your own UPI ID). Install the app on Android and iPhone, make bills in airplane mode, and send a PDF through the share sheet.
-2. Native review of `js/i18n/locales/hi.js`.
-3. Choose hosting, then push the branches and open a pull request (not done yet; needs your go-ahead).
+1. Review and merge the pull request into `main`. Netlify should then build and publish; check that Settings → App on the live site shows 1.1.0.
+2. On real phones, scan a bill's QR code and the 📲 payment QR with a UPI app and check the payee and amount (pay ₹1 to your own UPI ID). Install the app on Android and iPhone, make bills in airplane mode, and send a PDF through the share sheet.
+3. Native review of `js/i18n/locales/hi.js`.
 4. Choose a licence.
 5. Add the next languages (`docs/I18N.md`).

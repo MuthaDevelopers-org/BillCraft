@@ -39,19 +39,20 @@ export function buildHeaders(indexHtml) {
   ].join('\n');
 }
 
-export function packageSite() {
+/** Writes the site to `outDir` (site/ unless given; the browser tests use a temporary folder) */
+export function packageSite(outDir = SITE) {
   const files = appFiles();
   const stamp = readStamp(readFileSync(path.join(ROOT, 'sw.js'), 'utf8'));
   if (stamp.version !== stampVersion(files) || JSON.stringify(stamp.files) !== JSON.stringify(files)) {
     throw new Error('sw.js is out of date: run npm run stamp first');
   }
-  rmSync(SITE, { recursive: true, force: true });
+  rmSync(outDir, { recursive: true, force: true });
   for (const file of [...files, ...EXTRA_FILES]) {
-    const target = path.join(SITE, file);
+    const target = path.join(outDir, file);
     mkdirSync(path.dirname(target), { recursive: true });
     cpSync(path.join(ROOT, file), target);
   }
-  writeFileSync(path.join(SITE, '_headers'), buildHeaders(readFileSync(path.join(ROOT, 'index.html'), 'utf8')));
+  writeFileSync(path.join(outDir, '_headers'), buildHeaders(readFileSync(path.join(ROOT, 'index.html'), 'utf8')));
   return { count: files.length + EXTRA_FILES.length + 1, version: stamp.version };
 }
 

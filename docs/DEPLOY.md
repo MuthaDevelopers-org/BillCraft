@@ -19,6 +19,14 @@ The app now opens from the home screen and works without internet.
 
 **Quick test on the same Wi-Fi, without uploading:** run `npm run serve -- --lan` and open the printed address on the phone, for example `http://192.168.1.16:8089`. Bills work, but installing, offline use, the share sheet and voice need HTTPS, so they are off this way.
 
+## Netlify from GitHub: published on every push
+When the Netlify site is linked to the GitHub repository, `netlify.toml` tells Netlify what to do: run `npm run package` and publish the `site` folder, with its `_headers`. Every push to the production branch (`main`) then goes live within a minute or two.
+
+- **Check the link** in Netlify under **Site configuration → Build & deploy**: the repository should be BillCraft and the production branch `main`. The build command and the publish folder come from `netlify.toml`, so leave those fields empty there.
+- **A deploy fails on purpose** when `sw.js` was not stamped after a change. Run `npm run stamp`, commit and push again.
+- **Pull requests get a deploy preview** at their own address. Use it to try a change; bills made there stay at that address.
+- **Update by pushing,** not by dragging a folder: the next push replaces anything uploaded by hand.
+
 ## What to publish
 `npm run package` puts exactly these into `site/`; on another host, publish the same files:
 - `index.html`, `manifest.webmanifest`, `sw.js`
@@ -52,7 +60,7 @@ Permissions-Policy: camera=(), geolocation=(), payment=(), usb=(), microphone=(s
 3. Manual checks on real phones:
    - Scan a bill's QR code with Google Pay, PhonePe or Paytm, and confirm the payee and amount. Paying ₹1 to your own UPI ID is the safest test.
    - Install the app on an Android phone and an iPhone, switch on airplane mode, and make and share a bill.
-4. Commit and tag (for example `v1.1.0`), run `npm run package`, and upload `site/`.
+4. Commit and tag (for example `v1.1.0`). If Netlify builds from GitHub, merge into `main` and push; otherwise run `npm run package` and upload `site/`.
 
 ## How updates reach people
 - **An open app** notices the new version in the background. It shows "A new version of BillCraft is ready" with **Update now**, and the same offer appears in Settings → App.

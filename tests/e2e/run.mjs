@@ -7,7 +7,11 @@
  * BarcodeDetector where the platform has one (macOS, Android); elsewhere that
  * check is reported as skipped.
  */
+import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createAppServer } from '../../scripts/serve.mjs';
+import { packageSite } from '../../scripts/package-site.mjs';
 import { findChrome, launchChrome, sleep } from './chrome.mjs';
 
 if (!findChrome()) {
@@ -88,7 +92,11 @@ async function openBrowser() {
       }`);
     },
     isOpen: id => evaluate(`document.getElementById('${id}').classList.contains('active')`),
-    lastToast: () => evaluate("[...document.querySelectorAll('.toast')].at(-1)?.firstChild.textContent || ''"),
+    /** The message of the newest notice (after its icon) */
+    lastToast: () => evaluate("[...document.querySelectorAll('.toast')].at(-1)?.querySelector('span:not(.toast-icon)')?.textContent || ''"),
+    /** The chip of a choice row (units, delivery, discount) whose data-choice is `choice` */
+    chip: (row, choice) => `${row} .choice-chip[data-choice="${choice}"]`,
+    checked: row => evaluate(`document.querySelector('${row} .choice-chip[aria-checked="true"]')?.dataset.choice ?? 'other'`),
     /** Runs `action` in the page and returns the file it would save: { name, type, bytes (base64), text } */
     catchFile: action => evaluate(`(async () => {
       const files = [];
@@ -307,6 +315,120 @@ await journey('Offline, through the service worker', async (page) => {
   check('a PDF can be made offline', pdf && pdf.type === 'application/pdf');
   await page.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   server.setOffline(false);
+});
+
+await journey('Quick entry: the number pad, units and pictures', async (page) => {
+  await page.size(390, 844);
+  await page.start({ settings: SHOP, catalog: PRODUCTS });
+  await page.click('#product-grid [data-qty-product="prod_candle"]');
+  await sleep(300);
+  check('a tile\'s number button asks how many', await page.isOpen('modal-qty'));
+  for (const key of ['1', '2']) await page.click(`#qty-pad [data-key="${key}"]`);
+  await page.evaluate("document.getElementById('form-qty').requestSubmit()");
+  await sleep(400);
+  check('the number pad puts 12 on the bill', (await page.evaluate("window.app.currentInvoice.items.find(i => i.productId === 'prod_candle').quantity")) === 12);
+
+  await page.evaluate('window.app.openProductModal()');
+  await sleep(300);
+  await page.type('#modal-prod-name', 'Basmati rice');
+  check('a product name picks its unit and picture', (await page.checked('#modal-prod-units')) === 'kg'
+    && (await page.evaluate("document.getElementById('prod-icon-face').textContent")) === '🍚');
+  await page.click(page.chip('#modal-prod-units', 'bag'));
+  await page.type('#modal-prod-name', 'Basmati rice 25 kg');
+  check('a unit picked by hand stays', (await page.checked('#modal-prod-units')) === 'bag');
+  await page.type('#modal-prod-price', '1800');
+  await page.click('#btn-save-modal-product');
+  await sleep(400);
+  const rice = await page.evaluate("JSON.parse(localStorage.getItem('billcraft_catalog')).find(p => p.name === 'Basmati rice 25 kg')");
+  check('it is saved with the unit code and follows its name for the picture', rice?.unit === 'bag' && rice?.icon === '');
+  check('its tile shows the picture and the unit', (await page.evaluate(`[...document.querySelectorAll('#product-grid .product-tile')].find(t => t.textContent.includes('Basmati')).textContent.replace(/\\s+/g, ' ').trim()`)).startsWith('🍚 Basmati rice 25 kg ₹ 1,800.00/bag'));
+
+  await page.click('#product-grid [data-other-item]');
+  await sleep(300);
+  await page.type('#mobile-items-list .bill-line:last-child [data-field="name"]', 'Milk');
+  check('a typed item\'s unit and picture follow its name', (await page.evaluate('window.app.currentInvoice.items.at(-1).unit')) === 'ltr'
+    && (await page.evaluate("document.querySelector('#mobile-items-list .bill-line:last-child .line-icon').textContent")) === '🥛');
+
+  await page.evaluate(`(() => { window.app.settings.billLanguage = 'hi'; window.app.saveSettings(); })()`);
+  await page.reload();
+  await page.evaluate('window.app.setStep(2); window.app.flushPreview()');
+  const bill = await page.evaluate("document.getElementById('invoice-render-target').textContent");
+  check('a Hindi bill names the units in Hindi, with no pictures', bill.includes('लीटर') && bill.includes('नग') && !/\p{Extended_Pictographic}/u.test(bill));
+});
+
+await journey('Delivery, discount, Clear and the payment QR', async (page) => {
+  await page.size(390, 844);
+  await page.start({ settings: SHOP, catalog: PRODUCTS });
+  await page.click('#product-grid [data-product-id="prod_candle"]');
+  await page.click('#product-grid [data-product-id="prod_candle"]');
+  await page.evaluate("document.querySelector('.more-options').open = true");
+  await page.click(page.chip('#delivery-chips', '50'));
+  await page.click(page.chip('#discount-chips', '10'));
+  await sleep(700);
+  check('₹50 delivery and 10% off: ₹900 - ₹90 + ₹50 = ₹860', (await page.evaluate('window.app.currentInvoice.grandTotal')) === 860
+    && (await page.evaluate("document.getElementById('summary-discount-label').textContent")) === 'Discount (10%):');
+  await page.click('#discount-type [data-discount-type="amount"]');
+  await page.click('#discount-chips [data-choice-other]');
+  await page.type('#inv-discount', '25');
+  await sleep(300);
+  check('an amount typed under Other: ₹925', (await page.evaluate('window.app.currentInvoice.grandTotal')) === 925 && (await page.checked('#discount-chips')) === 'other');
+
+  await page.click('#btn-clear-bill');
+  await sleep(300);
+  check('Clear empties the bill and keeps its number', (await page.evaluate('window.app.currentInvoice.items.length')) === 0
+    && (await page.evaluate('window.app.currentInvoice.grandTotal')) === 0 && (await page.lastToast()) === 'Bill cleared. Its number and date stay.');
+  await page.click('.toast-action');
+  await sleep(300);
+  check('Undo brings it all back', (await page.evaluate('window.app.currentInvoice.grandTotal')) === 925);
+
+  await page.evaluate('window.app.setStep(2)');
+  await page.click('#status-toggle [data-status="Due"]');
+  await sleep(300);
+  check('a Due bill offers its payment QR', await page.evaluate("!document.getElementById('btn-payment-qr').hidden"));
+  await page.click('#btn-payment-qr');
+  await sleep(400);
+  const number = await page.evaluate('window.app.currentInvoice.invoiceNumber');
+  const decoded = await decodeQR(page, '#pay-qr');
+  if (decoded === null) {
+    skip('the payment QR is for the exact amount', 'no BarcodeDetector on this platform');
+  } else {
+    check('the payment QR is for the exact amount', decoded === `upi://pay?pa=asha.candles@okaxis&pn=Asha%20Candles&am=925.00&cu=INR&tn=Bill%20${number}`, decoded);
+  }
+  await page.click('#btn-payment-received');
+  await sleep(400);
+  const saved = () => page.evaluate(`JSON.parse(localStorage.getItem('billcraft_invoices')).find(i => i.invoiceNumber === '${number}')?.status`);
+  check('Payment received saves it as Paid', (await saved()) === 'Paid' && (await page.lastToast()) === `Bill ${number} marked paid`);
+  await page.click('.toast-action');
+  await sleep(300);
+  check('and Undo makes it Due again', (await saved()) === 'Due');
+});
+
+await journey('The site folder for Netlify', async (page) => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'billcraft-site-'));
+  const site = createAppServer({ root: dir });
+  try {
+    const { count } = packageSite(dir);
+    check('the folder has the app, its licences and _headers', count > 30 && existsSync(path.join(dir, 'index.html')) && existsSync(path.join(dir, 'sw.js'))
+      && readFileSync(path.join(dir, '_headers'), 'utf8').includes("frame-ancestors 'none'"));
+    check('and nothing else (no tests, scripts or docs)', !['tests', 'scripts', 'docs', 'package.json', 'CLAUDE.md'].some(name => existsSync(path.join(dir, name))));
+    await new Promise(resolve => site.listen(0, '127.0.0.1', resolve));
+    await page.size(390, 844);
+    await page.send('Page.navigate', { url: `http://127.0.0.1:${site.address().port}/?sw=1` });
+    await page.settle();
+    await page.evaluate(`(() => { localStorage.setItem('billcraft_settings', ${JSON.stringify(JSON.stringify(SHOP))}); localStorage.setItem('billcraft_catalog', ${JSON.stringify(JSON.stringify(PRODUCTS))}); window.__oldPage = true; })()`);
+    await page.send('Page.reload');
+    await page.settle();
+    check('the app runs from the folder', await page.evaluate("Boolean(document.querySelector('#product-grid [data-product-id]'))"));
+    const controlled = await page.evaluate("(async () => { await navigator.serviceWorker.ready; for (let i = 0; i < 50 && !navigator.serviceWorker.controller; i++) await new Promise(r => setTimeout(r, 100)); return Boolean(navigator.serviceWorker.controller); })()");
+    site.setOffline(true);
+    await page.evaluate('window.__oldPage = true');
+    await page.send('Page.reload');
+    await page.settle();
+    check('and works offline once opened', controlled && await page.evaluate("Boolean(document.querySelector('#product-grid [data-product-id]'))"));
+  } finally {
+    site.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 await journey('Layouts and Hindi', async (page) => {

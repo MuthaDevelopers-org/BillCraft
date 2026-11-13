@@ -7,7 +7,7 @@
 
 // The app files and their version, written by scripts/stamp-sw.mjs (npm run stamp).
 // Do not edit by hand: tests/sw.test.js checks them against the files.
-const VERSION = '1.0.0-3a6a14b925e5';
+const VERSION = '1.1.0-10b20f09e8ce';
 const FILES = [
   'css/base.css',
   'css/components.css',

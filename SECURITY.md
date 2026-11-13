@@ -6,6 +6,7 @@ Report a security problem privately: use **Report a vulnerability** on the repos
 ## How BillCraft protects people's data
 - **No server and no account.** Bills, products and settings are stored only in the person's browser (`localStorage`). The app sends no data anywhere.
 - **Nothing loads from other websites.** The scripts, the font and the export libraries are served with the app, and the Content Security Policy in `index.html` allows only the app's own site. The page sends no referrer.
+- **The site folder brings its own headers.** `npm run package` writes a `_headers` file for Netlify: the same Content Security Policy plus `frame-ancestors 'none'` (no framing by other sites), `nosniff`, no referrer and a Permissions-Policy that allows only the microphone, and only for the app.
 - **Everything shown is escaped.** Every value placed into the page goes through one escaping function (`js/safe.js`). Images must be inline pictures or the app's own QR code. Tests render every bill design with hostile data.
 - **Backups are checked before restoring.** A restore checks and rebuilds every value first (`js/backup.js`), asks before replacing anything, and can be undone.
 - **Spreadsheet exports cannot run formulas.** A cell starting with `=`, `+`, `-` or `@` is disarmed.

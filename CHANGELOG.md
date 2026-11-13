@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.1.0 (2026-11-04)
+Ready for phones, quicker to fill in, and friendlier to look at.
+
+### On your phones
+- **A folder ready for Netlify Drop.** `npm run package` builds `site/` with only the app's files and its security headers. Drag it onto app.netlify.com/drop for an HTTPS address that installs on Android and iPhone ([docs/DEPLOY.md](docs/DEPLOY.md)).
+- **A one-time tip to add BillCraft to the home screen** after the first saved bill: the install prompt on Android, the Share steps on iPhone.
+- **Taps respond at once and never zoom the page,** and no field is small enough for iPhone to zoom into.
+
+### Bill numbers that say something
+- **New bills are numbered by shop, month and count:** `AC-2611-042` is Asha Candles' 42nd bill of November 2026. Settings also offers a daily format (`AC-261104-03`) and a financial-year format (`AC/26-27/0412`), and the shop code can be changed.
+- **The number follows the bill date** until you type one yourself, and the Send step says what it means.
+- **Older bills keep their numbers.** Counters are kept per period, never go back, and travel with backups.
+
+### Quicker entry
+- **A number button on every product,** or hold the product, opens the quantity sheet. It has a large number pad, so the phone keyboard never covers it.
+- **Standard units with icons:** pcs, kg, g, ltr, ml, pack, box, bottle, jar, bag, dozen, pair, set, m, cm, plate, cup and hr, or type your own. A product's name picks its unit ("Toor dal" → kg) until you choose one. Bills print the units in the bill language (kg → किलो).
+- **Delivery in one tap:** None, ₹30, ₹50, ₹100, or another amount.
+- **Discounts as a percent or an amount:** 5%, 10%, 15%, 20%, or ₹20, ₹50, ₹100, or another value. Bills say "Discount (10%)".
+- **🧹 Clear** empties the bill but keeps its number and date, with Undo.
+
+### Getting paid
+- **📲 A payment QR for Due and Draft bills,** above the bill and on Due bills in History. It shows a large QR code for the exact amount, with the shop name and UPI ID.
+- **Payment received** marks the bill paid, with Undo.
+- **Without a UPI ID** it shows your own QR picture, or explains how to add one.
+
+### A friendlier look (screens only; bills stay formal)
+- **Product pictures:** 101 emoji in eight groups. Choose one in the product form, or let the product's name pick it.
+- **Emoji throughout:** the steps, statuses, customers, summary, notices and Settings.
+- **Illustrated empty screens** for no products, an empty bill, no bills yet and the shop setup.
+
+### Data
+- **Backup files now carry the bill-number counters (format 3).** Version 1.0 refuses them as made by a newer version; 1.1 still reads every older backup.
+
 ## 1.0.0 (2026-11-04)
 The first complete release: payments that work, data that is safe, and an app that works offline.
 

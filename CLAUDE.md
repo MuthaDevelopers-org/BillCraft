@@ -8,11 +8,15 @@ Static HTML, CSS and JavaScript bill and invoice maker for small domestic busine
 - `npm run check`: syntax check of every script
 - `npm run e2e`: browser tests in headless Chrome (`tests/e2e/run.mjs`; set `CHROME_PATH` if Chrome is not found)
 - `npm run stamp`: writes the app's file list and content hash into `sw.js`. Run it after changing any served file; `tests/sw.test.js` fails until you do.
+- `npm run package`: builds `site/` (git-ignored) for Netlify Drop: exactly the served files, the licences and a `_headers` file. It stops if the stamp is stale.
 
 ## Layout
 - `index.html`: every screen and modal. Visible text uses `data-i18n*` attributes.
 - `js/app.js`: the controller (`BillCraftApp`).
-- `js/quickBill.js`: bill logic without the DOM (product order, recent customers, units and quantities). Unit-tested in `tests/quickBill.test.js`.
+- `js/quickBill.js`: bill logic without the DOM (product order, recent customers, quantities, delivery and discount presets). Unit-tested in `tests/quickBill.test.js`.
+- `js/billNumber.js`: bill number formats (shop code with month, day or financial year). The counters per period are in `js/storage.js`.
+- `js/units.js`: standard units (code, icon, measured, one-tap amounts, spellings) and the unit and picture a product name suggests.
+- `js/icons.js`: product pictures (emoji in groups) and `pictureFor()`.
 - `js/motion.js`: animation helpers for the bill journey.
 - `js/templates.js`: the four bill designs. Each receives a translator for the bill language.
 - `js/exporter.js`: PDF, PNG, print and WhatsApp.
@@ -25,7 +29,7 @@ Static HTML, CSS and JavaScript bill and invoice maker for small domestic busine
 - `sw.js`, `manifest.webmanifest`, `icons/`: offline use and installing. Icons are drawn from `icons/icon.svg` by `scripts/make-icons.mjs`.
 - `vendor/`, `fonts/`: html2canvas, jsPDF and the font, served by the app (see `THIRD_PARTY_NOTICES.md`).
 - `css/base.css` and `css/components.css`: phone defaults. `css/responsive.css`: wider layouts, and the bill's layout by its own width (container queries).
-- `scripts/`: `serve.mjs` (dev server), `stamp-sw.mjs`, `make-icons.mjs`.
+- `scripts/`: `serve.mjs` (dev server), `stamp-sw.mjs`, `package-site.mjs`, `make-icons.mjs`.
 - `tests/`: unit tests; `tests/e2e/` the browser tests and a small Chrome driver.
 
 ## Rules
@@ -37,6 +41,8 @@ Static HTML, CSS and JavaScript bill and invoice maker for small domestic busine
 - **Bills lay out by their own width.** Bill styles that depend on width are container queries on `bill` in `css/responsive.css`, not media queries, because the preview, print and exports are different widths.
 - **Colours meet WCAG AA.** `tests/contrast.test.js` checks the tokens in `css/variables.css` and every text colour on the bills.
 - **Keep stored values in English.** Statuses (`Paid`, `Due`, `Draft`) stay English in storage so old bills and backups still work. Only the display is translated.
+- **Units are stored as codes** (`kg`, `pcs`) from `js/units.js` and shown with `unitLabel()`: the app language on screens, the bill language on bills. A unit typed by hand is kept as typed. Each translated unit name must also be one of its unit's spellings (`tests/units.test.js`).
+- **Emoji are decoration, on screens only.** Put each in its own `aria-hidden` span beside the translated text (translations replace the whole text of a `data-i18n` element). Never put one in a translation string or on a bill.
 - **No new dependencies and no build step.** Nothing loads from another website: the Content Security Policy in `index.html` allows only this site.
 - **Run `npm run stamp` after changing any served file**, so installed copies update as one set.
 - **Motion is decoration.** Change the data and text first, then animate through `js/motion.js`: transform and opacity only, 0.45 s or less (0.7 s for the burst after sending), and never block a tap. Everything must still work, and show final values, under `prefers-reduced-motion: reduce`.

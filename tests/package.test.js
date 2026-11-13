@@ -21,3 +21,10 @@ test('the page and the service worker are never cached stale', () => {
     assert.match(headers, new RegExp(`\\n${path.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\n  Cache-Control: no-cache`));
   }
 });
+
+test('a Netlify build from GitHub publishes only the packaged site', () => {
+  const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  assert.match(toml, /^\s*command = "npm run package"$/m);
+  assert.match(toml, /^\s*publish = "site"$/m);
+  assert.equal(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).scripts.package, 'node scripts/package-site.mjs');
+});
