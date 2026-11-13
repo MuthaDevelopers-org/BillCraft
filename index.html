@@ -2,296 +2,373 @@
 <html lang="en" data-accent="emerald">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>BillCraft - Domestic Business Bill & Invoice Maker</title>
-  <meta name="description" content="Fast, offline-ready domestic sales bill and invoice generator with multiple templates, product catalog, UPI QR code, PDF and Image export." />
-  
-  <!-- Modern Typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title data-i18n="app.title">BillCraft: bills for small businesses</title>
+  <!-- Everything the page loads comes from this site; inline styles are allowed for the bill designs -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self'; manifest-src 'self'" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="BillCraft" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="description" content="Simple bill and invoice maker for small businesses. Works in many Indian languages, on phones and computers, with UPI QR codes and PDF, image and WhatsApp sharing." />
 
-  <!-- App Stylesheets -->
+  <!-- App Stylesheets (mobile-first: base styles are for phones, responsive.css adds larger screens) -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/invoice-templates.css" />
   <link rel="stylesheet" href="css/responsive.css" />
-
-  <!-- Client-side Exporter CDNs (Works online, with fallback to pure browser render when offline) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <!-- html2canvas and jsPDF are loaded by js/exporter.js on first export -->
 </head>
 <body>
+  <!-- Shown only if the app has not started after 8 seconds (or failed, or scripts are off).
+       Plain HTML and CSS in English and Hindi, because no script may have run. -->
+  <div class="boot-error" role="alert">
+    <p class="boot-error-title">BillCraft could not start.</p>
+    <p>Reload the page. The first time, the phone needs internet to download the app.</p>
+    <p lang="hi">BillCraft शुरू नहीं हो सका। पेज फिर से खोलें। पहली बार ऐप डाउनलोड करने के लिए इंटरनेट चाहिए।</p>
+    <a class="btn btn-primary" href="">Reload / फिर से खोलें</a>
+  </div>
+  <noscript>
+    <div class="boot-error boot-error-now">
+      <p class="boot-error-title">BillCraft needs JavaScript.</p>
+      <p>Turn on JavaScript in your browser settings, then reload the page.</p>
+      <p lang="hi">ब्राउज़र की सेटिंग्स में JavaScript चालू करें, फिर पेज दोबारा खोलें।</p>
+    </div>
+  </noscript>
+
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <div class="app-container">
-    <!-- App Sidebar (Desktop Sidebar / Mobile Bottom Nav) -->
+    <!-- Navigation: bottom bar on phones, left sidebar on larger screens -->
     <aside class="app-sidebar">
       <div class="brand-header">
         <div class="brand-icon-box">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
         <div>
-          <div class="brand-title">BillCraft</div>
-          <div class="brand-subtitle">Domestic Sales Utility</div>
+          <div class="brand-title" data-i18n="app.name">BillCraft</div>
+          <div class="brand-subtitle" data-i18n="app.subtitle">Domestic Sales Utility</div>
         </div>
       </div>
 
       <ul class="nav-links">
         <li class="nav-item">
-          <button class="nav-btn active" data-view="builder" id="nav-builder-btn" title="Create Bill">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn active" data-view="builder" id="nav-builder-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            <span>Create Bill</span>
+            <span class="nav-label" data-i18n="nav.createBill">Create Bill</span>
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-btn" data-view="catalog" id="nav-catalog-btn" title="Products">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn" data-view="catalog" id="nav-catalog-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span>Products</span>
+            <span class="nav-label" data-i18n="nav.products">Products</span>
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-btn" data-view="history" id="nav-history-btn" title="History">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn" data-view="history" id="nav-history-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>History</span>
+            <span class="nav-label" data-i18n="nav.history">History</span>
             <span class="nav-badge" id="nav-history-badge">0</span>
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-btn" data-view="settings" id="nav-settings-btn" title="Settings">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button class="nav-btn" data-view="settings" id="nav-settings-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>Settings</span>
+            <span class="nav-label" data-i18n="nav.settings">Settings</span>
           </button>
         </li>
       </ul>
 
       <div class="sidebar-footer">
         <div class="business-mini-badge">
-          <div class="business-avatar" id="sidebar-brand-avatar">C</div>
-          <div class="business-mini-name" id="sidebar-brand-name">Craftisan Studio</div>
+          <div class="business-avatar" id="sidebar-brand-avatar">B</div>
+          <div class="business-mini-name" id="sidebar-brand-name">BillCraft</div>
         </div>
       </div>
     </aside>
 
     <!-- Main Workspace -->
-    <main class="app-main">
-      <!-- Topbar Header -->
+    <main class="app-main" id="main-content" tabindex="-1">
       <header class="app-topbar">
         <div class="topbar-left">
-          <h1 class="page-title" id="topbar-page-title">New Sales Bill</h1>
+          <h1 class="page-title" id="topbar-page-title" data-i18n="title.builder">New Sales Bill</h1>
         </div>
         <div class="topbar-right">
+          <button class="btn btn-ghost btn-icon" id="btn-change-language" data-i18n-title="nav.language" data-i18n-aria="nav.language">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>
+          </button>
           <button class="btn btn-primary btn-sm" id="btn-new-bill">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-            <span>+ New Bill</span>
+            <span data-i18n="nav.newBill">+ New Bill</span>
           </button>
         </div>
       </header>
 
       <!-- VIEW 1: BILL BUILDER -->
       <section class="view-section active" id="view-builder">
-        <!-- Mobile tab switch -->
-        <div class="bill-view-tabs">
-          <button class="view-tab-btn active" data-tab="editor">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-            1. Edit Bill
+        <!-- Mobile step bar (hidden on larger screens) -->
+        <nav class="step-bar mobile-only" aria-label="Bill steps" data-i18n-aria="step.bar">
+          <span class="step-pill" aria-hidden="true"></span>
+          <button type="button" class="step-btn active" data-step-go="1">
+            <span class="step-num">1</span>
+            <span class="step-label"><span aria-hidden="true">🛒</span> <span data-i18n="step.items">Items</span></span>
           </button>
-          <button class="view-tab-btn" data-tab="preview">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            2. Live Preview
+          <button type="button" class="step-btn" data-step-go="2">
+            <span class="step-num">2</span>
+            <span class="step-label"><span aria-hidden="true">📤</span> <span data-i18n="step.send">Send</span></span>
           </button>
-        </div>
+        </nav>
 
-        <div class="bill-builder-layout">
-          <!-- Left Panel: Form Inputs -->
+        <div class="bill-builder-layout step-1" id="bill-layout">
           <div class="bill-form-panel">
-            <!-- Card 1: Bill & Customer Info -->
-            <div class="card">
+            <!-- Step 1: Items and totals -->
+            <div class="card step-items">
               <div class="card-header">
                 <div class="card-title">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                  Bill & Customer Information
+                  <span class="card-emoji" aria-hidden="true">🛍️</span>
+                  <span data-i18n="items.card">Products & Items</span>
                 </div>
               </div>
               <div class="card-body">
-                <div class="form-grid-3">
-                  <div class="form-group">
-                    <label class="form-label" for="inv-number">Bill / Invoice #</label>
-                    <input type="text" id="inv-number" class="form-control" placeholder="BILL-001" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="inv-date">Bill Date</label>
-                    <input type="date" id="inv-date" class="form-control" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="inv-status">Payment Status</label>
-                    <select id="inv-status" class="form-control">
-                      <option value="Paid">Paid</option>
-                      <option value="Due">Due / Unpaid</option>
-                      <option value="Draft">Draft</option>
-                    </select>
-                  </div>
+                <div class="product-search">
+                  <input type="search" id="product-search" class="form-control" data-voice="text" data-i18n-placeholder="catalog.search" placeholder="Search products..." autocomplete="off" enterkeyhint="done" />
                 </div>
 
-                <div class="form-grid-2">
-                  <div class="form-group">
-                    <label class="form-label" for="cust-name">Customer Name</label>
-                    <input type="text" id="cust-name" class="form-control" placeholder="e.g. Priya Sharma" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="cust-phone">Customer Phone / WhatsApp</label>
-                    <input type="tel" id="cust-phone" class="form-control" placeholder="e.g. +91 98765 43210" />
-                  </div>
-                </div>
+                <!-- Product tiles, most used first, then "+ Other item" (rendered by app.js) -->
+                <div class="product-grid" id="product-grid"></div>
 
-                <div class="form-grid-2">
-                  <div class="form-group">
-                    <label class="form-label" for="cust-address">Delivery Address / City</label>
-                    <input type="text" id="cust-address" class="form-control" placeholder="e.g. 104 Blossom Heights, Pune" />
+                <div class="lines-head">
+                  <h3 class="lines-title" data-i18n="lines.title">In this bill</h3>
+                  <!-- Empties the bill but keeps its number and date; the notice offers Undo -->
+                  <button type="button" class="btn btn-ghost btn-sm lines-clear" id="btn-clear-bill" hidden><span aria-hidden="true">🧹</span> <span data-i18n="lines.clear">Clear</span></button>
+                </div>
+                <!-- One line per item (rendered by app.js) -->
+                <div class="bill-lines" id="mobile-items-list"></div>
+
+                <details class="more-options">
+                  <summary class="more-summary" data-i18n="step.more">More options</summary>
+                  <div class="more-body">
+                    <!-- Delivery and discount: None, the usual amounts, or "Other" to type one (chips by app.js) -->
+                    <div class="form-group">
+                      <span class="form-label" id="delivery-label"><span class="label-icon" aria-hidden="true">🚚</span> <span data-i18n="field.shipping">Delivery / Shipping Fee</span></span>
+                      <div class="choices" id="delivery-chips" role="radiogroup" aria-labelledby="delivery-label"></div>
+                      <input type="number" inputmode="decimal" step="any" min="0" id="inv-shipping" class="form-control choice-other" placeholder="0" aria-labelledby="delivery-label" hidden />
+                    </div>
+                    <div class="form-group">
+                      <div class="discount-head">
+                        <span class="form-label" id="discount-label"><span class="label-icon" aria-hidden="true">🏷️</span> <span data-i18n="field.discount">Discount</span></span>
+                        <div class="segmented segmented-2 discount-type" id="discount-type" role="radiogroup" data-i18n-aria="discount.type" aria-label="Percent or amount">
+                          <span class="segmented-pill" aria-hidden="true"></span>
+                          <button type="button" role="radio" aria-checked="true" data-discount-type="percent" data-i18n-aria="discount.percent" aria-label="Percent">%</button>
+                          <button type="button" role="radio" aria-checked="false" data-discount-type="amount" data-i18n-aria="discount.amount" aria-label="Amount" id="discount-currency">₹</button>
+                        </div>
+                      </div>
+                      <div class="choices" id="discount-chips" role="radiogroup" aria-labelledby="discount-label"></div>
+                      <input type="number" inputmode="decimal" step="any" min="0" id="inv-discount" class="form-control choice-other" placeholder="0" aria-labelledby="discount-label" hidden />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="inv-footer-notes" data-i18n="field.terms">Terms / Notes for Customer</label>
+                      <input type="text" id="inv-footer-notes" class="form-control" data-i18n-placeholder="ph.terms" placeholder="Thank you for supporting small business!" />
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label" for="cust-notes">Customer Order Note</label>
-                    <input type="text" id="cust-notes" class="form-control" placeholder="e.g. Gift wrap requested, evening drop" />
+                </details>
+
+                <div class="bill-summary-grid">
+                  <div class="summary-row">
+                    <span data-i18n="sum.subtotal">Subtotal:</span>
+                    <span id="summary-subtotal">₹ 0.00</span>
+                  </div>
+                  <div class="summary-row summary-discount" id="summary-discount-row" hidden>
+                    <span id="summary-discount-label"></span>
+                    <span id="summary-discount"></span>
+                  </div>
+                  <div class="summary-row" id="summary-delivery-row" hidden>
+                    <span data-i18n="sum.delivery">Delivery:</span>
+                    <span id="summary-delivery"></span>
+                  </div>
+                  <div class="summary-row grand-total">
+                    <span data-i18n="sum.grandTotal">Grand Total:</span>
+                    <span class="grand-total-amount" id="summary-grand-total">₹ 0.00</span>
+                  </div>
+                  <div class="amount-words-row">
+                    <div class="amount-words-badge" id="summary-words">Zero Only</div>
+                    <button type="button" class="btn btn-ghost btn-icon btn-speak" id="btn-speak-total" data-i18n-title="sum.readAloud" data-i18n-aria="sum.readAloud" hidden>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Card 2: Items & Pricing -->
-            <div class="card">
+            <!-- Step 2: who the bill is for, and whether it is paid -->
+            <div class="card step-customer">
               <div class="card-header">
                 <div class="card-title">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                  Products & Line Items
-                </div>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-pick-from-catalog">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                    + From Catalog
-                  </button>
-                  <button type="button" class="btn btn-primary btn-sm" id="btn-add-custom-item">
-                    + Custom Item
-                  </button>
+                  <span class="card-emoji" aria-hidden="true">👤</span>
+                  <span data-i18n="customer.card">Customer Details</span>
                 </div>
               </div>
               <div class="card-body">
-                <!-- Desktop Table View (Hidden on mobile) -->
-                <div class="items-table-wrap desktop-items-table">
-                  <table class="items-table">
-                    <thead>
-                      <tr>
-                        <th>Item Details</th>
-                        <th>Rate / Price</th>
-                        <th>Qty & Unit</th>
-                        <th>Disc %</th>
-                        <th style="text-align: right;">Total</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="items-table-body">
-                      <!-- Rendered dynamically -->
-                    </tbody>
-                  </table>
-                </div>
+                <!-- Walk-in, recent customers from history, and "+ New" (rendered by app.js) -->
+                <div class="chip-row" id="customer-chips" role="group" data-i18n-aria="customer.card"></div>
 
-                <!-- Mobile Card List View (Visible only on mobile) -->
-                <div class="mobile-items-container" id="mobile-items-list">
-                  <!-- Rendered dynamically for touch -->
-                </div>
-
-                <!-- Totals Summary & Adjustments -->
-                <div class="form-grid-2" style="margin-top: 1rem;">
+                <div class="form-grid-2 customer-fields" id="customer-fields" hidden>
                   <div class="form-group">
-                    <label class="form-label" for="inv-shipping">Delivery / Shipping Fee</label>
-                    <input type="number" step="any" min="0" id="inv-shipping" class="form-control" placeholder="0" />
+                    <label class="form-label" for="cust-name" data-i18n="field.customerName">Customer Name</label>
+                    <input type="text" id="cust-name" class="form-control" data-voice="text" data-i18n-placeholder="ph.customerName" placeholder="e.g. Priya Sharma" autocomplete="off" list="customer-suggestions" />
+                    <!-- Every past customer; picking one fills in their phone and address -->
+                    <datalist id="customer-suggestions"></datalist>
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="inv-discount">Special Bill Discount (Flat)</label>
-                    <input type="number" step="any" min="0" id="inv-discount" class="form-control" placeholder="0" />
+                    <label class="form-label" for="cust-phone" data-i18n="field.customerPhone">Phone / WhatsApp</label>
+                    <input type="tel" id="cust-phone" class="form-control" data-voice="number" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" autocomplete="tel" />
                   </div>
                 </div>
 
-                <div class="bill-summary-grid">
-                  <div class="summary-row">
-                    <span>Subtotal:</span>
-                    <span id="summary-subtotal">₹ 0.00</span>
+                <div class="form-group">
+                  <span class="form-label" id="status-label" data-i18n="field.status">Payment Status</span>
+                  <div class="segmented" id="status-toggle" role="radiogroup" aria-labelledby="status-label">
+                    <span class="segmented-pill" aria-hidden="true"></span>
+                    <button type="button" role="radio" aria-checked="true" data-status="Paid"><span aria-hidden="true">✅</span> <span data-i18n="status.paid">Paid</span></button>
+                    <button type="button" role="radio" aria-checked="false" data-status="Due"><span aria-hidden="true">⏳</span> <span data-i18n="status.due">Due</span></button>
+                    <button type="button" role="radio" aria-checked="false" data-status="Draft"><span aria-hidden="true">📝</span> <span data-i18n="status.draft">Draft</span></button>
                   </div>
-                  <div class="summary-row grand-total">
-                    <span>Grand Total:</span>
-                    <span class="grand-total-amount" id="summary-grand-total">₹ 0.00</span>
-                  </div>
-                  <div class="amount-words-badge" id="summary-words">Zero Only</div>
                 </div>
 
-                <div class="form-group" style="margin-top: 1.25rem;">
-                  <label class="form-label" for="inv-footer-notes">Terms / Notes for Customer</label>
-                  <input type="text" id="inv-footer-notes" class="form-control" placeholder="Thank you for supporting small domestic business!" />
+                <!-- Only for a Due bill: printed on it, and used in the reminder -->
+                <div class="form-group" id="due-date-group" hidden>
+                  <label class="form-label" for="inv-due-date" data-i18n="field.payBy">Pay by (optional)</label>
+                  <input type="date" id="inv-due-date" class="form-control" />
                 </div>
-              </div>
-              <div class="card-footer">
-                <button type="button" class="btn btn-secondary" id="btn-jump-to-preview">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                  Preview Bill
-                </button>
-                <button type="button" class="btn btn-success" id="btn-save-bill">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                  Save to History
-                </button>
+
+                <details class="more-options">
+                  <summary class="more-summary" data-i18n="step.more">More options</summary>
+                  <div class="more-body">
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="inv-number" data-i18n="field.billNumber">Bill Number</label>
+                        <input type="text" id="inv-number" class="form-control" data-i18n-placeholder="ph.billNumber" placeholder="AC-2611-001" aria-describedby="inv-number-meaning" />
+                        <small class="field-help" id="inv-number-meaning" hidden></small>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="inv-date" data-i18n="field.billDate">Bill Date</label>
+                        <input type="date" id="inv-date" class="form-control" />
+                      </div>
+                    </div>
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="cust-address" data-i18n="field.customerAddress">Delivery Address / City</label>
+                        <input type="text" id="cust-address" class="form-control" data-i18n-placeholder="ph.address" placeholder="e.g. 104 Blossom Heights, Pune" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="cust-notes" data-i18n="field.customerNote">Order Note</label>
+                        <input type="text" id="cust-notes" class="form-control" data-i18n-placeholder="ph.customerNote" placeholder="e.g. Gift wrap requested" />
+                      </div>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
 
-          <!-- Right Panel: Live Invoice Preview -->
+          <!-- Step 2 on phones (below the customer), the right-hand panel on larger screens -->
           <div class="bill-preview-panel">
-            <!-- Preview Controls Bar -->
+            <!-- Shown while the shop has no name, so bills do not go out as "My Business" -->
+            <div class="setup-nudge no-print" id="setup-nudge" hidden>
+              <span data-i18n="nudge.noShop">Your shop name is not on the bill yet.</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-nudge-setup" data-i18n="nudge.add">Add shop details</button>
+            </div>
             <div class="preview-actions-bar">
               <div class="template-selector-pill">
-                <span>Template:</span>
+                <span data-i18n="preview.template">Design:</span>
                 <select id="preview-template-select">
-                  <option value="modern">Modern Minimal</option>
-                  <option value="classic">Classic Executive</option>
-                  <option value="boutique">Artisan Boutique</option>
-                  <option value="thermal">Compact Thermal POS</option>
+                  <option value="modern" data-i18n="template.modern">Modern Minimal</option>
+                  <option value="classic" data-i18n="template.classic">Classic Executive</option>
+                  <option value="boutique" data-i18n="template.boutique">Artisan Boutique</option>
+                  <option value="thermal" data-i18n="template.thermal">Compact Thermal POS</option>
                 </select>
               </div>
 
               <div class="btn-group">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-pdf" title="Download PDF">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                  PDF
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-pdf" data-i18n-title="action.pdfTitle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <span data-i18n="action.pdf">PDF</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-image" title="Download PNG Image">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                  Image
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-export-image" data-i18n-title="action.imageTitle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <span data-i18n="action.image">Image</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-print-bill" title="Print Invoice">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                  Print
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-print-bill" data-i18n-title="action.printTitle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                  <span data-i18n="action.print">Print</span>
                 </button>
-                <button type="button" class="btn btn-success btn-sm btn-whatsapp" id="btn-share-whatsapp" title="Share via WhatsApp">
-                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 01-1.25-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.83c.02 4.54-3.68 8.23-8.23 8.23zm4.51-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
+                <button type="button" class="btn btn-success btn-sm btn-whatsapp" id="btn-share-whatsapp" data-i18n-title="action.whatsappTitle">
+                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15c-1.48 0-2.930-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 01-1.25-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.83c.02 4.54-3.68 8.23-8.23 8.23zm4.51-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
                   </svg>
-                  WhatsApp
+                  <span data-i18n="action.whatsapp">WhatsApp</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-save-bill" data-i18n-title="btn.saveHistory">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                  <span data-i18n="action.save">Save</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-speak" id="btn-speak-preview" data-i18n-title="action.speak" data-i18n-aria="action.speak" hidden>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/></svg>
+                  <span data-i18n="action.speak">Read aloud</span>
                 </button>
               </div>
             </div>
 
-            <!-- The Rendered Document Paper -->
+            <!-- A Due or Draft bill: a QR code for its amount, one tap away -->
+            <button type="button" class="pay-banner no-print" id="btn-payment-qr" hidden>
+              <span class="pay-banner-icon" aria-hidden="true">📲</span>
+              <span class="pay-banner-text">
+                <strong data-i18n="pay.show">Show payment QR</strong>
+                <small id="pay-banner-hint"></small>
+              </span>
+              <span class="pay-banner-go" aria-hidden="true">&rsaquo;</span>
+            </button>
+
+            <!-- The bill itself -->
             <div class="invoice-render-wrapper" id="invoice-render-target">
               <!-- Rendered via JS templates -->
             </div>
           </div>
+        </div>
+
+        <!-- Phone bar: the running total and Next on Items; Back and Send on the last step -->
+        <div class="step-nav mobile-only">
+          <div class="bar-summary" data-bar-step="1">
+            <span class="bar-count" id="bar-count">0 items</span>
+            <span class="bar-total" id="bar-total">₹ 0.00</span>
+          </div>
+          <button type="button" class="btn btn-primary bar-next" id="btn-step-next" data-bar-step="1" disabled>
+            <span data-i18n="common.next">Next</span>
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <button type="button" class="btn btn-secondary bar-back" id="btn-step-back" data-bar-step="2" data-i18n-title="common.back" data-i18n-aria="common.back" hidden>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button type="button" class="btn btn-success bar-send" id="btn-send-whatsapp" data-bar-step="2" hidden>
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15c-1.48 0-2.930-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 01-1.25-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.83c.02 4.54-3.68 8.23-8.23 8.23zm4.51-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/></svg>
+            <span data-i18n="send.whatsapp">Send on WhatsApp</span>
+          </button>
         </div>
       </section>
 
@@ -299,12 +376,11 @@
       <section class="view-section" id="view-catalog">
         <div class="catalog-header-bar">
           <div class="catalog-search-wrap">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input type="text" id="catalog-search" class="form-control catalog-search-input" placeholder="Search catalog items or categories..." />
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="catalog-search" class="form-control catalog-search-input" data-i18n-placeholder="catalog.search" placeholder="Search products..." />
           </div>
           <button class="btn btn-primary" id="btn-new-product">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-            + Add Product
+            <span data-i18n="catalog.addProduct">+ Add Product</span>
           </button>
         </div>
 
@@ -313,66 +389,76 @@
         </div>
       </section>
 
-      <!-- VIEW 3: INVOICES HISTORY -->
+      <!-- VIEW 3: BILLS HISTORY -->
       <section class="view-section" id="view-history">
-        <!-- Stats Summary -->
+        <div class="backup-banner" id="backup-banner" hidden>
+          <div class="backup-banner-text">
+            <strong data-i18n="backup.reminderTitle">Your bills are only on this phone</strong>
+            <span data-i18n="backup.reminderText">Save a backup file, so a lost or broken phone does not take them with it.</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-backup-now" data-i18n="settings.exportJson">Save Backup File</button>
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon-wrap">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span aria-hidden="true">💰</span>
             </div>
             <div>
-              <div class="stat-val" id="stat-total-sales">₹ 0.00</div>
-              <div class="stat-label">Total Realized Sales</div>
+              <div class="stat-val" id="stat-today">₹ 0</div>
+              <div class="stat-label" data-i18n="stats.today">Paid today</div>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon-wrap">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span aria-hidden="true">📅</span>
             </div>
             <div>
-              <div class="stat-val" id="stat-total-count">0</div>
-              <div class="stat-label">Invoices Created</div>
+              <div class="stat-val" id="stat-month">₹ 0</div>
+              <div class="stat-label" data-i18n="stats.month">Paid this month</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon-wrap" style="color: var(--danger); background: var(--danger-light);">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="stat-icon-wrap stat-icon-danger">
+              <span aria-hidden="true">⏳</span>
             </div>
             <div>
-              <div class="stat-val" id="stat-pending-amount">₹ 0.00</div>
-              <div class="stat-label">Pending / Due Amount</div>
+              <div class="stat-val" id="stat-due">₹ 0</div>
+              <div class="stat-label" id="stat-due-label">Nothing due</div>
             </div>
           </div>
         </div>
 
-        <!-- History Filter & Table / Cards -->
         <div class="card">
-          <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
-            <div class="card-title">Saved Bills Record</div>
-            <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%; max-width: 380px;">
-              <select id="history-filter-status" class="form-control" style="width: 130px; font-size: 0.85rem;">
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="due">Due</option>
-                <option value="draft">Draft</option>
+          <div class="card-header history-header">
+            <div class="card-title" data-i18n="history.card">Saved Bills</div>
+            <div class="history-filters">
+              <select id="history-filter-status" class="form-control history-filter-select" data-i18n-aria="field.status" aria-label="Payment Status">
+                <option value="all" data-i18n="history.filterAll">All</option>
+                <option value="paid" data-i18n="status.paid">Paid</option>
+                <option value="due" data-i18n="status.due">Due</option>
+                <option value="draft" data-i18n="status.draft">Draft</option>
               </select>
-              <input type="text" id="history-search-input" class="form-control" style="flex: 1; font-size: 0.85rem;" placeholder="Search customer / #" />
+              <input type="text" id="history-search-input" class="form-control history-search" data-i18n-placeholder="history.search" placeholder="Search by name or bill no." />
+              <button type="button" class="btn btn-secondary btn-sm history-csv" id="btn-export-csv" data-i18n-title="history.exportCsvTitle" title="Download these bills as a spreadsheet">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span data-i18n="history.exportCsv">Excel (CSV)</span>
+              </button>
             </div>
           </div>
-          <div class="card-body" style="padding: 0;">
-            <!-- Desktop Table View -->
-            <div class="items-table-wrap desktop-history-table" style="border: none; border-radius: 0; margin-bottom: 0;">
+          <div class="card-body card-body-flush">
+            <!-- Desktop table -->
+            <div class="items-table-wrap desktop-history-table">
               <table class="items-table">
                 <thead>
                   <tr>
-                    <th>Bill #</th>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th style="text-align: center;">Items</th>
-                    <th>Grand Total</th>
-                    <th>Status</th>
-                    <th style="text-align: right;">Actions</th>
+                    <th data-i18n="history.th.bill">Bill #</th>
+                    <th data-i18n="history.th.date">Date</th>
+                    <th data-i18n="history.th.customer">Customer</th>
+                    <th style="text-align: center;" data-i18n="history.th.items">Items</th>
+                    <th data-i18n="history.th.total">Grand Total</th>
+                    <th data-i18n="history.th.status">Status</th>
+                    <th style="text-align: right;" data-i18n="history.th.actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="history-table-body">
@@ -381,9 +467,9 @@
               </table>
             </div>
 
-            <!-- Mobile Card List View -->
+            <!-- Phone cards -->
             <div class="mobile-history-container" id="mobile-history-list">
-              <!-- Rendered dynamically for touch -->
+              <!-- Rendered dynamically -->
             </div>
           </div>
         </div>
@@ -392,88 +478,81 @@
       <!-- VIEW 4: SETTINGS -->
       <section class="view-section" id="view-settings">
         <form id="form-settings">
-          <!-- Profile Card -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                Seller & Brand Identity
+                <span class="card-emoji" aria-hidden="true">🏪</span>
+                <span data-i18n="settings.sellerCard">Your Business</span>
               </div>
             </div>
             <div class="card-body">
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-seller-name">Seller / Owner Name</label>
-                  <input type="text" id="settings-seller-name" class="form-control" placeholder="e.g. Aarav Sharma" />
+                  <label class="form-label" for="settings-seller-name" data-i18n="settings.sellerName">Owner Name</label>
+                  <input type="text" id="settings-seller-name" class="form-control" data-i18n-placeholder="ph.sellerName" placeholder="e.g. Asha Sharma" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="settings-brand-name">Brand / Business Name</label>
-                  <input type="text" id="settings-brand-name" class="form-control" placeholder="e.g. Craftisan Studio" />
-                </div>
-              </div>
-
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label" for="settings-tagline">Tagline / Business Subtitle</label>
-                  <input type="text" id="settings-tagline" class="form-control" placeholder="e.g. Handmade Domestic Goods & Curations" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="settings-phone">Business Phone / WhatsApp</label>
-                  <input type="tel" id="settings-phone" class="form-control" placeholder="e.g. +91 98765 43210" />
+                  <label class="form-label" for="settings-brand-name" data-i18n="settings.brandName">Business Name</label>
+                  <input type="text" id="settings-brand-name" class="form-control" data-i18n-placeholder="ph.brandName" placeholder="e.g. Asha Candles" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-email">Email Address</label>
-                  <input type="email" id="settings-email" class="form-control" placeholder="e.g. contact@craftisan.store" />
+                  <label class="form-label" for="settings-tagline" data-i18n="settings.tagline">Tagline</label>
+                  <input type="text" id="settings-tagline" class="form-control" data-i18n-placeholder="ph.tagline" placeholder="e.g. Handmade candles and gifts" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="settings-address">Business Address / Location</label>
-                  <input type="text" id="settings-address" class="form-control" placeholder="e.g. 12 Green Avenue, Bengaluru, Karnataka" />
+                  <label class="form-label" for="settings-phone" data-i18n="settings.phone">Business Phone / WhatsApp</label>
+                  <input type="tel" id="settings-phone" class="form-control" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" />
+                </div>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="settings-email" data-i18n="settings.email">Email Address</label>
+                  <input type="email" id="settings-email" class="form-control" data-i18n-placeholder="ph.email" placeholder="e.g. hello@ashacandles.in" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="settings-address" data-i18n="settings.address">Business Address</label>
+                  <input type="text" id="settings-address" class="form-control" data-i18n-placeholder="ph.businessAddress" placeholder="e.g. 12 MG Road, Pune" />
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Payment & UPI Card -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
-                Digital Payment & QR Settings
+                <span class="card-emoji" aria-hidden="true">💳</span>
+                <span data-i18n="settings.paymentCard">Payment & QR Code</span>
               </div>
             </div>
             <div class="card-body">
               <div class="form-grid-2">
                 <div>
                   <div class="form-group">
-                    <label class="form-label" for="settings-upi">UPI ID (VPA)</label>
-                    <input type="text" id="settings-upi" class="form-control" placeholder="e.g. seller@okaxis or business@upi" />
-                    <small style="color: var(--text-muted); font-size: 0.75rem;">Generates a dynamic payment QR code automatically on every invoice!</small>
+                    <label class="form-label" for="settings-upi" data-i18n="settings.upi">UPI ID</label>
+                    <input type="text" id="settings-upi" class="form-control" data-i18n-placeholder="ph.upi" placeholder="e.g. asha@okaxis" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="settings-upi-help settings-upi-error" />
+                    <small class="field-help" id="settings-upi-help" data-i18n="settings.upiHelp">A payment QR code is made automatically on every bill.</small>
+                    <small class="field-error" id="settings-upi-error" data-i18n="settings.upiInvalid" hidden>Check the UPI ID.</small>
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="settings-payment-note">Payment Instructions Note</label>
-                    <input type="text" id="settings-payment-note" class="form-control" placeholder="e.g. Scan QR code or pay to UPI ID for immediate confirmation." />
+                    <label class="form-label" for="settings-payment-note" data-i18n="settings.paymentNote">Payment Instructions</label>
+                    <input type="text" id="settings-payment-note" class="form-control" data-i18n-placeholder="ph.paymentNote" placeholder="e.g. Scan the QR code to pay" />
                   </div>
                 </div>
 
                 <div>
-                  <label class="form-label">Payment QR Code Preview</label>
-                  <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                  <label class="form-label" data-i18n="settings.qrPreview">QR Code Preview</label>
+                  <div class="qr-row">
                     <div class="qr-preview-box" id="settings-qr-preview">
                       <!-- Rendered via JS -->
                     </div>
-                    <div>
-                      <label for="settings-qr-upload" class="btn btn-secondary btn-sm" style="cursor: pointer; display: inline-flex;">
-                        Upload Custom QR Image
-                      </label>
-                      <input type="file" id="settings-qr-upload" accept="image/*" style="display: none;" />
-                      <div style="margin-top: 0.4rem;">
-                        <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-custom-qr" style="font-size: 0.75rem; color: var(--danger);">
-                          Reset to Auto UPI QR
-                        </button>
-                      </div>
+                    <div class="qr-actions">
+                      <label for="settings-qr-upload" class="btn btn-secondary btn-sm qr-upload-label" data-i18n="settings.uploadQr">Upload Your Own QR</label>
+                      <input type="file" id="settings-qr-upload" accept="image/*" hidden />
+                      <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-custom-qr" style="color: var(--danger);" data-i18n="settings.resetQr">Use Automatic UPI QR</button>
                     </div>
                   </div>
                 </div>
@@ -481,47 +560,56 @@
             </div>
           </div>
 
-          <!-- Template & Style Preferences -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                Bill Format & Design Preferences
+                <span class="card-emoji" aria-hidden="true">🎨</span>
+                <span data-i18n="settings.formatCard">Bill Design & Language</span>
               </div>
             </div>
             <div class="card-body">
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label class="form-label" for="settings-currency">Currency Symbol</label>
+                  <label class="form-label" for="settings-app-language" data-i18n="settings.appLanguage">App Language</label>
+                  <select id="settings-app-language" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="settings-bill-language" data-i18n="settings.billLanguage">Bill Language</label>
+                  <select id="settings-bill-language" class="form-control"></select>
+                  <small class="field-help" data-i18n="settings.billLanguageHelp">Language printed on bills, PDFs and WhatsApp messages.</small>
+                </div>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="settings-currency" data-i18n="settings.currency">Currency Symbol</label>
                   <select id="settings-currency" class="form-control">
-                    <option value="₹">₹ (INR - Indian Rupee)</option>
-                    <option value="$">$ (USD / International)</option>
-                    <option value="€">€ (EUR - Euro)</option>
-                    <option value="£">£ (GBP - British Pound)</option>
-                    <option value="AED">AED (UAE Dirham)</option>
-                    <option value="SAR">SAR (Saudi Riyal)</option>
-                    <option value="SGD">SGD (Singapore Dollar)</option>
+                    <option value="₹" data-i18n="currency.inr">₹ (INR, Indian rupee)</option>
+                    <option value="$" data-i18n="currency.usd">$ (USD, US dollar)</option>
+                    <option value="€" data-i18n="currency.eur">€ (EUR, euro)</option>
+                    <option value="£" data-i18n="currency.gbp">£ (GBP, British pound)</option>
+                    <option value="AED" data-i18n="currency.aed">AED (UAE dirham)</option>
+                    <option value="SAR" data-i18n="currency.sar">SAR (Saudi riyal)</option>
+                    <option value="SGD" data-i18n="currency.sgd">SGD (Singapore dollar)</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Theme Color Accent</label>
+                  <span class="form-label" data-i18n="settings.accent">Theme Colour</span>
                   <div class="color-swatches">
-                    <div class="color-swatch active" data-color="emerald" style="background: #059669;" title="Emerald Green"></div>
-                    <div class="color-swatch" data-color="sapphire" style="background: #2563eb;" title="Sapphire Blue"></div>
-                    <div class="color-swatch" data-color="purple" style="background: #7c3aed;" title="Royal Purple"></div>
-                    <div class="color-swatch" data-color="rose" style="background: #e11d48;" title="Rose Gold"></div>
-                    <div class="color-swatch" data-color="amber" style="background: #d97706;" title="Warm Amber"></div>
-                    <div class="color-swatch" data-color="charcoal" style="background: #1e293b;" title="Executive Charcoal"></div>
+                    <button type="button" class="color-swatch active" data-color="emerald" style="background: #047857;" data-i18n-title="settings.color.emerald" data-i18n-aria="settings.color.emerald"></button>
+                    <button type="button" class="color-swatch" data-color="sapphire" style="background: #2563eb;" data-i18n-title="settings.color.sapphire" data-i18n-aria="settings.color.sapphire"></button>
+                    <button type="button" class="color-swatch" data-color="purple" style="background: #7c3aed;" data-i18n-title="settings.color.purple" data-i18n-aria="settings.color.purple"></button>
+                    <button type="button" class="color-swatch" data-color="rose" style="background: #be123c;" data-i18n-title="settings.color.rose" data-i18n-aria="settings.color.rose"></button>
+                    <button type="button" class="color-swatch" data-color="amber" style="background: #b45309;" data-i18n-title="settings.color.amber" data-i18n-aria="settings.color.amber"></button>
+                    <button type="button" class="color-swatch" data-color="charcoal" style="background: #1e293b;" data-i18n-title="settings.color.charcoal" data-i18n-aria="settings.color.charcoal"></button>
                   </div>
                 </div>
               </div>
 
-              <!-- Default Template Selection Cards -->
-              <div class="form-group" style="margin-top: 1rem;">
-                <label class="form-label">Default Invoice Template Format</label>
+              <div class="form-group">
+                <span class="form-label" data-i18n="settings.defaultTemplate">Default Bill Design</span>
                 <div class="template-cards-grid">
-                  <!-- Modern -->
-                  <div class="template-card-choice selected" data-template="modern">
+                  <button type="button" class="template-card-choice selected" data-template="modern">
                     <div class="template-mock-thumb">
                       <div class="mock-bar accent"></div>
                       <div class="mock-bar" style="width: 50%;"></div>
@@ -530,12 +618,11 @@
                         <div class="mock-row"></div>
                       </div>
                     </div>
-                    <div class="template-choice-label">Modern Minimal</div>
-                    <div class="template-choice-desc">Clean lines & accent bar</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.modern">Modern Minimal</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.modernDesc">Clean lines and accent bar</div>
+                  </button>
 
-                  <!-- Classic -->
-                  <div class="template-card-choice" data-template="classic">
+                  <button type="button" class="template-card-choice" data-template="classic">
                     <div class="template-mock-thumb" style="border: 2px solid #334155;">
                       <div class="mock-bar" style="background: #334155;"></div>
                       <div class="mock-table">
@@ -544,12 +631,11 @@
                         <div class="mock-row"></div>
                       </div>
                     </div>
-                    <div class="template-choice-label">Classic Executive</div>
-                    <div class="template-choice-desc">Traditional formal receipt</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.classic">Classic Executive</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.classicDesc">Traditional formal receipt</div>
+                  </button>
 
-                  <!-- Boutique -->
-                  <div class="template-card-choice" data-template="boutique">
+                  <button type="button" class="template-card-choice" data-template="boutique">
                     <div class="template-mock-thumb" style="background: linear-gradient(135deg, #6366f1, #818cf8);">
                       <div class="mock-bar" style="background: #ffffff; width: 60%;"></div>
                       <div class="mock-table" style="background: #ffffff; padding: 3px; border-radius: 3px; margin-top: 6px;">
@@ -557,59 +643,107 @@
                         <div class="mock-row"></div>
                       </div>
                     </div>
-                    <div class="template-choice-label">Artisan Boutique</div>
-                    <div class="template-choice-desc">Warm retail gradient banner</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.boutique">Artisan Boutique</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.boutiqueDesc">Warm retail banner</div>
+                  </button>
 
-                  <!-- Thermal POS -->
-                  <div class="template-card-choice" data-template="thermal">
-                    <div class="template-mock-thumb" style="border: 1px dashed #64748b; font-family: monospace; font-size: 6px; padding: 6px; justify-content: center; align-items: center;">
-                      <div>--- RECEIPT ---</div>
+                  <button type="button" class="template-card-choice" data-template="thermal">
+                    <div class="template-mock-thumb" style="border: 1px dashed #64748b; padding: 6px; justify-content: center; align-items: center;">
+                      <div class="mock-bar" style="width: 60%;"></div>
                       <div style="width: 80%; border-bottom: 1px dashed #cbd5e1; margin: 3px 0;"></div>
-                      <div>TOTAL: ₹***</div>
+                      <div class="mock-bar" style="width: 40%;"></div>
                     </div>
-                    <div class="template-choice-label">Compact POS Slip</div>
-                    <div class="template-choice-desc">Receipt slip style</div>
-                  </div>
+                    <div class="template-choice-label" data-i18n="template.thermal">Compact Thermal POS</div>
+                    <div class="template-choice-desc" data-i18n="settings.tpl.thermalDesc">Receipt slip style</div>
+                  </button>
                 </div>
               </div>
 
-              <div class="form-group" style="margin-top: 1.25rem;">
-                <label class="form-label" for="settings-default-notes">Default Bill Terms & Conditions</label>
-                <textarea id="settings-default-notes" class="form-control" rows="2" placeholder="e.g. Items once sold can be exchanged within 7 days. Thank you for shopping with us!"></textarea>
+              <!-- Bill numbers: a shop code, the period and a count (js/billNumber.js) -->
+              <div class="form-group">
+                <span class="form-label" id="bill-format-label" data-i18n="settings.billFormat">Bill numbers</span>
+                <div class="bill-format-choices" id="bill-format-choices" role="radiogroup" aria-labelledby="bill-format-label">
+                  <button type="button" role="radio" aria-checked="true" class="bill-format-card" data-bill-format="month">
+                    <span class="bill-format-emoji" aria-hidden="true">🗓️</span>
+                    <span class="bill-format-name" data-i18n="settings.billFormat.month">By month</span>
+                    <code class="bill-format-example" data-example="month"></code>
+                  </button>
+                  <button type="button" role="radio" aria-checked="false" class="bill-format-card" data-bill-format="day">
+                    <span class="bill-format-emoji" aria-hidden="true">📆</span>
+                    <span class="bill-format-name" data-i18n="settings.billFormat.day">By day</span>
+                    <code class="bill-format-example" data-example="day"></code>
+                  </button>
+                  <button type="button" role="radio" aria-checked="false" class="bill-format-card" data-bill-format="fy">
+                    <span class="bill-format-emoji" aria-hidden="true">📊</span>
+                    <span class="bill-format-name" data-i18n="settings.billFormat.fy">By financial year</span>
+                    <code class="bill-format-example" data-example="fy"></code>
+                  </button>
+                </div>
+                <p class="bill-format-meaning" id="bill-format-meaning"></p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="settings-bill-code" data-i18n="settings.billCode">Shop code in bill numbers</label>
+                <input type="text" id="settings-bill-code" class="form-control bill-code-input" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="settings-bill-code-help" />
+                <small class="field-help" id="settings-bill-code-help" data-i18n="settings.billCodeHelp">2 to 4 letters or digits. Leave it empty to use your shop's initials.</small>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="settings-default-notes" data-i18n="settings.defaultTerms">Default Terms & Conditions</label>
+                <textarea id="settings-default-notes" class="form-control" rows="2" data-i18n-placeholder="ph.defaultTerms" placeholder="e.g. Items can be exchanged within 7 days."></textarea>
               </div>
             </div>
             <div class="card-footer">
               <button type="submit" class="btn btn-primary">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                Save Settings
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+                <span data-i18n="settings.save">Save Settings</span>
               </button>
             </div>
           </div>
 
-          <!-- Data Backup & Restore -->
           <div class="card">
             <div class="card-header">
               <div class="card-title">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                Backup & Data Portability
+                <span class="card-emoji" aria-hidden="true">💾</span>
+                <span data-i18n="settings.backupCard">Backup & Restore</span>
               </div>
             </div>
             <div class="card-body">
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                All your catalog products, settings, and invoice history are securely stored in your local browser. Export a JSON backup anytime or restore on another device.
-              </p>
-              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <p class="backup-last" id="backup-last"></p>
+              <p class="backup-text" data-i18n="settings.backupText">Your products, settings and bills are stored only in this browser. Save a backup file regularly, or restore it on another phone.</p>
+              <div class="backup-actions">
                 <button type="button" class="btn btn-secondary" id="btn-export-backup">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                  Export Data JSON
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  <span data-i18n="settings.exportJson">Save Backup File</span>
                 </button>
-                <label for="input-import-backup" class="btn btn-secondary" style="cursor: pointer;">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                  Restore from JSON
+                <label for="input-import-backup" class="btn btn-secondary backup-restore-label">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                  <span data-i18n="settings.restoreJson">Restore Backup File</span>
                 </label>
-                <input type="file" id="input-import-backup" accept=".json" style="display: none;" />
+                <input type="file" id="input-import-backup" accept=".json,application/json" hidden />
               </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="card-emoji" aria-hidden="true">📲</span>
+                <span data-i18n="settings.appCard">App</span>
+              </div>
+            </div>
+            <div class="card-body app-card">
+              <div class="app-row" id="install-row" hidden>
+                <p data-i18n="install.text">Install BillCraft on this device. It opens from the home screen and works without internet.</p>
+                <button type="button" class="btn btn-primary" id="btn-install-app" data-i18n="install.button">Install app</button>
+              </div>
+              <p class="app-row" id="install-ios" data-i18n="install.ios" hidden>On iPhone or iPad: tap Share, then Add to Home Screen.</p>
+              <div class="app-row" id="update-row" hidden>
+                <p data-i18n="update.ready">A new version of BillCraft is ready.</p>
+                <button type="button" class="btn btn-secondary" id="btn-update-app" data-i18n="update.now">Update now</button>
+              </div>
+              <p class="privacy-note" data-i18n="settings.privacy">Your bills, products and settings are stored only on this device. BillCraft has no account and does not send your data anywhere. Voice typing, if you use it, goes through your phone's speech service.</p>
+              <p class="app-version" id="app-version"></p>
             </div>
           </div>
         </form>
@@ -617,76 +751,221 @@
     </main>
   </div>
 
-  <!-- MODAL: ADD / EDIT PRODUCT -->
-  <div class="modal-overlay" id="modal-product">
-    <div class="modal-box">
+  <!-- MODAL: LANGUAGE (first visit, and from the top bar) -->
+  <div class="modal-overlay" id="modal-language">
+    <div class="modal-box lang-box" role="dialog" aria-modal="true" aria-labelledby="lang-title" tabindex="-1">
       <div class="modal-header">
-        <h3 class="modal-title" id="modal-product-title">Add New Product</h3>
-        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" title="Close">&times;</button>
+        <h3 class="modal-title" id="lang-title" data-i18n="lang.title">Choose your language</h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" id="btn-close-language" data-i18n-title="common.close" data-i18n-aria="common.close" hidden>&times;</button>
       </div>
-      <form id="form-product-edit">
+      <div class="modal-body">
+        <p class="lang-subtitle" data-i18n="lang.subtitle">Pick the language you read best. You can change it later in Settings.</p>
+        <div class="lang-grid" id="lang-grid">
+          <!-- Rendered from the language registry -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHEET: SHOP SETUP (first run, after the language; and from the bill when the shop has no name) -->
+  <div class="modal-overlay" id="modal-setup">
+    <div class="modal-box setup-box" role="dialog" aria-modal="true" aria-labelledby="setup-title" tabindex="-1">
+      <div class="modal-header">
+        <h3 class="modal-title" id="setup-title" data-i18n="setup.title">Your shop</h3>
+      </div>
+      <form id="form-setup" novalidate>
         <div class="modal-body">
+          <div class="empty-art" aria-hidden="true"><span class="empty-art-main">🏪</span><span class="empty-art-a">✨</span><span class="empty-art-b">🧾</span></div>
+          <p class="setup-subtitle" data-i18n="setup.subtitle">These details go on every bill. You can change them later in Settings.</p>
           <div class="form-group">
-            <label class="form-label" for="modal-prod-name">Product Name *</label>
-            <input type="text" id="modal-prod-name" class="form-control" required placeholder="e.g. Handcrafted Soy Wax Candle" />
+            <label class="form-label" for="setup-shop" data-i18n="setup.shopName">Shop or business name</label>
+            <input type="text" id="setup-shop" class="form-control" data-voice="text" autocomplete="organization" data-i18n-placeholder="ph.brandName" placeholder="e.g. Asha Candles" />
           </div>
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label" for="modal-prod-category">Category / Tag</label>
-              <input type="text" id="modal-prod-category" class="form-control" placeholder="e.g. Home Decor, Wellness, Grocery" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="modal-prod-sku">SKU / Item Code</label>
-              <input type="text" id="modal-prod-sku" class="form-control" placeholder="e.g. CAN-01" />
-            </div>
-          </div>
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label" for="modal-prod-price">Unit Price *</label>
-              <input type="number" step="any" min="0" id="modal-prod-price" class="form-control" required placeholder="450" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="modal-prod-unit">Unit Type</label>
-              <input type="text" id="modal-prod-unit" class="form-control" placeholder="pcs, jar, kg, box, packet, mtr" value="pcs" />
-            </div>
-          </div>
-
           <div class="form-group">
-            <label class="form-label" for="modal-prod-desc">Description / Notes</label>
-            <textarea id="modal-prod-desc" class="form-control" rows="2" placeholder="e.g. 200g jar, Lavender essential oil scent"></textarea>
+            <label class="form-label" for="setup-phone" data-i18n="setup.phone">Your phone / WhatsApp</label>
+            <input type="tel" id="setup-phone" class="form-control" data-voice="number" autocomplete="tel" data-i18n-placeholder="ph.phone" placeholder="e.g. +91 98765 43210" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setup-upi" data-i18n="settings.upi">UPI ID</label>
+            <input type="text" id="setup-upi" class="form-control" autocomplete="off" autocapitalize="none" spellcheck="false" data-i18n-placeholder="ph.upi" placeholder="e.g. asha@okaxis" aria-describedby="setup-upi-help setup-upi-error" />
+            <small class="field-help" id="setup-upi-help" data-i18n="setup.upiHelp">Optional. Customers scan the QR code on your bill to pay you.</small>
+            <small class="field-error" id="setup-upi-error" data-i18n="settings.upiInvalid" hidden>Check the UPI ID.</small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-close-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-modal-product">Save Product</button>
+          <button type="button" class="btn btn-ghost" id="btn-setup-skip" data-i18n="setup.skip">Skip for now</button>
+          <button type="submit" class="btn btn-primary" data-i18n="setup.start">Start billing</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: QUICK CATALOG PICKER FOR ACTIVE BILL -->
-  <div class="modal-overlay" id="modal-catalog-picker">
-    <div class="modal-box">
+  <!-- MODAL: ADD / EDIT PRODUCT -->
+  <div class="modal-overlay" id="modal-product">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-product-title" tabindex="-1">
       <div class="modal-header">
-        <h3 class="modal-title">Select from Catalog</h3>
-        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" title="Close">&times;</button>
+        <h3 class="modal-title" id="modal-product-title" data-i18n="product.addTitle">Add New Product</h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
       </div>
-      <div style="padding: 1rem 1.25rem 0.5rem;">
-        <input type="text" id="catalog-picker-search" class="form-control" placeholder="Search catalog items..." />
+      <form id="form-product-edit">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="modal-prod-name" data-i18n="product.name">Product Name *</label>
+            <input type="text" id="modal-prod-name" class="form-control" required data-voice="text" data-i18n-placeholder="product.namePh" placeholder="e.g. Handmade Soy Candle" />
+          </div>
+
+          <!-- A picture for the product's button, on screens only (js/icons.js). Until one is chosen it follows the name. -->
+          <div class="form-group">
+            <span class="form-label" id="modal-prod-icon-label" data-i18n="product.icon">Picture</span>
+            <button type="button" class="prod-icon-button" id="btn-prod-icon" aria-describedby="modal-prod-icon-label">
+              <span class="prod-icon-face" id="prod-icon-face"></span>
+              <span data-i18n="product.iconPick">Choose a picture</span>
+            </button>
+          </div>
+
+          <!-- The unit follows the name until one is picked (js/units.js) -->
+          <div class="form-group">
+            <span class="form-label" id="modal-prod-unit-label" data-i18n="product.unit">Unit Type</span>
+            <div class="choices" id="modal-prod-units" role="radiogroup" aria-labelledby="modal-prod-unit-label"></div>
+            <input type="text" id="modal-prod-unit" class="form-control choice-other" maxlength="20" aria-labelledby="modal-prod-unit-label" data-i18n-placeholder="product.unitPh" placeholder="Type the unit, e.g. tray, roll" value="pcs" hidden />
+            <small class="field-help" id="modal-prod-unit-hint" data-i18n="unitPick.suggested" hidden>Picked from the name. Tap another to change.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-prod-price" data-i18n="product.price">Price *</label>
+            <input type="number" inputmode="decimal" step="any" min="0" id="modal-prod-price" class="form-control" required data-voice="number" placeholder="450" />
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="modal-prod-category" data-i18n="product.category">Category</label>
+              <input type="text" id="modal-prod-category" class="form-control" data-i18n-placeholder="product.categoryPh" placeholder="e.g. Home Decor, Grocery" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="modal-prod-sku" data-i18n="product.sku">Item Code (SKU)</label>
+              <input type="text" id="modal-prod-sku" class="form-control" data-i18n-placeholder="product.skuPh" placeholder="e.g. CAN-01" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-prod-desc" data-i18n="product.desc">Description / Notes</label>
+            <textarea id="modal-prod-desc" class="form-control" rows="2" data-i18n-placeholder="product.descPh" placeholder="e.g. 200g jar, lavender scent"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal" data-i18n="common.cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-modal-product" data-i18n="product.save">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SHEET: A PRODUCT'S PICTURE (over the product form): groups of emoji, a tap chooses one -->
+  <div class="modal-overlay" id="modal-icon">
+    <div class="modal-box icon-box" role="dialog" aria-modal="true" aria-labelledby="icon-title" tabindex="-1">
+      <div class="modal-header">
+        <h3 class="modal-title" id="icon-title" data-i18n="product.iconPick">Choose a picture</h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
       </div>
-      <div class="modal-body" id="catalog-picker-list" style="padding: 0.5rem 1.25rem 1.25rem; max-height: 420px;">
-        <!-- Rendered dynamically -->
+      <div class="modal-body">
+        <div class="choices choices-strip icon-groups" id="icon-groups" role="radiogroup" data-i18n-aria="icon.groups" aria-label="Kinds of pictures"></div>
+        <div class="icon-grid" id="icon-grid"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-close-modal">Done</button>
+        <button type="button" class="btn btn-secondary" id="btn-icon-none"><span aria-hidden="true">🚫</span> <span data-i18n="icon.none">No picture</span></button>
       </div>
     </div>
   </div>
 
+  <!-- SHEET: PAYMENT QR (a Due or Draft bill, or a Due bill in History): a large QR for the amount -->
+  <div class="modal-overlay" id="modal-pay">
+    <div class="modal-box pay-box" role="dialog" aria-modal="true" aria-labelledby="pay-title" tabindex="-1">
+      <div class="modal-header">
+        <h3 class="modal-title" id="pay-title"><span aria-hidden="true">📲</span> <span data-i18n="pay.title">Scan to pay</span></h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
+      </div>
+      <div class="modal-body pay-body">
+        <p class="pay-shop" id="pay-shop"></p>
+        <p class="pay-amount" id="pay-amount"></p>
+        <p class="pay-bill" id="pay-bill"></p>
+        <div class="pay-qr" id="pay-qr-box">
+          <img id="pay-qr" alt="" width="280" height="280" />
+        </div>
+        <p class="pay-upi" id="pay-upi"></p>
+        <p class="pay-note" id="pay-note" hidden></p>
+        <!-- No QR possible: why, and how to get one -->
+        <div class="pay-missing" id="pay-missing" hidden>
+          <p id="pay-missing-text"></p>
+          <button type="button" class="btn btn-secondary" id="btn-pay-add-upi" data-i18n="pay.addUpi">Add UPI ID</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-close-modal" data-i18n="common.close">Close</button>
+        <button type="button" class="btn btn-success" id="btn-payment-received"><span aria-hidden="true">✅</span> <span data-i18n="pay.received">Payment received</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHEET: HOW MUCH (a tile's 🔢 button or a long press, items sold by weight or length, or a line's quantity) -->
+  <div class="modal-overlay" id="modal-qty">
+    <div class="modal-box qty-box" role="dialog" aria-modal="true" aria-labelledby="qty-title" tabindex="-1">
+      <div class="modal-header">
+        <h3 class="modal-title"><span class="qty-icon" id="qty-icon" aria-hidden="true"></span><span id="qty-title">Item</span></h3>
+        <button type="button" class="btn btn-ghost btn-icon btn-close-modal" data-i18n-title="common.close" data-i18n-aria="common.close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="qty-question" data-i18n="qty.title">How much?</p>
+        <div class="qty-presets" id="qty-presets"></div>
+        <form id="form-qty">
+          <label class="form-label" for="qty-input" data-i18n="qty.other">Other amount</label>
+          <div class="qty-entry-row">
+            <input type="text" inputmode="decimal" autocomplete="off" id="qty-input" class="form-control qty-display" data-voice="number" />
+            <span class="qty-unit" id="qty-unit"></span>
+          </div>
+          <!-- An on-screen number pad: on phones the keyboard stays closed and never covers the sheet -->
+          <div class="qty-pad" id="qty-pad">
+            <button type="button" data-key="1">1</button>
+            <button type="button" data-key="2">2</button>
+            <button type="button" data-key="3">3</button>
+            <button type="button" data-key="4">4</button>
+            <button type="button" data-key="5">5</button>
+            <button type="button" data-key="6">6</button>
+            <button type="button" data-key="7">7</button>
+            <button type="button" data-key="8">8</button>
+            <button type="button" data-key="9">9</button>
+            <button type="button" data-key="." data-i18n-aria="qty.point" aria-label="Decimal point">.</button>
+            <button type="button" data-key="0">0</button>
+            <button type="button" data-key="back" data-i18n-aria="qty.backspace" aria-label="Delete last digit">⌫</button>
+          </div>
+          <p class="qty-line-total" id="qty-line-total"></p>
+          <button type="submit" class="btn btn-primary qty-add" data-i18n="common.add">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIALOG: a yes/no question in the app language (replaces the browser's confirm()) -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-box confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" tabindex="-1">
+      <div class="modal-body">
+        <h3 class="modal-title" id="confirm-title">Are you sure?</h3>
+        <p class="confirm-message" id="confirm-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-confirm-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flying "+1" bubbles and the burst after sending (js/motion.js) -->
+  <div class="motion-layer" id="motion-layer" aria-hidden="true"></div>
+
   <!-- Toast Notification Container -->
-  <div class="toast-container" id="toast-container"></div>
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- Read out by screen readers after the bill changes (js/app.js announceBill) -->
+  <div class="sr-only" id="sr-status" role="status" aria-live="polite"></div>
 
   <!-- Main ES Module Script -->
   <script type="module" src="js/app.js"></script>

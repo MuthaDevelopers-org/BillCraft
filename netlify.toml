@@ -1,0 +1,10 @@
+# Netlify, when the site is linked to this GitHub repository: every push to the
+# production branch (main) is published. `npm run package` copies exactly the files
+# the app serves into site/, with the security headers in site/_headers, and stops
+# (failing the deploy) if sw.js was not stamped after a change. See docs/DEPLOY.md.
+[build]
+  command = "npm run package"
+  publish = "site"
+
+[build.environment]
+  NODE_VERSION = "22"

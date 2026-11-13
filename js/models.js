@@ -2,15 +2,76 @@
  * BillCraft Data Models & Utilities
  */
 
+import english from './i18n/locales/en.js';
+import { spellAmount } from './i18n/numberWords.js';
+import { unitInfo } from './units.js';
+import { cleanIcon } from './icons.js';
+
+/**
+ * Rounds an amount to paise (2 decimals), half up. Shifting by exponent avoids
+ * binary errors such as 10.075 * 100 = 1007.4999...
+ */
+export function roundMoney(value) {
+  const n = Number(value) || 0;
+  if (String(n).includes('e')) return Math.round(n * 100) / 100;
+  return Math.round(Number(`${n}e2`)) / 100;
+}
+
+const nonNegative = value => Math.max(0, Number(value) || 0);
+
+/** A bill's discount is a percent of the subtotal or an amount of money */
+export const DISCOUNT_TYPES = ['percent', 'amount'];
+
+/** The currencies a bill can use (Settings). Amounts are placed into markup, so no other value is kept. */
+export const CURRENCIES = ['₹', '$', '€', '£', 'AED', 'SAR', 'SGD'];
+
+/** Today's date on this device, as YYYY-MM-DD. (toISOString() would give the UTC date, a day early before 5:30 am in India.) */
+export function todayISO(now = new Date()) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
+ * A date for people to read, in their language with Latin digits: "3 Nov 2026",
+ * "3 नव॰ 2026". A YYYY-MM-DD value is a calendar date; a full timestamp is shown
+ * in this device's time zone. Anything else is returned as it is.
+ */
+export function formatDate(value, language = 'en') {
+  const text = String(value || '');
+  const calendarDate = /^\d{4}-\d{2}-\d{2}$/.test(text);
+  const date = new Date(calendarDate ? `${text}T00:00:00Z` : text);
+  if (!text || Number.isNaN(date.getTime())) return text;
+  try {
+    return new Intl.DateTimeFormat(`${language}-IN`, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      numberingSystem: 'latn',
+      ...(calendarDate ? { timeZone: 'UTC' } : {})
+    }).format(date);
+  } catch {
+    return text.slice(0, 10);
+  }
+}
+
+/** A new unique id such as "inv_1f0c…". Random where the browser can, so two made in the same millisecond differ. */
+export function newId(prefix) {
+  const random = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${random}`;
+}
+
 export class Product {
   constructor({
-    id = 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    id = newId('prod'),
     name = '',
     description = '',
     unitPrice = 0,
     unit = 'pcs',
     category = 'General',
-    sku = ''
+    sku = '',
+    icon = '' // a picture from js/icons.js, NO_ICON, or '' for the one its name suggests
   } = {}) {
     this.id = id;
     this.name = name;
@@ -19,12 +80,13 @@ export class Product {
     this.unit = unit || 'pcs';
     this.category = category || 'General';
     this.sku = sku;
+    this.icon = cleanIcon(icon);
   }
 }
 
 export class InvoiceItem {
   constructor({
-    id = 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    id = newId('item'),
     productId = null,
     name = '',
     description = '',
@@ -39,22 +101,22 @@ export class InvoiceItem {
     this.description = description;
     this.quantity = Number(quantity) > 0 ? Number(quantity) : 1;
     this.unit = unit || 'pcs';
-    this.unitPrice = Number(unitPrice) || 0;
-    this.discount = Number(discount) || 0;
+    this.unitPrice = nonNegative(unitPrice);
+    this.discount = Math.min(100, nonNegative(discount)); // percent
   }
 
+  /** The line amount in paise-exact rupees, so the printed lines add up to the subtotal */
   get total() {
     const gross = this.quantity * this.unitPrice;
-    const discountAmount = (gross * this.discount) / 100;
-    return Math.max(0, gross - discountAmount);
+    return roundMoney(gross - (gross * this.discount) / 100);
   }
 }
 
 export class Invoice {
   constructor({
-    id = 'inv_' + Date.now(),
+    id = newId('inv'),
     invoiceNumber = 'BILL-001',
-    date = new Date().toISOString().split('T')[0],
+    date = todayISO(),
     dueDate = '',
     customer = {
       name: '',
@@ -64,11 +126,14 @@ export class Invoice {
     },
     items = [],
     shippingFee = 0,
-    billDiscount = 0, // flat discount
-    notes = 'Thank you for your business! Items once sold can be exchanged within 7 days.',
+    discountType = 'percent', // a 'percent' of the subtotal, or an 'amount' of money
+    discountValue = 0,
+    billDiscount = 0, // bills from before 1.1: a flat amount, read as discountType 'amount'
+    notes = '', // empty prints the bill language's thank-you line
     template = 'modern',
     status = 'Paid', // Paid, Due, Draft
-    createdAt = new Date().toISOString()
+    createdAt = new Date().toISOString(),
+    numberAuto = null // true while the number is automatic and follows the bill date; null before 1.1
   } = {}) {
     this.id = id;
     this.invoiceNumber = invoiceNumber;
@@ -76,44 +141,70 @@ export class Invoice {
     this.dueDate = dueDate;
     this.customer = { ...customer };
     this.items = items.map(item => item instanceof InvoiceItem ? item : new InvoiceItem(item));
-    this.shippingFee = Number(shippingFee) || 0;
-    this.billDiscount = Number(billDiscount) || 0;
+    this.shippingFee = nonNegative(shippingFee);
+    const legacy = !nonNegative(discountValue) && nonNegative(billDiscount) > 0;
+    this.discountType = legacy || discountType === 'amount' ? 'amount' : 'percent';
+    this.discountValue = legacy ? nonNegative(billDiscount) : nonNegative(discountValue);
+    if (this.discountType === 'percent') this.discountValue = Math.min(100, this.discountValue);
     this.notes = notes;
     this.template = template;
     this.status = status;
     this.createdAt = createdAt;
+    this.numberAuto = numberAuto === null ? null : Boolean(numberAuto);
   }
 
   get subtotal() {
-    return this.items.reduce((sum, item) => sum + item.total, 0);
+    return roundMoney(this.items.reduce((sum, item) => sum + item.total, 0));
+  }
+
+  /** The discount in money: a percent of the subtotal, or an amount, never more than the subtotal */
+  get discountAmount() {
+    const value = this.discountType === 'percent' ? (this.subtotal * this.discountValue) / 100 : this.discountValue;
+    return roundMoney(Math.min(this.subtotal, value));
   }
 
   get grandTotal() {
-    const sub = this.subtotal;
-    const afterDiscount = Math.max(0, sub - this.billDiscount);
-    return afterDiscount + this.shippingFee;
+    return roundMoney(this.subtotal - this.discountAmount + this.shippingFee);
   }
 
   get totalItemsCount() {
-    return this.items.reduce((count, item) => count + item.quantity, 0);
+    return Math.round(this.items.reduce((count, item) => count + item.quantity, 0) * 1000) / 1000;
+  }
+
+  /** True when every line uses the same unit ("Kilo" and "kg" are one), so a total quantity means something */
+  get hasSingleUnit() {
+    return new Set(this.items.map(item => unitInfo(item.unit || 'pcs')?.code || String(item.unit).trim().toLowerCase())).size <= 1;
   }
 }
 
+/**
+ * The seller's own details and preferences. Everything starts empty: the
+ * first-run setup asks for the shop name, phone and UPI ID.
+ */
 export class BusinessSettings {
   constructor({
-    sellerName = 'Aarav Sharma',
-    brandName = 'Craftisan Studio',
-    tagline = 'Handmade Domestic Goods & Curations',
-    phone = '+91 98765 43210',
-    email = 'contact@craftisan.store',
-    address = '12 Green Avenue, Gandhi Nagar, Bengaluru, KA',
+    sellerName = '',
+    brandName = '',
+    tagline = '',
+    phone = '',
+    email = '',
+    address = '',
     currency = '₹',
-    upiId = 'craftisan@upi',
-    paymentNotes = 'Scan QR code or pay to UPI ID for quick settlement.',
+    upiId = '',
+    paymentNotes = '',
     defaultTemplate = 'modern',
     themeAccent = 'emerald',
-    defaultNotes = 'Thank you for supporting our domestic venture! Please retain this bill for your reference.',
-    qrCustomImage = ''
+    defaultNotes = '',
+    qrCustomImage = '',
+    appLanguage = '', // '' = not chosen yet, so the first-run picker is shown
+    billLanguage = '', // '' = same as the app language
+    voiceConsent = false, // set once the user agrees to voice typing
+    setupDone = false, // set once the shop setup is finished or skipped
+    billFormat = 'month', // bill numbers: 'month' AC-2611-042, 'day' AC-261104-03, 'fy' AC/26-27/0412
+    billCode = '', // the shop code in bill numbers; '' = from the shop name (js/billNumber.js)
+    lastBackupAt = '', // ISO time of the last backup file saved
+    persistAsked = false, // set once the browser was asked to keep this data
+    installTipShown = false // set once the phone was shown the add-to-home-screen tip
   } = {}) {
     this.sellerName = sellerName;
     this.brandName = brandName;
@@ -121,49 +212,41 @@ export class BusinessSettings {
     this.phone = phone;
     this.email = email;
     this.address = address;
-    this.currency = currency;
+    this.currency = CURRENCIES.includes(currency) ? currency : '₹';
     this.upiId = upiId;
     this.paymentNotes = paymentNotes;
     this.defaultTemplate = defaultTemplate;
     this.themeAccent = themeAccent;
     this.defaultNotes = defaultNotes;
     this.qrCustomImage = qrCustomImage;
+    this.appLanguage = appLanguage;
+    this.billLanguage = billLanguage;
+    this.voiceConsent = Boolean(voiceConsent);
+    this.setupDone = Boolean(setupDone);
+    this.billFormat = ['month', 'day', 'fy'].includes(billFormat) ? billFormat : 'month';
+    this.billCode = String(billCode || '');
+    this.lastBackupAt = lastBackupAt;
+    this.persistAsked = Boolean(persistAsked);
+    this.installTipShown = Boolean(installTipShown);
   }
 }
 
 /**
- * Converts a numeric amount to English Words (e.g. ₹ 1,520 => One Thousand Five Hundred Twenty Only)
+ * English amount in words, e.g. 1520 => "One Thousand Five Hundred and Twenty Only".
+ * Other languages use spellAmount() with their own vocabulary (see i18n/).
  */
 export function numberToWords(num) {
-  const n = Math.floor(Math.abs(num));
-  if (n === 0) return 'Zero Only';
-
-  const a = [
-    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-    'Seventeen', 'Eighteen', 'Nineteen'
-  ];
-  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-  function inWords(n) {
-    if (n < 20) return a[n];
-    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
-    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' and ' + inWords(n % 100) : '');
-    if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + inWords(n % 1000) : '');
-    if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 !== 0 ? ' ' + inWords(n % 100000) : '');
-    return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + inWords(n % 10000000) : '');
-  }
-
-  return inWords(n) + ' Only';
+  return spellAmount(num, english.words);
 }
 
 /**
- * Currency Formatter
+ * Currency formatter. Always Indian digit grouping with Latin digits, so
+ * amounts match what the customer sees in UPI and payment apps.
  */
-export function formatCurrency(amount, currency = '₹') {
+export function formatCurrency(amount, currency = '₹', decimals = 2) {
   const num = Number(amount) || 0;
   return `${currency} ${num.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
   })}`;
 }

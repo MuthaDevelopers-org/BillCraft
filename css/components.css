@@ -13,14 +13,14 @@
   transition: all var(--transition-fast);
   white-space: nowrap;
   user-select: none;
-  min-height: 40px; /* Touch target accessibility */
+  min-height: 48px; /* Touch target: at least 44px on phones */
 }
 
 .btn-sm {
   padding: 0.4rem 0.75rem;
   font-size: 0.8rem;
   border-radius: var(--radius-sm);
-  min-height: 34px;
+  min-height: 44px;
 }
 
 .btn-lg {
@@ -32,8 +32,8 @@
 .btn-icon {
   padding: 0.55rem;
   border-radius: var(--radius-md);
-  min-width: 38px;
-  min-height: 38px;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .btn-primary {
@@ -114,7 +114,7 @@
   color: var(--success-text);
 }
 
-.badge-unpaid {
+.badge-due {
   background: var(--danger-light);
   color: var(--danger-text);
 }
@@ -157,7 +157,7 @@
 }
 
 .card-body {
-  padding: 1.25rem;
+  padding: 1rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -196,10 +196,10 @@
   border: 1px solid var(--border-light);
   background: var(--bg-surface);
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 1rem; /* 16px stops iOS zooming in on focus */
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   box-sizing: border-box;
-  min-height: 42px; /* iOS thumb-friendly */
+  min-height: 48px; /* Touch target */
 }
 
 .form-control:focus {
@@ -215,21 +215,21 @@ textarea.form-control {
 
 .form-grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
 .form-grid-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
 /* Bill Creator Split Layout */
 .bill-builder-layout {
   display: grid;
-  grid-template-columns: 1.15fr 0.95fr;
-  gap: 1.75rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   align-items: start;
   width: 100%;
   box-sizing: border-box;
@@ -243,8 +243,7 @@ textarea.form-control {
 }
 
 .bill-preview-panel {
-  position: sticky;
-  top: 4.5rem;
+  position: static;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -252,43 +251,8 @@ textarea.form-control {
   min-width: 0;
 }
 
-/* Mobile Screen Tab Bar for Bill Builder */
-.bill-view-tabs {
-  display: none;
-  background: var(--bg-surface-alt);
-  padding: 0.3rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 1.25rem;
-  width: 100%;
-  box-sizing: border-box;
-  gap: 0.3rem;
-}
 
-.view-tab-btn {
-  flex: 1;
-  padding: 0.7rem 0.5rem;
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.88rem;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: var(--text-muted);
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-}
-
-.view-tab-btn.active {
-  background: var(--bg-surface);
-  color: var(--theme-accent, #4f46e5);
-  box-shadow: var(--shadow-sm);
-}
-
-/* Line Items Table & Mobile Cards */
+/* Tables (the bill history on wider screens) */
 .items-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -325,116 +289,6 @@ textarea.form-control {
 
 .items-table tr:last-child td {
   border-bottom: none;
-}
-
-.item-row-title-input {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.item-row-desc-input {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.item-total-badge {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text-main);
-  white-space: nowrap;
-}
-
-/* ============================================================
-   MOBILE LINE ITEM CARDS (UX Breakthrough for Phones)
-   ============================================================ */
-.mobile-items-container {
-  display: none;
-  flex-direction: column;
-  gap: 0.85rem;
-  margin-bottom: 1rem;
-  width: 100%;
-}
-
-.mobile-item-card {
-  background: var(--bg-surface-alt);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 0.95rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  position: relative;
-  box-sizing: border-box;
-}
-
-.mobile-item-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.mobile-item-title-wrap {
-  flex: 1;
-}
-
-.mobile-item-inputs-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 1.2fr 0.9fr;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.mobile-item-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 0.6rem;
-  border-top: 1px dashed var(--border-light);
-}
-
-/* Quantity Stepper Control (Thumb-Friendly) */
-.qty-stepper {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  overflow: hidden;
-  height: 38px;
-}
-
-.qty-step-btn {
-  width: 32px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-main);
-  cursor: pointer;
-  user-select: none;
-}
-
-.qty-step-btn:active {
-  background: var(--bg-surface-alt);
-}
-
-.qty-stepper-input {
-  width: 44px;
-  border: none;
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0;
-  background: transparent;
-}
-
-.qty-stepper-input:focus {
-  outline: none;
 }
 
 /* Totals Summary Card */
@@ -483,10 +337,10 @@ textarea.form-control {
 /* Preview Actions Bar */
 .preview-actions-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   background: var(--bg-surface);
-  padding: 0.85rem 1rem;
+  padding: 0.75rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
@@ -512,7 +366,7 @@ textarea.form-control {
   border: none;
   outline: none;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 1rem; /* 16px: iOS zooms in on smaller fields */
   color: var(--text-main);
   cursor: pointer;
 }
@@ -524,29 +378,51 @@ textarea.form-control {
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(4px);
   display: none;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  padding: 1rem;
+  padding: 0;
   box-sizing: border-box;
 }
 
 .modal-overlay.active {
   display: flex;
+  animation: fadeIn 200ms ease-out;
 }
 
+/* On phones a dialog is a bottom sheet that slides up (wider screens pop it in the middle) */
 .modal-box {
   background: var(--bg-surface);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   width: 100%;
   max-width: 620px;
-  max-height: 90vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-xl);
-  animation: modalPop 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: sheetUp 320ms cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(48px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 
 @keyframes modalPop {
@@ -624,8 +500,8 @@ textarea.form-control {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
   width: 100%;
 }
 
@@ -710,13 +586,16 @@ textarea.form-control {
 /* Template Picker Cards in Settings */
 .template-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.85rem;
   margin-top: 0.5rem;
   width: 100%;
 }
 
 .template-card-choice {
+  width: 100%;
+  font: inherit;
+  color: inherit;
   border: 2px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: 0.85rem;
@@ -795,8 +674,9 @@ textarea.form-control {
 }
 
 .color-swatch {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid transparent;
@@ -835,9 +715,9 @@ textarea.form-control {
 /* Stats Cards in History View */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
   width: 100%;
 }
 
@@ -882,10 +762,10 @@ textarea.form-control {
    MOBILE HISTORY CARDS (Adaptive Card List for Phones)
    ============================================================ */
 .mobile-history-container {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding: 1rem;
+  padding: 0 1rem 1rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -942,4 +822,1703 @@ textarea.form-control {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.25rem;
+}
+
+/* ============================================================
+   PHONE-FIRST ADDITIONS
+   Phone defaults for the bill steps, More options, voice typing,
+   the language picker and the history and catalog screens.
+   Wider screens are handled in responsive.css.
+   ============================================================ */
+
+/* Bill steps: progress bar at the top of the builder */
+.step-bar {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+  padding: 0.35rem;
+  margin-bottom: 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  position: sticky;
+  top: 3.5rem;
+  z-index: 20;
+}
+
+.step-btn {
+  position: relative; /* above the sliding pill */
+  z-index: 1;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.step-btn.active {
+  color: var(--theme-accent, #059669);
+}
+
+/* The highlight behind the active step. It slides when the step changes. */
+.step-pill {
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  inset-inline-start: 0.35rem;
+  width: calc((100% - 0.7rem - 0.4rem) / 2);
+  border-radius: var(--radius-md);
+  background: var(--theme-accent-soft, #ecfdf5);
+  box-shadow: inset 0 0 0 2px var(--theme-accent, #059669);
+  transform: translateX(calc(var(--step-index, 0) * (100% + 0.4rem)));
+  transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[dir="rtl"] .step-pill {
+  transform: translateX(calc(var(--step-index, 0) * (-100% - 0.4rem)));
+}
+
+.step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-alt);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.step-btn.active .step-num {
+  background: var(--theme-accent, #059669);
+  color: #ffffff;
+}
+
+/* On phones, Items shows alone, and Send shows the customer above the bill
+   (desktop resets this in responsive.css) */
+.bill-builder-layout.step-1 .step-customer,
+.bill-builder-layout.step-1 .bill-preview-panel,
+.bill-builder-layout.step-2 .step-items {
+  display: none;
+}
+
+/* Back / Next bar, fixed above the bottom navigation */
+.step-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-light);
+  z-index: 80;
+}
+
+.step-nav .btn {
+  flex: 1;
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+/* Items step: how many items and the running total, beside Next */
+.bar-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
+}
+
+.bar-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.bar-total {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-nav .bar-next {
+  flex: 0 0 auto;
+  min-width: 8.5rem;
+}
+
+.step-nav .bar-back {
+  flex: 0 0 auto;
+  width: 56px;
+  padding: 0;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.card-body-flush {
+  padding: 0;
+}
+
+/* Catalog header: stacked on phones */
+.catalog-header-bar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Amount in words, with the read-aloud button beside it */
+.amount-words-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.amount-words-row .amount-words-badge {
+  flex: 1;
+}
+
+/* Preview actions: two per row on phones */
+.btn-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* On phones WhatsApp is the big button in the bottom bar, so the row leaves it out */
+.btn-group .btn-whatsapp {
+  display: none;
+}
+
+/* Form helpers */
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field-help {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--danger-text);
+}
+
+.form-control[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.muted-note {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+/* "More options": collapsed on phones, open on wide screens */
+.more-options {
+  margin: 0.25rem 0 1rem;
+  border-top: 1px dashed var(--border-light);
+}
+
+.more-summary,
+.item-more > summary {
+  list-style: none;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--theme-accent, #059669);
+}
+
+.more-summary::-webkit-details-marker,
+.item-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-summary::after,
+.item-more > summary::after {
+  content: '\25BE';
+  margin-inline-start: auto;
+}
+
+.more-options[open] > .more-summary::after,
+.item-more[open] > summary::after {
+  content: '\25B4';
+}
+
+.more-body {
+  padding-top: 0.5rem;
+}
+
+/* Per-item details inside a phone item card */
+.item-more {
+  border-top: 1px dashed var(--border-light);
+}
+
+.item-more > summary {
+  min-height: 44px;
+  font-size: 0.85rem;
+}
+
+.item-more-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+/* Desktop history table (shown from 768px); item cards are used at every width */
+.desktop-history-table {
+  display: none;
+}
+
+/* Grid items may shrink below their content width, so voice fields stay inside their column */
+.form-grid-2 > *,
+.form-grid-3 > * {
+  min-width: 0;
+}
+
+/* Two-column stats on phones: the third card spans the row */
+.stats-grid .stat-card:last-child {
+  grid-column: 1 / -1;
+}
+
+.stat-icon-danger {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+/* History header: search and status filter */
+.history-header {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.history-filters {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.history-filter-select {
+  width: 120px;
+  flex-shrink: 0;
+  font-size: 1rem; /* 16px: iOS zooms in on smaller fields */
+}
+
+.history-search {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem; /* 16px: iOS zooms in on smaller fields */
+}
+
+.history-bill-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Product cards and empty states */
+.product-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.empty-box {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.empty-box-wide {
+  grid-column: 1 / -1;
+  padding: 2.5rem;
+}
+
+.empty-box-wide p {
+  margin-bottom: 0.85rem;
+}
+
+/* Settings: QR code and backup */
+.qr-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qr-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.qr-upload-label {
+  cursor: pointer;
+}
+
+.backup-text {
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.backup-restore-label {
+  cursor: pointer;
+}
+
+/* Voice typing: a microphone beside each voice-enabled input */
+.voice-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.voice-field > .form-control {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.btn-mic {
+  flex-shrink: 0;
+}
+
+.btn-mic.listening {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-light);
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+/* Language picker (first visit, and from the top bar) */
+.lang-box {
+  max-width: 560px;
+}
+
+.lang-subtitle {
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.lang-option {
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.85rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  text-align: start;
+  cursor: pointer;
+}
+
+.lang-option:hover,
+.lang-option.active {
+  border-color: var(--theme-accent, #059669);
+  background: var(--theme-accent-soft, #ecfdf5);
+}
+
+.lang-native {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.lang-english {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Customer chips: Walk-in, recent customers and "+ New" */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chip {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.45rem 0.95rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+
+.chip.active {
+  border-color: var(--theme-accent, #059669);
+  background: var(--theme-accent, #059669);
+  color: #ffffff;
+}
+
+/* Paid / Due / Draft: one control, with a pill that slides to the choice */
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+}
+
+.segmented-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  inset-inline-start: 4px;
+  width: calc((100% - 8px) / 3);
+  border-radius: calc(var(--radius-md) - 3px);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(calc(var(--active, 0) * 100%));
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[dir="rtl"] .segmented-pill {
+  transform: translateX(calc(var(--active, 0) * -100%));
+}
+
+.segmented [role="radio"] {
+  position: relative; /* above the pill */
+  z-index: 1;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmented [role="radio"][aria-checked="true"] {
+  color: var(--text-main);
+}
+
+.segmented [data-status="Paid"][aria-checked="true"] {
+  color: var(--success-text);
+}
+
+.segmented [data-status="Due"][aria-checked="true"] {
+  color: var(--warning-text);
+}
+
+/* Paid / Due / Draft: the emoji above the word, so a long word ("भुगतान हो गया") has the whole width */
+.segmented [data-status] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-height: 56px;
+  padding: 0.3rem 0.25rem;
+  line-height: 1.2;
+}
+
+.segmented [data-status] > [aria-hidden="true"] {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Two choices: the discount's percent / amount switch */
+.segmented-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.segmented-2 .segmented-pill {
+  width: calc((100% - 8px) / 2);
+}
+
+/* ============================================================
+   FAST BILL: product tiles, bill lines and the quantity sheet
+   ============================================================ */
+.product-search {
+  margin-bottom: 0.75rem;
+}
+
+/* Tiles: a tap adds one. Two per row on phones, more where there is room. */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.product-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 104px;
+  padding: 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 150ms, background-color 150ms;
+}
+
+.product-tile:active {
+  transform: scale(0.94);
+  transition-duration: 90ms;
+}
+
+.product-tile.in-bill {
+  border-color: var(--theme-accent, #059669);
+  background: var(--theme-accent-soft, #ecfdf5);
+}
+
+/* A coloured initial, so a product can be found without reading its name */
+.tile-initial {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: hsl(var(--tile-hue, 160) 70% 90%);
+  color: hsl(var(--tile-hue, 160) 60% 28%);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.tile-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.tile-price {
+  margin-top: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--theme-accent, #059669);
+}
+
+.tile-price small {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.tile-badge {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--theme-accent, #059669);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+
+.product-tile-other {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  color: var(--theme-accent, #059669);
+}
+
+.tile-plus {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tile-none {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* "In this bill": one line per item */
+/* "In this bill", with Clear at the other end */
+.lines-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.lines-head .lines-title {
+  margin-bottom: 0;
+}
+
+.lines-clear {
+  min-height: 40px;
+  gap: 0.3rem;
+  color: var(--text-muted);
+}
+
+.lines-title {
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bill-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.bill-line {
+  padding: 0.65rem 0.75rem 0.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.bill-line-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.line-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.line-name.is-placeholder {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.line-total {
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bill-line-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.line-qty-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+  overflow: hidden;
+}
+
+.line-step,
+.line-qty {
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.line-step {
+  width: 44px;
+  font-size: 1.25rem;
+}
+
+.line-step:active {
+  background: var(--border-light);
+}
+
+.line-qty {
+  min-width: 3.25rem;
+  padding: 0 0.4rem;
+  border-inline: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.line-qty small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.line-rate {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bill-line .item-more {
+  margin-top: 0.5rem;
+}
+
+.bill-line .item-more-body {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.line-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.line-remove {
+  color: var(--danger);
+}
+
+/* Quantity sheet: presets in one tap, or any amount */
+.qty-box {
+  max-width: 480px;
+}
+
+.qty-question {
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.qty-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.qty-preset {
+  min-height: 56px;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.qty-preset small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.qty-preset:active {
+  border-color: var(--theme-accent, #059669);
+  background: var(--theme-accent-soft, #ecfdf5);
+}
+
+.qty-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-entry-row > .form-control,
+.qty-entry-row > .voice-field {
+  flex: 1;
+}
+
+.qty-unit {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.qty-line-total {
+  min-height: 1.5em;
+  margin: 0.6rem 0 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.qty-add {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+/* ============================================================
+   FIRST RUN: the shop setup sheet, the empty product grid, and the
+   reminder above the bill while the shop has no name
+   ============================================================ */
+.setup-subtitle {
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.setup-box .modal-footer {
+  justify-content: space-between;
+}
+
+.grid-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.1rem;
+  border: 2px dashed var(--theme-border, var(--border-light));
+  border-radius: var(--radius-md);
+  background: var(--theme-accent-soft, var(--bg-surface-alt));
+}
+
+.grid-empty-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.grid-empty-text {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.setup-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  color: var(--warning-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* ============================================================
+   SAVED DATA: the in-app question, the backup reminder and status
+   ============================================================ */
+.confirm-box {
+  max-width: 420px;
+}
+
+.confirm-box .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.confirm-message {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.confirm-box .modal-footer {
+  justify-content: flex-end;
+}
+
+.backup-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  color: var(--warning-text);
+}
+
+.backup-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.88rem;
+}
+
+.backup-last {
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* ============================================================
+   SETTINGS: the App card (install, update, version, privacy)
+   ============================================================ */
+.app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.app-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.app-row p {
+  flex: 1 1 220px;
+}
+
+.privacy-note {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.app-version {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   HISTORY: due dates and the buttons for a bill that is due
+   ============================================================ */
+.stat-val {
+  white-space: nowrap;
+}
+
+.history-due {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger-text);
+}
+
+.history-due-actions {
+  flex-wrap: wrap;
+}
+
+.history-due-actions .btn {
+  flex: 1;
+}
+
+.history-open {
+  flex: 1;
+}
+
+.btn-delete {
+  color: var(--danger);
+}
+
+.history-empty-cell {
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.history-number,
+.history-total {
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.history-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.history-customer {
+  font-weight: 600;
+}
+
+.history-phone {
+  color: var(--text-muted);
+}
+
+.history-items {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.history-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+/* ============================================================
+   SETTINGS: bill number formats
+   ============================================================ */
+.bill-format-choices {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.bill-format-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "emoji name" "emoji example";
+  align-items: center;
+  column-gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  text-align: start;
+  cursor: pointer;
+}
+
+.bill-format-card[aria-checked="true"] {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+}
+
+.bill-format-emoji {
+  grid-area: emoji;
+  font-size: 1.6rem;
+}
+
+.bill-format-name {
+  grid-area: name;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.bill-format-example {
+  grid-area: example;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.bill-format-meaning {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.bill-code-input {
+  max-width: 10rem;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+/* ============================================================
+   QUANTITY: the 🔢 button on each tile and the on-screen number pad
+   ============================================================ */
+.product-tile-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.product-tile-wrap > .product-tile {
+  flex: 1;
+  min-width: 0;
+  /* A long press opens the quantity sheet, not the phone's text menu */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* The price wraps before it reaches the 🔢 button: the unit moves down, the amount stays whole */
+.product-tile-wrap .tile-price {
+  padding-inline-end: 2.4rem;
+}
+
+.tile-amount {
+  white-space: nowrap;
+}
+
+.tile-qty {
+  position: absolute;
+  inset-inline-end: 0.45rem;
+  bottom: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-xs);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* A larger area to tap than the button shows */
+.tile-qty::after {
+  content: '';
+  position: absolute;
+  inset: -0.4rem;
+}
+
+.tile-qty:active {
+  transform: scale(0.9);
+}
+
+.qty-display {
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* A quantity shown when the sheet opened: the first key replaces it */
+.qty-display.is-fresh {
+  background: var(--theme-accent-soft);
+}
+
+.qty-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.qty-pad button {
+  min-height: 3rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qty-pad button:active {
+  background: var(--theme-accent-soft);
+  transform: scale(0.97);
+}
+
+.line-qty-edit {
+  font-size: 0.75rem;
+}
+
+/* ============================================================
+   CHOICES: a row of chips with "Other" for typing (units, delivery,
+   discount). Units come from js/units.js.
+   ============================================================ */
+.choices {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* In a bill line's Edit panel the unit chips are one row that scrolls sideways. The far
+   edge fades while there are more chips to see (.at-end is set by js/app.js). */
+.choices-strip {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+}
+
+.choices-strip.at-end {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.choice-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0.35rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.choice-chip[aria-checked="true"] {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+  font-weight: 700;
+}
+
+.choice-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.choice-other {
+  margin-top: 0.5rem;
+}
+
+/* An emoji before a small label, at a size where it can be made out */
+.label-icon {
+  font-size: 1.05rem;
+  vertical-align: -0.1em;
+}
+
+/* The discount's heading, with its percent / amount switch beside it */
+.discount-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.discount-head .form-label {
+  margin-bottom: 0;
+}
+
+.discount-type {
+  flex: none;
+  width: 7.5rem;
+}
+
+/* ============================================================
+   PAYMENT QR: the bar above a Due or Draft bill, and the sheet
+   ============================================================ */
+.pay-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px dashed var(--theme-accent);
+  border-radius: var(--radius-lg);
+  background: var(--theme-accent-soft);
+  color: var(--text-main);
+  text-align: start;
+  cursor: pointer;
+}
+
+.pay-banner-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.pay-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pay-banner-text strong {
+  font-size: 1rem;
+}
+
+.pay-banner-text small {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pay-banner-go {
+  margin-inline-start: auto;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--theme-accent);
+}
+
+.pay-body {
+  text-align: center;
+}
+
+.pay-shop {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.pay-amount {
+  margin: 0.15rem 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-bill {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* A white box with a quiet margin, so the code scans in a dark room or a dark theme */
+.pay-qr {
+  display: inline-block;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.pay-qr img {
+  display: block;
+  width: min(68vw, 280px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.pay-upi {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.pay-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--warning-text);
+}
+
+.pay-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+}
+
+.pay-missing p {
+  margin: 0;
+}
+
+/* ============================================================
+   PICTURES AND EMOJI (screens only; bills never show them)
+   ============================================================ */
+
+/* A product's picture on its tile, where the coloured initial would be */
+.tile-picture {
+  background: var(--bg-surface-alt);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.line-icon {
+  flex: none;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.qty-icon:not(:empty) {
+  margin-inline-end: 0.4rem;
+}
+
+.product-card-icon {
+  margin-inline-end: 0.35rem;
+  font-size: 1.2rem;
+}
+
+.card-emoji {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.stat-icon-wrap span {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.toast-icon {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* The product form's picture: a large face, tap to choose another */
+.prod-icon-button {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: 64px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--theme-accent);
+  font-weight: 700;
+  text-align: start;
+  cursor: pointer;
+}
+
+.prod-icon-face {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-surface-alt);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.prod-icon-face.is-initial {
+  background: hsl(var(--tile-hue, 160) 70% 90%);
+  color: hsl(var(--tile-hue, 160) 60% 28%);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+/* The picture picker: groups in a row, then the pictures of the group */
+.icon-groups {
+  margin-bottom: 0.85rem;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 0.4rem;
+}
+
+.icon-option {
+  aspect-ratio: 1;
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-option[aria-pressed="true"] {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+}
+
+/* An empty screen's picture: a large emoji in a soft circle, two small ones beside it */
+.empty-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  margin: 0.25rem auto 0.85rem;
+  border-radius: 50%;
+  background: var(--theme-accent-soft);
+}
+
+.empty-art-main {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.empty-art-a,
+.empty-art-b {
+  position: absolute;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.empty-art-a {
+  top: -4px;
+  right: -8px;
+  transform: rotate(12deg);
+}
+
+.empty-art-b {
+  bottom: -2px;
+  left: -10px;
+  transform: rotate(-10deg);
+}
+
+.grid-empty .empty-art {
+  margin: 0.25rem 0 0.5rem 0.65rem;
+  background: var(--bg-surface);
+}
+
+.history-empty-cell .empty-art {
+  margin-top: 0.5rem;
+}
+
+/* The empty bill: one line with a cart */
+.empty-box-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  text-align: start;
+}
+
+.empty-inline-icon {
+  flex: none;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/* ============================================================
+   MOTION (driven by js/motion.js)
+   ============================================================ */
+/* Flying "+1" bubbles and the burst of dots float above everything */
+.motion-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fly-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.fly-bubble-inner {
+  display: block;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: var(--theme-accent, #059669);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+.burst-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* After Send or Save, the button shows a tick for a moment */
+.btn.is-done {
+  position: relative;
+}
+
+.btn.is-done > * {
+  visibility: hidden;
+}
+
+.btn.is-done::after {
+  content: '\2713';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  animation: tickIn 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tickIn {
+  from {
+    transform: scale(0.3) rotate(-20deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }

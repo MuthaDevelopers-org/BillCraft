@@ -10,17 +10,20 @@
   width: 100%;
   max-width: 780px;
   margin: 0 auto;
-  min-height: 600px;
+  min-height: 0;
   transition: all var(--transition-normal);
   box-sizing: border-box;
+  /* The bill lays out by its own width (see responsive.css), because the preview,
+     the printed page and the exported file are each a different width */
+  container: bill / inline-size;
 }
 
 /* Base Invoice Typography & Reset */
 .invoice-paper {
   background: #ffffff;
   color: #1e293b;
-  padding: 2.25rem;
-  font-size: 13.5px;
+  padding: 1.1rem;
+  font-size: 13px;
   line-height: 1.5;
   box-sizing: border-box;
   width: 100%;
@@ -70,8 +73,8 @@
 }
 
 .template-modern .inv-meta-block {
-  text-align: right;
-  min-width: 140px;
+  text-align: left;
+  min-width: 0;
 }
 
 .template-modern .inv-title-badge {
@@ -101,7 +104,7 @@
 
 .template-modern .inv-parties-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   background: #f8fafc;
   padding: 1rem 1.25rem;
@@ -114,7 +117,7 @@
   text-transform: uppercase;
   font-weight: 800;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: #64748b;
   margin-bottom: 0.35rem;
 }
 
@@ -175,7 +178,7 @@
 
 .template-modern .inv-bottom-section {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   margin-top: 0.75rem;
 }
@@ -216,12 +219,13 @@
   gap: 0.85rem;
 }
 
+/* Payment QR codes are 112px (about 30 mm printed) so phone cameras read them easily.
+   The code carries its own light border, so the frames add no padding. */
 .template-modern .payment-qr-wrap {
-  width: 68px;
-  height: 68px;
+  width: 112px;
+  height: 112px;
   background: #ffffff;
   border-radius: 6px;
-  padding: 4px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -246,7 +250,7 @@
   padding-top: 1rem;
   border-top: 1px solid #f1f5f9;
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: #64748b;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -289,7 +293,7 @@
 .template-classic .classic-grid-meta {
   border: 1px solid #cbd5e1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   margin-bottom: 1.25rem;
 }
 
@@ -560,35 +564,49 @@
 
 .template-thermal .pos-qr {
   margin: 0.65rem auto;
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
 }
 
 /* ============================================================
    PRINT MEDIA RULES
+   Only the bill prints. Everything else is removed from the layout.
+   Print uses a page narrower than the desktop breakpoints, so
+   .mobile-only elements would show. Chrome repeats fixed bars on
+   every page. Add any new bar, toolbar or modal to the hide list
+   below; tests/print.test.js checks that list.
    ============================================================ */
 @media print {
+  /* html carries the screen background, and it would print as a grey page */
+  html,
   body {
     background: #ffffff !important;
     color: #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
+  .boot-error,
   .app-sidebar,
   .app-topbar,
   .bill-form-panel,
   .preview-actions-bar,
   .toast-container,
+  .motion-layer,
   .modal-overlay,
-  .bill-view-tabs,
-  .no-print {
+  .step-bar,
+  .step-nav,
+  .mobile-only,
+  .no-print,
+  .view-section:not(#view-builder) {
     display: none !important;
   }
 
   .app-container,
   .app-main,
-  .view-section,
+  #view-builder,
   .bill-builder-layout,
   .bill-preview-panel {
     display: block !important;
@@ -598,6 +616,7 @@
     box-shadow: none !important;
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
     position: static !important;
     width: 100% !important;
   }
@@ -620,4 +639,63 @@
     margin: 1cm;
     size: auto;
   }
+}
+
+/* A narrow bill (a phone, or the preview column on a computer): the item tables fit
+   without wrapping every word, and the bottom sections stack. responsive.css restores
+   the roomy values for a bill 560px wide or more. */
+.template-modern .inv-table th,
+.template-modern .inv-table td,
+.template-classic .classic-table th,
+.template-classic .classic-table td {
+  padding: 0.4rem 0.25rem;
+  font-size: 11px;
+}
+
+.template-modern .inv-table td:nth-child(2),
+.template-classic .classic-table td:nth-child(2) {
+  min-width: 84px;
+}
+
+.template-classic .classic-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Stacked customer cells are divided by lines between rows, not columns */
+.template-classic .meta-cell {
+  border-right: none;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.template-classic .meta-cell:last-child {
+  border-bottom: none;
+}
+
+.template-classic .classic-number-block {
+  text-align: left;
+}
+
+/* Totals come before the payment details when stacked */
+.template-classic .classic-bottom .classic-summary-wrap {
+  order: -1;
+}
+
+.template-classic .classic-summary-table {
+  width: 100%;
+}
+
+.template-boutique .boutique-banner,
+.template-boutique .boutique-body {
+  padding: 1.25rem 1.1rem;
+}
+
+.template-boutique .boutique-table th {
+  padding: 0.45rem 0.4rem;
+}
+
+.template-boutique .boutique-table tr.boutique-row td {
+  padding: 0.55rem 0.4rem;
+  font-size: 11px;
 }
